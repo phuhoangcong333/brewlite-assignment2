@@ -1,6 +1,6 @@
 # Hợp đồng API BrewLite
 
-> **Người giữ file:** TV7. **Khung dựng:** 04/11/2026 (hạn N5, 06/11). **Mỗi người điền endpoint của mình trước N6 (07/11).**
+> **Người giữ file:** TV7. **Khung dựng:** 04/11/2026; **cập nhật 05/11/2026** (chốt JWT lưu ở localStorage và gửi bằng header Bearer). **Mỗi người điền endpoint của mình trước N6 (07/11).**
 >
 > Mỗi endpoint có đúng một người làm. Các luồng khác gọi theo hợp đồng này nên có thể code song song. Muốn đổi hợp đồng sau khi đã điền: báo người giữ file (TV7) và những người đang gọi endpoint đó, rồi ghi vào mục "Lịch sử thay đổi".
 
@@ -249,3 +249,4 @@ Kiểm tra API chạy và kết nối được database. Không cần đăng nh�
 | Ngày | Người sửa | Nội dung |
 |---|---|---|
 | 04/11/2026 | TV7 | Dựng khung; điền quy ước chung và 3 endpoint của TV7 (`/auth/register`, `/auth/login`, `/health`) |
+| 05/11/2026 | TV7 | Chốt ADR JWT: token lưu ở localStorage và gửi bằng header Bearer (`POST /auth/login` trả `accessToken` trong body) |
