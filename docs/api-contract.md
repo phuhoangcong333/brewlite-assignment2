@@ -60,7 +60,7 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | Endpoint | Người làm | Cần JWT | Vai trò | Dùng cho | Trạng thái |
 |---|---|---|---|---|---|
 | `GET /products` | TV1 | Không | Mọi người | Menu (có lọc danh mục) | Khung |
-| `GET /products/:id` | TV2 | Không | Mọi người | Chi tiết, size, topping | Khung |
+| `GET /products/:id` | TV2 | Không | Mọi người | Chi tiết, size, topping | Đã điền |
 | `POST /promotions/validate` | TV3 | Không | Mọi người | Giỏ hàng: báo giá và mã khuyến mãi | Khung |
 | `POST /auth/register` | TV7 | Không | Mọi người | Đăng ký | Đã điền |
 | `POST /auth/login` | TV7 | Không | Mọi người | Đăng nhập, cấp JWT | Đã điền |
@@ -83,11 +83,47 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 
 ### 4.2. `GET /products/:id` (TV2)
 
-**Gợi ý từ phân công:** trả kèm size và topping; có trạng thái topping hết hàng.
+**Response 200:**
 
-- **Path:** `id` của sản phẩm
-- **Response 200:** _Chưa điền_ (mẫu JSON, gồm size, topping, giá)
-- **Lỗi:** _Chưa điền_ (ví dụ 404 khi không có sản phẩm)
+{
+  "id": 1,
+  "name": "Trà sữa trân châu",
+  "description": "Trà sữa truyền thống",
+  "price": 30000,
+  "imageUrl": "/uploads/tra-sua.jpg",
+  "sizes": [
+    { "id": 1, "code": "S", "additionalPrice": 0 },
+    { "id": 2, "code": "M", "additionalPrice": 5000 },
+    { "id": 3, "code": "L", "additionalPrice": 10000 }
+  ],
+  "toppings": [
+    {
+      "id": 1,
+      "code": "TRAN_CHAU",
+      "name": "Trân châu",
+      "additionalPrice": 5000,
+      "isAvailable": true
+    },
+    {
+      "id": 2,
+      "code": "KEM",
+      "name": "Kem",
+      "additionalPrice": 5000,
+      "isAvailable": false
+    }
+  ]
+}
+
+**Lỗi:**
+Mã	   Trường hợp
+400	   ID không hợp lệ
+404	   Không tìm thấy sản phẩm
+500	   Lỗi hệ thống
+
+**Quy ước:**
+- Size S: +0đ, M: +5.000đ, L: +10.000đ.
+- Mỗi topping: +5.000đ.
+-isAvailable = false: Topping hết hàng, không cho chọn.
 
 ### 4.3. `POST /promotions/validate` (TV3)
 
