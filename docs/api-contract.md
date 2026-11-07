@@ -59,7 +59,7 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 
 | Endpoint | Người làm | Cần JWT | Vai trò | Dùng cho | Trạng thái |
 |---|---|---|---|---|---|
-| `GET /products` | TV1 | Không | Mọi người | Menu (có lọc danh mục) | Khung |
+| `GET /products` | TV1 | Không | Mọi người | Menu (có lọc danh mục) | Đã điền |
 | `GET /products/:id` | TV2 | Không | Mọi người | Chi tiết, size, topping | Đã điền |
 | `POST /promotions/validate` | TV3 | Không | Mọi người | Giỏ hàng: báo giá và mã khuyến mãi | Khung |
 | `POST /auth/register` | TV7 | Không | Mọi người | Đăng ký | Đã điền |
@@ -76,10 +76,64 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 ### 4.1. `GET /products` (TV1)
 
 **Gợi ý từ phân công:** lọc theo danh mục; dữ liệu seed từ 12 món, có vài món hết hàng.
+**Query:**
 
-- **Query:** _Chưa điền_ (ví dụ tên tham số lọc danh mục)
-- **Response 200:** _Chưa điền_ (mẫu JSON)
-- **Lỗi:** _Chưa điền_
+Tham số | Kiểu | Bắt buộc | Mô tả
+categoryId | number | Không | ID danh mục cần lọc sản phẩm. Nếu không truyền, trả về tất cả sản phẩm.
+
+Ví dụ:
+
+GET /products
+GET /products?categoryId=1
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Cà phê sữa đá",
+      "price": 25000,
+      "imageUrl": "/uploads/ca-phe-sua-da.jpg",
+      "categoryId": 1,
+      "categoryName": "Cà phê",
+      "stock": 20,
+      "isAvailable": true
+    },
+    {
+      "id": 2,
+      "name": "Bạc xỉu",
+      "price": 30000,
+      "imageUrl": "/uploads/bac-xiu.jpg",
+      "categoryId": 1,
+      "categoryName": "Cà phê",
+      "stock": 0,
+      "isAvailable": false
+    }
+  ],
+  "total": 2
+}
+```
+
+**Quy ước:**
+
+- price: Giá sản phẩm, đơn vị VNĐ, kiểu số nguyên.
+- stock: Số lượng tồn kho.
+- isAvailable: true nếu còn hàng (stock > 0), false nếu hết hàng (stock = 0).
+- categoryId: ID danh mục của sản phẩm.
+- categoryName: Tên danh mục sản phẩm.
+- total: Tổng số sản phẩm trong kết quả trả về.
+- Không truyền categoryId thì lấy tất cả sản phẩm.
+- Truyền categoryId thì chỉ lấy sản phẩm thuộc danh mục tương ứng.
+- Sản phẩm hết hàng vẫn được trả về để giao diện hiển thị trạng thái hết hàng.
+
+Lỗi:
+
+| Mã | Trường hợp
+| 400 | categoryId không hợp lệ hoặc không phải số nguyên dương.
+| 404 | Không tìm thấy danh mục tương ứng với categoryId.
+| 500 | Lỗi hệ thống khi truy vấn danh sách sản phẩm.
 
 ### 4.2. `GET /products/:id` (TV2)
 
