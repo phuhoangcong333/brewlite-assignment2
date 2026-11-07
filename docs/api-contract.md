@@ -204,12 +204,89 @@ Kiểm tra API chạy và kết nối được database. Không cần đăng nh�
 
 ### 4.7. `POST /orders` (TV4)
 
-**Gợi ý từ phân công:** cần JWT; tạo đơn và trừ kho trong một transaction; hết hàng trả 409; chốt payload giỏ với TV3.
+Tạo đơn hàng mới từ giỏ hàng hiện tại, kiểm tra tồn kho và trừ kho an toàn trong một Database Transaction. Yêu cầu phải đăng nhập (có JWT).
 
 - **Header:** `Authorization: Bearer <accessToken>`
-- **Request:** _Chưa điền_ (mẫu JSON)
-- **Response 201:** _Chưa điền_ (mẫu JSON, có mã đơn)
-- **Lỗi:** _Chưa điền_ (401 chưa đăng nhập, 409 hết hàng, 400 dữ liệu sai)
+- **Request:**
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "sizeId": 1,
+      "toppingIds": [1, 2],
+      "note": "Ít đá, ít ngọt"
+    }
+  ],
+  "promotionCode": "BREW2026"
+}
+```
+
+- **Response 201:** 
+```json
+{
+  "id": 105,
+  "userId": 1,
+  "total": 95000,
+  "status": "PENDING",
+  "createdAt": "2026-11-06T08:30:00Z",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "price": 45000,
+      "sizeId": 1
+    }
+  ]
+}
+```
+
+- **Lỗi:** 
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Giỏ hàng rỗng (`items` trống), thiếu trường bắt buộc, sai kiểu dữ liệu hoặc `quantity <= 0` |
+| 401 | Chưa đăng nhập, thiếu header `Authorization` hoặc token JWT sai / hết hạn |
+| 409 | Sản phẩm hoặc topping hết hàng / số lượng tồn kho (`stock`) không đủ |
+
+- **Response lỗi 400 (Dữ liệu gửi lên không hợp lệ):**
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": [
+    "items should not be empty",
+    "quantity must not be less than 1"
+  ],
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+- **Response lỗi 401 (Chưa đăng nhập / Token hết hạn):**
+
+```json
+{
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "Unauthorized",
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+- **Response lỗi 409 (Sản phẩm hết hàng / Không đủ tồn kho):**
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Product stock is insufficient",
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
 
 ### 4.8. `POST /payments` (TV5)
 
