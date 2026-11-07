@@ -84,7 +84,7 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 ### 4.2. `GET /products/:id` (TV2)
 
 **Response 200:**
-
+```json
 {
   "id": 1,
   "name": "Trà sữa trân châu",
@@ -113,17 +113,18 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
     }
   ]
 }
+```
 
 **Lỗi:**
-Mã	   Trường hợp
-400	   ID không hợp lệ
-404	   Không tìm thấy sản phẩm
-500	   Lỗi hệ thống
+|Mã	 |  Trường hợp
+|400	 |  ID không hợp lệ
+|404	 |  Không tìm thấy sản phẩm
+|500	 |  Lỗi hệ thống
 
 **Quy ước:**
 - Size S: +0đ, M: +5.000đ, L: +10.000đ.
 - Mỗi topping: +5.000đ.
--isAvailable = false: Topping hết hàng, không cho chọn.
+- isAvailable = false: Topping hết hàng, không cho chọn.
 
 ### 4.3. `POST /promotions/validate` (TV3)
 
