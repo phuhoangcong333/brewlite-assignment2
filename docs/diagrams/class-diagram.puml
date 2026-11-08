@@ -1,0 +1,213 @@
+@startuml class-diagram
+title Class diagram tổng: BrewLite (TV7)
+
+skinparam defaultFontName Arial
+skinparam titleFontColor #1F3864
+skinparam titleFontSize 18
+skinparam ArrowColor #444444
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam classAttributeFontSize 11
+skinparam classStereotypeFontColor #555555
+skinparam nodesep 50
+skinparam ranksep 60
+hide empty methods
+hide circle
+
+' Màu theo người phụ trách: thân lớp, viền, tiêu đề
+skinparam class {
+  BackgroundColor<<TV1_TV2>> #F3F8FE
+  BorderColor<<TV1_TV2>> #4A6FA5
+  HeaderBackgroundColor<<TV1_TV2>> #CFE0F7
+  BackgroundColor<<TV3>> #F4FBF4
+  BorderColor<<TV3>> #5BA55B
+  HeaderBackgroundColor<<TV3>> #CDEBCD
+  BackgroundColor<<TV4>> #FEF8EF
+  BorderColor<<TV4>> #D98E2B
+  HeaderBackgroundColor<<TV4>> #FBDDB0
+  BackgroundColor<<TV5>> #FAF5FD
+  BorderColor<<TV5>> #8E5BB5
+  HeaderBackgroundColor<<TV5>> #E3CFF0
+  BackgroundColor<<TV6>> #FDF4F4
+  BorderColor<<TV6>> #C25B5B
+  HeaderBackgroundColor<<TV6>> #F5C9C9
+  BackgroundColor<<TV7>> #FFFCEB
+  BorderColor<<TV7>> #B58A1B
+  HeaderBackgroundColor<<TV7>> #FFEC99
+}
+
+enum Role <<TV7>> {
+  CUSTOMER
+  STAFF
+}
+
+enum DiscountType <<TV3>> {
+  PERCENT
+  FIXED_AMOUNT
+}
+
+enum OrderStatus <<TV6>> {
+  PENDING
+  PAID
+  PAYMENT_FAILED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus <<TV5>> {
+  PAID
+  FAILED
+}
+
+enum PaymentMethod <<TV5>> {
+  MOCK_WALLET
+  MOCK_CARD
+}
+
+class User <<TV7>> {
+  - id : Int
+  - email : String
+  - passwordHash : String
+  - name : String
+  - role : Role
+  - loyaltyPoints : Int
+  - createdAt : DateTime
+  + verifyPassword(plain : String) : Boolean
+  + hasRole(role : Role) : Boolean
+}
+
+class Category <<TV1_TV2>> {
+  - id : Int
+  - name : String
+  - description : String
+  + getProducts() : List<Product>
+}
+
+class Product <<TV1_TV2>> {
+  - id : Int
+  - name : String
+  - description : String
+  - price : Int
+  - imageUrl : String
+  - stock : Int
+  - categoryId : Int
+  - version : Int
+  + isAvailable() : Boolean
+  + updateStock(quantity : Int) : void
+  + updatePrice(price : Int) : void
+}
+
+class ProductSize <<TV1_TV2>> {
+  - id : Int
+  - name : String
+  - additionalPrice : Int
+  + getPrice() : Int
+}
+
+class Topping <<TV1_TV2>> {
+  - id : Int
+  - name : String
+  - price : Int
+  - stock : Int
+  + isAvailable() : Boolean
+}
+
+class Promotion <<TV3>> {
+  - id : Int
+  - code : String
+  - description : String
+  - discountType : DiscountType
+  - discountValue : Int
+  - maxDiscountAmount : Int
+  - minOrderValue : Int
+  - startsAt : DateTime
+  - expiresAt : DateTime
+  - usageLimit : Int
+  - usedCount : Int
+  - isActive : Boolean
+}
+
+class Order <<TV4>> {
+  - id : Int
+  - userId : Int
+  - total : Int
+  - status : OrderStatus
+  - promotionId : Int
+  - discountAmount : Int
+  - createdAt : DateTime
+  - updatedAt : DateTime
+  + createOrder(userId : Int, items : OrderItem[], promotionCode : String) : Order
+  + cancelOrder() : void
+  + calculateTotal() : Int
+  + transitionStatus(newStatus : OrderStatus) : void
+}
+
+class OrderItem <<TV4>> {
+  - id : Int
+  - orderId : Int
+  - productId : Int
+  - quantity : Int
+  - price : Int
+  - sizeId : Int
+  - toppingIds : Int[]
+  - note : String
+  + getSubtotal() : Int
+}
+
+class Payment <<TV5>> {
+  - id : Int
+  - orderId : Int
+  - idempotencyKey : String
+  - amount : Int
+  - method : PaymentMethod
+  - status : PaymentStatus
+  - transactionId : String
+  - createdAt : DateTime
+  + processPayment(dto : CreatePaymentDto, idempotencyKey : String) : Payment
+  + validateAmount(orderTotal : Int, payAmount : Int) : Boolean
+  + executeMockGateway(method : PaymentMethod, amount : Int) : GatewayResult
+}
+
+class LoyaltyTransaction <<TV6>> {
+  - id : Int
+  - userId : Int
+  - orderId : Int
+  - points : Int
+  - createdAt : DateTime
+}
+
+' --- Quan hệ và multiplicity ---
+User "1" -- "0..*" Order : đặt >
+User "1" -- "0..*" LoyaltyTransaction : tích điểm >
+Order "1" *-- "1..*" OrderItem : gồm >
+Order "1" -- "0..*" Payment : thanh toán bằng >
+Order "1" -- "0..1" LoyaltyTransaction : phát sinh điểm >
+Promotion "0..1" -- "0..*" Order : áp dụng cho >
+Product "1" -- "0..*" OrderItem : có trong >
+Category "1" -- "0..*" Product : chứa >
+Product "1" -- "0..*" ProductSize : có kích thước >
+Product "0..*" -- "0..*" Topping : cho phép chọn >
+OrderItem "0..*" -- "0..1" ProductSize : chọn size >
+OrderItem "0..*" -- "0..*" Topping : chọn topping >
+
+' --- Thuộc tính dùng enum ---
+User ..> Role
+Promotion ..> DiscountType
+Order ..> OrderStatus
+Payment ..> PaymentStatus
+Payment ..> PaymentMethod
+
+legend right
+  |= Màu |= Người phụ trách |
+  |<#CFE0F7>    | TV1, TV2 |
+  |<#CDEBCD>    | TV3 |
+  |<#FBDDB0>    | TV4 |
+  |<#E3CFF0>    | TV5 |
+  |<#F5C9C9>    | TV6 |
+  |<#FFEC99>    | TV7 |
+endlegend
+@enduml
