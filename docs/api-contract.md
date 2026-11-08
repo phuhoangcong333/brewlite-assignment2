@@ -530,29 +530,153 @@ Tạo đơn hàng mới từ giỏ hàng hiện tại, kiểm tra tồn kho và 
 - **Response 200 / 201:** _Chưa điền_ (mẫu JSON)
 - **Lỗi:** _Chưa điền_ (thanh toán thất bại, số tiền không khớp đơn)
 
+
 ### 4.9. `GET /orders` (TV6)
 
-**Gợi ý từ phân công:** lịch sử đơn.
+**Gợi ý từ phân công:** Trả về lịch sử đơn hàng của khách hàng đang đăng nhập, sắp xếp từ mới nhất đến cũ nhất.
 
-- **Query:** _Chưa điền_ (nếu có phân trang hoặc lọc trạng thái)
-- **Response 200:** _Chưa điền_ (mẫu JSON)
-- **Lỗi:** _Chưa điền_
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Query:** Không có. Backend lấy userId từ JWT.
+- **Request:** Không có body.
+
+- **Response 200:**
+
+```json
+[
+  {
+    "id": 105,
+    "userId": 1,
+    "total": 95000,
+    "status": "PREPARING",
+    "createdAt": "2026-11-06T08:30:00Z",
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 2,
+        "price": 45000,
+        "sizeId": 1
+      }
+    ]
+  }
+]
+```
+
+**Quy ước:**
+- Khách hàng chỉ xem được đơn hàng của chính mình.
+- Danh sách sắp xếp theo `createdAt` giảm dần.
+- Nếu chưa có đơn hàng, trả về mảng rỗng `[]`.
+- `total` và `price` là số nguyên VNĐ.
+- Trạng thái đơn sử dụng enum `OrderStatus`.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 500 | Lỗi hệ thống khi truy vấn lịch sử đơn hàng |
 
 ### 4.10. `GET /orders/:id` (TV6)
 
-**Gợi ý từ phân công:** theo dõi đơn; giao diện tự làm mới mỗi 5 đến 10 giây.
+**Gợi ý từ phân công:** Xem chi tiết và theo dõi trạng thái đơn hàng. Giao diện tự làm mới mỗi 5 đến 10 giây.
 
-- **Response 200:** _Chưa điền_ (mẫu JSON, có trạng thái đơn)
-- **Lỗi:** _Chưa điền_ (404 không tìm thấy)
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Path parameter:** `id` là mã đơn hàng, kiểu số nguyên dương.
+- **Request:** Không có body.
+
+- **Response 200:**
+
+```json
+{
+  "id": 105,
+  "userId": 1,
+  "total": 95000,
+  "status": "READY",
+  "createdAt": "2026-11-06T08:30:00Z",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "price": 45000,
+      "sizeId": 1
+    }
+  ]
+}
+```
+
+**Quy ước:**
+- Khách hàng chỉ được xem đơn hàng của mình.
+- Đơn hàng không tồn tại hoặc không thuộc khách hàng trả về `404`.
+- Trạng thái gồm: `PENDING`, `PAID`, `PAYMENT_FAILED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`.
+- Frontend tự gọi lại API sau mỗi 5 đến 10 giây để cập nhật trạng thái.
+- API chỉ lấy dữ liệu, không thay đổi trạng thái đơn hàng.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 400 | ID đơn hàng không hợp lệ |
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 404 | Không tìm thấy đơn hàng hoặc đơn không thuộc khách hàng |
+| 500 | Lỗi hệ thống |
 
 ### 4.11. `PATCH /orders/:id/status` (TV6)
 
-**Gợi ý từ phân công:** chỉ nhân viên; đổi trạng thái sai thứ tự bị từ chối; tích điểm khi hoàn thành.
+**Gợi ý từ phân công:** Nhân viên cập nhật trạng thái đơn hàng theo đúng thứ tự. Chuyển trạng thái sai bị từ chối; tích điểm khi đơn hoàn thành.
 
 - **Header:** `Authorization: Bearer <accessToken>` (vai trò `STAFF`)
-- **Request:** _Chưa điền_ (mẫu JSON)
-- **Response 200:** _Chưa điền_ (mẫu JSON)
-- **Lỗi:** _Chưa điền_ (403 khi là Khách, mã lỗi cho chuyển trạng thái sai thứ tự)
+- **Path parameter:** `id` là mã đơn hàng, kiểu số nguyên dương.
+
+- **Request:**
+
+```json
+{
+  "status": "PREPARING"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `status` | string | Có | Trạng thái đích phải hợp lệ theo State Machine |
+
+- **Response 204:** Cập nhật thành công, không trả về body. Frontend gọi lại `GET /orders/:id` để lấy trạng thái mới.
+
+**Quy ước:**
+- Chỉ nhân viên có vai trò `STAFF` được cập nhật trạng thái.
+- Các chuyển trạng thái do nhân viên thực hiện:
+  - `PAID` → `PREPARING`
+  - `PREPARING` → `READY`
+  - `READY` → `COMPLETED`
+- Không được bỏ qua bước hoặc cập nhật đơn đã hoàn thành/hủy.
+- Thanh toán và hủy đơn được xử lý bởi nghiệp vụ tương ứng, không thông qua endpoint này.
+- Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống ghi nhận `LoyaltyTransaction`.
+- Điểm thưởng dự kiến: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả.
+- Mỗi đơn hàng chỉ được cộng điểm một lần.
+- Việc cập nhật trạng thái và ghi nhận điểm thưởng thực hiện trong cùng database transaction.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 400 | ID hoặc status không hợp lệ, thiếu trường bắt buộc |
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 403 | Người dùng không có vai trò STAFF |
+| 404 | Không tìm thấy đơn hàng |
+| 409 | Chuyển trạng thái sai thứ tự hoặc xung đột cập nhật |
+| 500 | Lỗi hệ thống |
+
+- **Response lỗi 409 (Chuyển trạng thái không hợp lệ):**
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Invalid order status transition: PAID -> COMPLETED",
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+Các lỗi khác sử dụng định dạng thống nhất tại mục 2.1.
+  
 
 ## 5. Lịch sử thay đổi
 
