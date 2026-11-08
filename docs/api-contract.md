@@ -65,7 +65,7 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | `POST /auth/register` | TV7 | Không | Mọi người | Đăng ký | Đã điền |
 | `POST /auth/login` | TV7 | Không | Mọi người | Đăng nhập, cấp JWT | Đã điền |
 | `GET /health` | TV7 | Không | Mọi người | Smoke test sau deploy | Đã điền |
-| `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Khung |
+| `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
 | `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Khung |
 | `GET /orders` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` (tất cả) | Lịch sử đơn | Khung |
 | `GET /orders/:id` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` | Theo dõi đơn | Khung |
