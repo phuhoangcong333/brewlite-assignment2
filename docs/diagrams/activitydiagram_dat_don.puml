@@ -1,0 +1,69 @@
+@startuml
+skinparam DefaultTextAlignment center
+skinparam ActivityBackgroundColor #F9F9F9
+skinparam ActivityBorderColor #333333
+
+|Khách hàng|
+start
+:Xem giỏ hàng và nhấn "Đặt đơn";
+
+|Next.js UI|
+:Gửi POST /orders\n(JWT, giỏ hàng, promoCode);
+
+|NestJS API|
+:Xác thực JWT và validate đầu vào;
+if (Hợp lệ?) then (Có)
+else (Không)
+  :Trả về lỗi 401 / lỗi đầu vào;
+  |Next.js UI|
+  :Hiển thị lỗi hoặc chuyển về Đăng nhập;
+  stop
+endif
+
+|NestJS API|
+:Bắt đầu Prisma $transaction;
+
+|Database|
+:Đọc Product\n(stock, version);
+
+|NestJS API|
+:planReserve: kiểm tra sản phẩm tồn tại\nvà stock >= qty;
+if (Đủ tồn kho?) then (Có)
+else (Không)
+  :Rollback, trả về HTTP 409 Conflict;
+  |Next.js UI|
+  :Thông báo hết hàng;
+  stop
+endif
+
+|NestJS API|
+:Gửi lệnh trừ kho có điều kiện\nUPDATE ... WHERE version = đã đọc\nSET stock = stock - qty, version + 1;
+
+|Database|
+:Thực thi cập nhật,\ntrả về số dòng bị ảnh hưởng;
+
+|NestJS API|
+if (Cập nhật thành công?) then (Có)
+else (Không, version đã đổi)
+  :Rollback, thử lại transaction\n(tối đa 3 lần);
+  |Next.js UI|
+  :Hết 3 lần: thông báo hệ thống bận;
+  stop
+endif
+
+|NestJS API|
+:Tính tổng tiền, áp dụng promo (nếu có);
+
+|Database|
+:Tạo Order & OrderItem\nCommit Transaction;
+
+|NestJS API|
+:Trả về HTTP 201 Created\n(id, status, total, discount);
+
+|Next.js UI|
+:Xóa giỏ hàng, chuyển sang màn hình Thanh toán\nvà hiển thị các phương thức thanh toán;
+
+|Khách hàng|
+:Xem và chọn phương thức thanh toán;
+stop
+@enduml
