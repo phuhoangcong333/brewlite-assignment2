@@ -1,0 +1,96 @@
+@startuml activity-gio-hang
+title Activity diagram – Giỏ hàng (TV3)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam activity {
+  BackgroundColor #E8F0FB
+  BorderColor #9DB4D6
+  FontSize 11
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF6CC
+  BorderColor #C9B458
+  FontSize 10
+}
+skinparam swimlane {
+  BorderColor #8A8FB0
+  TitleFontSize 13
+}
+skinparam activityStart {
+  Color #1A1A1A
+}
+skinparam activityEnd {
+  Color #1A1A1A
+}
+
+|#F4F7FD|Khách hàng|
+start
+:Mở trang giỏ hàng;
+|#FFFFFF|Next.js UI|
+repeat
+  :Đọc giỏ từ localStorage;
+  if (Giỏ rỗng?) then (có)
+    #FBE4E4:Hiển thị "Giỏ trống" và nút "Xem menu";
+    break
+  else (không)
+  endif
+  :Gửi POST /promotions/validate\n(các dòng, mã nếu có);
+  |#F4F7FD|NestJS API|
+  :Validate payload\n(số lượng, số dòng);
+  |#FFFFFF|Database|
+  :Đọc sản phẩm, size, topping,\ntồn kho, giá;
+  |NestJS API|
+  :Tính đơn giá, thành tiền, tạm tính;\ngắn trạng thái từng dòng;
+  if (Có mã khuyến mãi?) then (có)
+    |Database|
+    :Đọc Promotion theo mã;
+    |NestJS API|
+    if (Mã hợp lệ?) then (có)
+      :Tính số tiền giảm và tổng;
+    else (không)
+      #FBE4E4:Trả valid=false và reason,\ngiữ nguyên tổng;
+    endif
+  else (không)
+  endif
+  :Trả báo giá (JSON);
+  |Next.js UI|
+  :Hiển thị giỏ và tổng tiền;
+  if (Có dòng hết hàng / topping hết?) then (có)
+    #FBE4E4:Cảnh báo dòng lỗi, loại khỏi tổng,\nchặn nút "Đặt đơn";
+  else (không)
+  endif
+  if (Mã bị từ chối?) then (có)
+    #FBE4E4:Hiển thị lý do: mã sai /\nhết hạn / chưa đủ điều kiện;
+  else (không)
+  endif
+  |Khách hàng|
+  if (Khách chọn thao tác?) then (bấm "Đặt đơn")
+    |Next.js UI|
+    if (Giỏ hợp lệ để đặt đơn?) then (có)
+      :Chuyển sang trang Đặt đơn (TV4);
+      break
+    else (không)
+      #FBE4E4:Chặn đặt đơn, báo lý do;
+    endif
+  elseif (sửa giỏ) then
+    :Thay đổi số lượng /\nsửa / xóa dòng;
+    |Next.js UI|
+    if (Vượt giới hạn\n(10 ly/dòng, 20 dòng)?) then (có)
+      #FBE4E4:Báo lỗi giới hạn,\ngiữ nguyên giỏ;
+    else (không)
+      :Cập nhật giỏ,\nghi localStorage;
+    endif
+  else (nhập mã)
+    :Nhập mã khuyến mãi;
+    |Next.js UI|
+    :Ghi mã vào giỏ,\nlưu localStorage;
+  endif
+repeat while (Tiếp tục chỉnh giỏ?) is (có)
+|Khách hàng|
+:Xem giỏ trống và quay lại menu,\nhoặc sang trang Đặt đơn;
+stop
+@enduml
