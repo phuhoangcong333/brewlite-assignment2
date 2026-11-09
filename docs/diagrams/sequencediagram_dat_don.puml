@@ -1,0 +1,90 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontColor #000000
+skinparam ArrowColor #000000
+skinparam NoteBackgroundColor #FFFFFF
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ActorBackgroundColor #FFFFFF
+skinparam BoundaryBackgroundColor #FFFFFF
+skinparam ControlBackgroundColor #FFFFFF
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam SequenceGroupBackgroundColor #FFFFFF
+skinparam SequenceDividerBackgroundColor #FFFFFF
+
+title SEQUENCE DIAGRAM: ĐẶT ĐƠN
+
+actor "Customer\n(Khách hàng)" as C
+boundary "Next.js UI\n(Client / PWA)" as UI
+control "NestJS API\n(Backend REST)" as API
+database "PostgreSQL DB\n(Prisma ORM)" as DB
+
+== TẠO ĐƠN HÀNG VÀ TRỪ TỒN KHO ==
+
+C -> UI: Bấm "Tiến hành đặt hàng"
+activate UI
+UI -> API: POST /orders\n[Header: Authorization: Bearer <JWT>]\n[Body: { items: [{ productId, quantity, sizeId, toppingIds, note }],\n promotionCode? }]
+activate API
+
+note over API: JwtAuthGuard xác thực JWT, lấy userId = sub; RolesGuard kiểm tra role = CUSTOMER\n(chạy trước ValidationPipe kiểm tra DTO)
+
+break JWT thiếu / sai chữ ký / hết hạn
+    UI <-- API: HTTP 401 Unauthorized\n{ statusCode: 401, error: "Unauthorized", message, requestId }
+    C <-- UI: Xóa token, báo "Phiên đăng nhập hết hạn" & chuyển sang trang đăng nhập\n(không tạo đơn, không trừ kho)
+end
+
+break Token hợp lệ nhưng role không phải CUSTOMER
+    UI <-- API: HTTP 403 Forbidden
+    C <-- UI: Báo "Bạn không có quyền đặt đơn"
+end
+
+break DTO / đầu vào không hợp lệ (giỏ rỗng, topping sai, sản phẩm không tồn tại)
+    UI <-- API: HTTP 400 Bad Request\n{ statusCode: 400, error: "Bad Request", message: [...], requestId }
+    C <-- UI: Hiển thị thông báo lỗi để khách sửa giỏ hàng
+end
+
+API -> DB: BEGIN $transaction (đặt đơn)
+DB --> API: Transaction đã mở
+API -> DB: SELECT id, price, stock, version FROM Product WHERE id IN (...)
+DB --> API: Trả về giá, tồn kho & version hiện tại
+
+break Không đủ tồn kho (stock < quantity)
+    API -> DB: ROLLBACK (không trừ kho, không tạo đơn)
+    DB --> API: Đã rollback
+    UI <-- API: HTTP 409 Conflict\n{ statusCode: 409, error: "Conflict", message, requestId }
+    C <-- UI: Thông báo hết hàng để khách điều chỉnh giỏ hàng
+end
+
+API -> DB: UPDATE Product SET stock = stock - quantity, version = version + 1\nWHERE id = ... AND version = <đã đọc>  (Optimistic Locking)
+DB --> API: Số dòng bị ảnh hưởng
+
+alt Cập nhật kho thành công (version khớp)
+    opt Request có promotionCode
+        API -> DB: SELECT Promotion WHERE code = promotionCode
+        DB --> API: percent, expiresAt, usageLeft
+        break Mã không tồn tại / hết hạn / hết lượt
+            API -> DB: ROLLBACK (kho không bị trừ)
+            DB --> API: Đã rollback
+            UI <-- API: Trả lỗi mã khuyến mãi không hợp lệ
+            C <-- UI: Thông báo để khách sửa hoặc bỏ mã
+        end
+        API -> DB: UPDATE Promotion SET usageLeft = usageLeft - 1\nWHERE code = ... AND usageLeft > 0
+        DB --> API: Số dòng bị ảnh hưởng
+    end
+    API -> DB: INSERT Order (userId = sub, status: "PENDING", total, discount, promoCode)\n& INSERT OrderItem (size, qty, toppings, lineTotal)
+    DB --> API: COMMIT transaction thành công
+else Xung đột: version đã bị giao dịch khác thay đổi
+    API -> DB: ROLLBACK
+    DB --> API: Đã rollback
+    note over API: Chạy lại từ bước SELECT Product,\ntối đa 3 lần (MAX_CREATE_ATTEMPTS)
+    break Hết 3 lần vẫn xung đột
+        UI <-- API: Lỗi hệ thống bận (InventoryConcurrencyException)
+        C <-- UI: Thông báo hệ thống bận, vui lòng thử lại sau
+    end
+end
+
+UI <-- API: HTTP 201 Created\n{ id: 105, userId: 1, total: 95000, status: "PENDING", createdAt, items: [...] }
+deactivate API
+C <-- UI: Hiển thị màn hình Thanh toán (Tổng: 95.000đ)
+deactivate UI
+@enduml
