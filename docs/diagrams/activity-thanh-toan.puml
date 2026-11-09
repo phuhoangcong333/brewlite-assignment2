@@ -1,0 +1,105 @@
+@startuml activity-thanh-toan
+title Activity diagram: Luồng Thanh toán (TV5)
+
+skinparam defaultFontName Arial
+skinparam titleFontColor #1F3864
+skinparam ArrowColor #333333
+skinparam ActivityBackgroundColor #E8F0FE
+skinparam ActivityBorderColor #4A6FA5
+skinparam ActivityDiamondBackgroundColor #FFF4D6
+skinparam ActivityDiamondBorderColor #B58A1B
+skinparam ActivityStartColor #222222
+skinparam ActivityEndColor #222222
+skinparam swimlaneBorderColor #9AA7BD
+skinparam swimlaneTitleFontColor #1F3864
+
+|#F6F8FC|Khách hàng|
+|#FFFFFF|Giao diện Next.js|
+|#F6F8FC|API NestJS|
+|#FFFFFF|Database|
+|#F6F8FC|Cổng Mock Payment|
+
+|Khách hàng|
+start
+:Mở màn hình Thanh toán\n(đơn hàng ở trạng thái PENDING hoặc PAYMENT_FAILED);
+
+repeat
+  |Khách hàng|
+  :Chọn phương thức thanh toán\n(Ví điện tử hoặc Thẻ ngân hàng);
+  :Nhấn nút "Xác nhận thanh toán";
+
+  |Giao diện Next.js|
+  :Sinh Idempotency-Key (UUIDv4);
+  :Gửi request POST /payments\nkèm Header: Bearer <JWT>, Idempotency-Key;
+
+  |API NestJS|
+  :JwtAuthGuard kiểm tra token JWT;
+  if (Token JWT hợp lệ và còn hạn?) then (không)
+    |Giao diện Next.js|
+    #FDE8E8:Xóa token, báo phiên hết hạn (401);
+    :Lưu tạm orderId, chuyển sang trang Đăng nhập;
+    stop
+  else (có)
+    |Database|
+    :Truy vấn Order theo orderId;
+    |API NestJS|
+    if (Đơn tồn tại và thuộc về khách hàng (userId == sub)?) then (không)
+      |Giao diện Next.js|
+      #FDE8E8:Hiển thị lỗi không có quyền (403/404);
+      stop
+    else (có)
+      if (Trạng thái đơn hợp lệ (PENDING / PAYMENT_FAILED)\nvà amount khớp Order.total?) then (không)
+        |Giao diện Next.js|
+        #FDE8E8:Báo lỗi trạng thái đơn hoặc sai lệch số tiền (400/409);
+        stop
+      else (có)
+        |Database|
+        :Tìm Payment theo Idempotency-Key;
+        |API NestJS|
+        if (Idempotency-Key đã tồn tại?) then (có)
+          |Giao diện Next.js|
+          :Nhận lại kết quả thanh toán cũ (200 OK);
+          :Báo đơn đã thanh toán, chuyển sang Xác nhận;
+          stop
+        else (chưa có)
+          |API NestJS|
+          :Gọi executeMockGateway(method, amount);
+          |Cổng Mock Payment|
+          :Xử lý trừ tiền mô phỏng;
+          if (Giao dịch thành công?) then (có)
+            |API NestJS|
+            :Mở database transaction;
+            |Database|
+            :Tạo Payment mới (status: PAID);
+            :Cập nhật Order (status: PAID);
+            |Giao diện Next.js|
+            :Xóa giỏ hàng;
+            #E8F5E9:Hiển thị màn hình Xác nhận đơn thành công\n(Mã đơn, Trạng thái: PAID);
+            stop
+          else (thất bại)
+            |API NestJS|
+            :Mở database transaction;
+            |Database|
+            :Tạo Payment mới (status: FAILED);
+            :Cập nhật Order (status: PAYMENT_FAILED);
+            note right
+              **Quy tắc:**
+              Giữ nguyên tồn kho,
+              không hoàn kho.
+            end note
+            |Giao diện Next.js|
+            #FDE8E8:Hiển thị thông báo thanh toán thất bại (422)\nkèm nút "Thử lại";
+          endif
+        endif
+      endif
+    endif
+  endif
+
+  |Khách hàng|
+repeat while (Khách hàng chọn "Thử lại"?) is (có)
+->không;
+
+|Khách hàng|
+:Rời khỏi màn hình hoặc Hủy đơn;
+stop
+@enduml

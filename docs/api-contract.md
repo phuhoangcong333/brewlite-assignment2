@@ -66,7 +66,7 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | `POST /auth/login` | TV7 | Không | Mọi người | Đăng nhập, cấp JWT | Đã điền |
 | `GET /health` | TV7 | Không | Mọi người | Smoke test sau deploy | Đã điền |
 | `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
-| `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Khung |
+| `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Đã điền |
 | `GET /orders` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` (tất cả) | Lịch sử đơn | Khung |
 | `GET /orders/:id` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` | Theo dõi đơn | Khung |
 | `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Khung |
@@ -523,12 +523,58 @@ Tạo đơn hàng mới từ giỏ hàng hiện tại, kiểm tra tồn kho và 
 
 ### 4.8. `POST /payments` (TV5)
 
-**Gợi ý từ phân công:** header `Idempotency-Key`; gửi lại cùng key không tạo thanh toán trùng; thanh toán thành công thì đơn chuyển sang đã thanh toán; thất bại thì đơn vẫn chờ thanh toán.
+Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc có `Idempotency-Key` để chống trừ tiền trùng khi gửi lại; cập nhật đơn sang `PAID` khi thành công.
 
-- **Header:** `Authorization: Bearer <accessToken>`, `Idempotency-Key: <chuỗi duy nhất>`
-- **Request:** _Chưa điền_ (mẫu JSON: đơn, phương thức Ví / Thẻ, số tiền)
-- **Response 200 / 201:** _Chưa điền_ (mẫu JSON)
-- **Lỗi:** _Chưa điền_ (thanh toán thất bại, số tiền không khớp đơn)
+- **Header:**
+  - `Authorization: Bearer *** (vai trò `CUSTOMER`)
+  - `Idempotency-Key: <UUID>` (chuỗi duy nhất toàn cục)
+
+- **Request:**
+
+```json
+{
+  "orderId": 1042,
+  "amount": 85000,
+  "method": "MOCK_WALLET"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `orderId` | số nguyên (Int) | Có | Đơn hàng tồn tại, đang ở trạng thái `PENDING` hoặc `PAYMENT_FAILED` |
+| `amount` | số nguyên (Int) | Có | Đơn vị VNĐ, phải khớp chính xác với `Order.total` |
+| `method` | chuỗi (String) | Có | Chỉ chấp nhận `"MOCK_WALLET"` (Ví) hoặc `"MOCK_CARD"` (Thẻ) |
+
+- **Response 200 / 201** (201: tạo mới thành công; 200: trả lại kết quả cũ khi trùng Idempotency-Key):
+
+```json
+{
+  "id": 1,
+  "orderId": 1042,
+  "idempotencyKey": "b1f4c0de-1111-4a2b-9c3d-0123456789ab",
+  "amount": 85000,
+  "method": "MOCK_WALLET",
+  "status": "PAID",
+  "transactionId": "TXN-987654321",
+  "createdAt": "2026-11-06T08:35:00Z"
+}
+```
+
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Thiếu header `Idempotency-Key`, thiếu trường hoặc `amount` không khớp với tổng tiền đơn hàng |
+| 401 | Chưa đăng nhập, token sai hoặc token hết hạn |
+| 403 | Không có quyền thanh toán đơn hàng này (đơn không thuộc về người dùng hiện tại) |
+| 404 | Không tìm thấy đơn hàng theo `orderId` |
+| 409 | Đơn hàng không ở trạng thái được phép thanh toán (đã hoàn thành hoặc đã hủy) hoặc xung đột Idempotency-Key |
+| 422 | Thanh toán mô phỏng thất bại (thẻ test lỗi đuôi `0000`, ví không đủ tiền); đơn chuyển `PAYMENT_FAILED`, giữ nguyên tồn kho để thử lại |
+
+- **Quy ước:**
+  - `Idempotency-Key` là duy nhất toàn cục trong bảng `Payment`.
+  - Thanh toán thành công: Cập nhật `Order.status` sang `PAID` trong transaction.
+  - Thanh toán thất bại (422): Cập nhật `Order.status` sang `PAYMENT_FAILED`, giữ nguyên tồn kho và giỏ hàng, cho phép khách đổi phương thức để thanh toán lại.
 
 
 ### 4.9. `GET /orders` (TV6)

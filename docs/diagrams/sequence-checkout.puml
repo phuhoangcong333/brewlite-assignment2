@@ -1,0 +1,136 @@
+@startuml sequence-checkout
+autonumber
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam roundcorner 6
+skinparam ParticipantPadding 20
+skinparam BoxPadding 15
+
+title SEQUENCE DIAGRAM: QUY TRÌNH CHECKOUT (ĐẶT ĐƠN & THANH TOÁN)\nTask 2.2 - TV5 chủ trì | TV4 (Transaction, Tồn kho) & TV7 (JWT) góp | TV7 duyệt
+
+actor "Customer\n(Khách hàng)" as C
+boundary "Next.js UI\n(Client / PWA)" as UI
+control "NestJS API\n(Backend REST)" as API
+database "PostgreSQL DB\n(Prisma ORM)" as DB
+participant "Mock Payment\n(Dịch vụ thanh toán)" as PaySvc
+
+== GIAI ĐOẠN 1: TẠO ĐƠN HÀNG VÀ TRỪ TỒN KHO (TV4 & TV7 phụ trách) ==
+
+C -> UI: submitCheckout()
+activate UI
+UI -> API: POST /orders (createOrderDto)\n[Header: Authorization: Bearer <JWT>]
+activate API
+
+note over API #FCE7F3: **[TV7]** JwtAuthGuard xác thực JWT, lấy userId = sub\n(chạy trước ValidationPipe kiểm tra DTO)
+
+opt JWT thiếu / không hợp lệ / hết hạn
+    UI <-- API: HTTP 401 Unauthorized\n{ statusCode: 401, error: "Unauthorized", message, requestId }
+    C <-- UI: Xóa token, báo "Phiên đăng nhập hết hạn" & chuyển sang trang Đăng nhập
+end
+
+API -> DB: [TV4] $transaction: Khởi tạo Transaction đặt đơn
+activate DB
+API -> DB: findProductsForUpdate(itemIds)
+DB --> API: return products (stock, version)
+
+opt Hết hàng hoặc xung đột phiên bản (version conflict)
+    API -> DB: rollback transaction
+    UI <-- API: HTTP 409 Conflict\n{ statusCode: 409, message: "Sản phẩm đã hết hàng hoặc có thay đổi" }
+    C <-- UI: Cảnh báo hết hàng, yêu cầu cập nhật lại giỏ hàng
+end
+
+API -> DB: deductStockOptimistic(productId, qty, version)
+API -> DB: INSERT Order (userId = sub, status: "PENDING", total)\n& INSERT OrderItem (lưu giá tại thời điểm đặt)
+DB --> API: Commit transaction thành công, return order { id: 1042, total: 85000, status: "PENDING" }
+deactivate DB
+
+UI <-- API: HTTP 201 Created\n{ orderId: 1042, total: 85000, status: "PENDING" }
+deactivate API
+C <-- UI: renderPaymentScreen(orderId: 1042, total: 85000)
+deactivate UI
+
+== GIAI ĐOẠN 2: THANH TOÁN VÀ XỬ LÝ IDEMPOTENCY (TV5 chủ trì) ==
+
+C -> UI: confirmPayment(method: "MOCK_WALLET")
+activate UI
+
+UI -> UI: generateUUID() [Idempotency-Key]
+UI -> API: POST /payments (createPaymentDto)\n[Header: Bearer <JWT>, Idempotency-Key: "k-uuid"]
+activate API
+
+note over API #FCE7F3: **[TV7]** JwtAuthGuard xác thực JWT, lấy userId = sub
+
+opt JWT thiếu / không hợp lệ / hết hạn
+    UI <-- API: HTTP 401 Unauthorized
+    C <-- UI: Giữ orderId 1042, chuyển sang Đăng nhập rồi quay lại màn Thanh toán
+end
+
+API -> DB: SELECT Order WHERE id = 1042
+activate DB
+DB --> API: return Order { userId, total, status }
+deactivate DB
+
+note over API #E0F2FE: **[TV5]** Kiểm tra: Order.userId == sub,\nstatus IN ("PENDING", "PAYMENT_FAILED"), amount == Order.total
+
+opt Đơn không thuộc về người dùng hiện tại (Order.userId != sub)
+    UI <-- API: HTTP 403 Forbidden\n{ statusCode: 403, message: "Không có quyền thanh toán đơn này" }
+    C <-- UI: Thông báo "Bạn không có quyền thanh toán đơn hàng này"
+end
+
+opt Đơn không ở trạng thái hợp lệ để thanh toán (status không phải PENDING/PAYMENT_FAILED)
+    UI <-- API: HTTP 409 Conflict\n{ statusCode: 409, message: "Đơn hàng đã được thanh toán hoặc đã bị hủy" }
+    C <-- UI: Thông báo trạng thái đơn không hợp lệ
+end
+
+API -> DB: SELECT * FROM Payment WHERE idempotencyKey = "k-uuid"
+activate DB
+DB --> API: return existingPayment
+deactivate DB
+
+alt#Gold #LightYellow Nhánh 1: Gửi lại cùng Idempotency-Key (Retry / Bấm trùng nút)
+    opt Key đã tồn tại nhưng thuộc giao dịch của người dùng khác
+        UI <-- API: HTTP 409 Conflict\n{ statusCode: 409, message: "Idempotency-Key đã được sử dụng" }
+        C <-- UI: Thông báo lỗi xung đột khóa giao dịch
+    end
+
+    UI <-- API: HTTP 200 OK (return cached PaymentResponseDto)
+    C <-- UI: renderSuccessScreen(orderId: 1042, status: "PAID")
+
+else #AliceBlue Nhánh 2: Idempotency-Key mới hợp lệ
+    API -> PaySvc: executeMockGateway(method, amount)
+    activate PaySvc
+
+    alt#LightGreen #MintCream Thanh toán thành công (Happy Path)
+        PaySvc --> API: return GatewayResult(SUCCESS, txnId: "TXN-999")
+        deactivate PaySvc
+
+        API -> DB: $transaction: Tạo Payment & Cập nhật Order
+        activate DB
+        API -> DB: INSERT Payment (idempotencyKey, orderId: 1042, amount, method, status: "PAID")
+        API -> DB: UPDATE Order SET status = "PAID" WHERE id = 1042
+        DB --> API: commit transaction thành công
+        deactivate DB
+
+        UI <-- API: HTTP 201 Created (PaymentResponseDto)\n{ paymentId: 1, orderId: 1042, status: "PAID" }
+        C <-- UI: renderSuccessScreen(orderId: 1042, status: "PAID", clearCart: true)
+
+    else #MistyRose Thanh toán thất bại (Thẻ lỗi / Từ chối / Số dư không đủ)
+        PaySvc --> API: return GatewayResult(FAILED, reason: "CARD_DECLINED")
+        activate PaySvc
+        deactivate PaySvc
+
+        API -> DB: $transaction: Ghi nhận thất bại
+        activate DB
+        API -> DB: INSERT Payment (idempotencyKey, orderId: 1042, amount, method, status: "FAILED")
+        API -> DB: UPDATE Order SET status = "PAYMENT_FAILED" WHERE id = 1042\n[Quy tắc: Giữ nguyên tồn kho, chỉ hoàn kho khi CANCELLED]
+        DB --> API: commit transaction
+        deactivate DB
+
+        UI <-- API: HTTP 422 Unprocessable Entity\n{ statusCode: 422, error: "PAYMENT_FAILED", canRetry: true }
+        C <-- UI: renderErrorAndRetry(orderId: 1042, canRetry: true)
+    end
+end
+
+deactivate API
+deactivate UI
+@enduml
