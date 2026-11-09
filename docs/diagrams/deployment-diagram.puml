@@ -1,0 +1,58 @@
+@startuml DeploymentDiagram
+!theme plain
+top to bottom direction
+
+title Sơ đồ triển khai hạ tầng BrewLite (AWS & Docker)
+
+node "Client Device" {
+  [Browser / Mobile App (PWA)] as ClientApp
+}
+
+node "AWS Cloud (ap-southeast-1)" {
+  
+  node "EC2 Instance (Ubuntu 24.04 LTS)" as EC2 {
+    folder "Docker Engine" {
+      node "Container: apps/web" as WebContainer {
+        [Next.js PWA (Port 3000)] as NextServer
+      }
+      
+      node "Container: apps/api" as ApiContainer {
+        [NestJS API Server (Port 3001)] as NestApi
+      }
+    }
+    
+    [Security Group: Port 80, 443, 3001] as EC2SecGroup
+  }
+
+  node "Amazon RDS Service" as RDSNode {
+    database "PostgreSQL Instance (Port 5432)" as DBInstance {
+      [brewlite-db (Persistent Storage)] as PostgresDB
+    }
+    [Security Group: Port 5432] as RDSSecGroup
+  }
+
+  node "GitHub Services" as GitHubCloud {
+    [GitHub Repository (Monorepo)] as Repo
+    [GitHub Actions (CI/CD Pipeline)] as Pipeline
+  }
+}
+
+ClientApp --> NextServer : HTTP/HTTPS (Port 80/443)
+ClientApp --> NestApi : HTTP/REST API (Port 3001)
+NestApi --> PostgresDB : DATABASE_URL (Port 5432)
+Pipeline --> Repo : Trigger on PR/Push
+Pipeline ..> WebContainer : Build Check
+Pipeline ..> ApiContainer : Build Check
+
+note right of EC2SecGroup
+  Đã cấu hình Inbound Rule:
+  Custom TCP 3001 cho phép Anywhere (0.0.0.0/0)
+end note
+
+note right of PostgresDB
+  Lưu trữ dữ liệu bền vững (Persistent)
+  Public Access: Yes (Cho phép EC2 truy cập)
+end note
+
+@enduml
+
