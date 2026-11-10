@@ -1,4 +1,4 @@
-# BrewLite - chạy cả hệ thống bằng 1 lệnh:  docker compose up --build
+# BrewLite - chạy cả hệ thống bằng 1 lệnh: docker compose up --build
 services:
   db:
     image: postgres:16
@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: brewlite123
       POSTGRES_DB: brewlite
     ports:
-      # Cổng 5433 trên máy bạn -> 5432 trong hộp (tránh đụng PostgreSQL cài sẵn ở 5432)
+      # Cổng 5433 trên máy local -> 5432 trong container (tránh đụng PostgreSQL local)
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -19,15 +19,15 @@ services:
       timeout: 5s
       retries: 12
 
-  backend:
-    build: ./backend
+  api:
+    build: ./apps/api
     container_name: brewlite-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - ./apps/api/.env
     environment:
-      # Trong mạng Docker, backend gọi database bằng tên dịch vụ "db" và cổng 5432
-      DATABASE_URL: postgresql://brewlite:brewlite123@db:5432/brewlite?schema=public
+      # Nếu chạy local cùng container DB thì giữ "db:5432", còn nếu nối AWS RDS thì đổi link RDS vào đây
+      DATABASE_URL: postgresql://postgres:postgres123@brewlite-db.cjqq4yy0i5l8.ap-southeast-1.rds.amazonaws.com:5432/postgres?schema=public
       JWT_SECRET: brewlite-doi-chuoi-bi-mat-nay
       PORT: 3001
     ports:
@@ -36,18 +36,17 @@ services:
       db:
         condition: service_healthy
 
-  frontend:
+  web:
     build:
-      context: ./frontend
+      context: ./apps/web
       args:
-        # Trình duyệt trên máy bạn gọi backend qua localhost:3001
-        NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_API_URL: http://47.129.180.144:3001
     container_name: brewlite-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      - api
 
 volumes:
   pgdata:
