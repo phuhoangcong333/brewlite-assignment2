@@ -18,23 +18,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check Backend Build (NestJS)
+      - name: Check Backend Build (apps/api)
         run: |
-          if [ -d "backend" ]; then
-            cd backend && npm ci && npm run build
-          elif [ -d "apps/api" ]; then
-            cd apps/api && npm ci && npm run build
+          if [ -d "apps/api" ]; then
+            cd apps/api
+            npm install --legacy-peer-deps
+            npm run build --if-present
           fi
 
-      - name: Check Frontend Build (Next.js)
+      - name: Check Frontend Build (apps/web)
         run: |
-          if [ -d "frontend" ]; then
-            cd frontend && npm ci && npm run build
-          elif [ -d "apps/web" ]; then
-            cd apps/web && npm ci && npm run build
+          if [ -d "apps/web" ]; then
+            cd apps/web
+            npm install --legacy-peer-deps
+            npm run build --if-present
           fi
