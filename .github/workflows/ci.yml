@@ -1,0 +1,36 @@
+name: BrewLite CI Pipeline
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Check Backend Build (apps/api)
+        run: |
+          if [ -d "apps/api" ]; then
+            cd apps/api
+            npm install --legacy-peer-deps
+            npm run build --if-present
+          fi
+
+      - name: Check Frontend Build (apps/web)
+        run: |
+          if [ -d "apps/web" ]; then
+            cd apps/web
+            npm install --legacy-peer-deps
+            npm run build --if-present
+          fi
