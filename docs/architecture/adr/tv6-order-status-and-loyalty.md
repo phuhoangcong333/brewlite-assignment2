@@ -33,5 +33,5 @@ Sau khi tạo đơn, khách xem lịch sử hoặc chi tiết tại trang Next.j
 ### Lưu ý khi TV7 tổng hợp
 
 - Không sửa trực tiếp `architecture.md` nếu TV7 đang giữ file; TV7 có thể ghép phần trên vào mục **“Trạng thái đơn và điểm thưởng”**.
-- Trong SRS `dev(2)` còn mô tả `PAID → CANCELLED`; cần sửa bởi TV2/TV4 để tránh mâu thuẫn với Class Diagram v3.
-- Không coi phần tính điểm/transaction là đã chạy thành công cho đến khi có migration và kết quả integration test trên `dev` mới nhất.
+- SRS đã được chỉnh để không cho phép `PAID → CANCELLED`, thống nhất với Class Diagram v3 và `apps/api/src/orders/order-state.ts`.
+- Không coi phần tính điểm/transaction là đã chạy thành công: `apps/api/prisma/schema.prisma` và migrations hiện chưa có `LoyaltyTransaction`, còn payment service đang cộng điểm quá sớm.

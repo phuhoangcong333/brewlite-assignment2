@@ -4,7 +4,7 @@
 - **Ngày:** 10/11/2026
 - **Người viết:** TV6 – Theo dõi đơn và điểm thưởng
 - **Task:** 3.1 – Thiết kế kiến trúc
-- **Liên quan:** `FR-34`–`FR-39`, `docs/diagrams/activity-theo-doi-don.puml`, `docs/diagrams/class-diagram.puml`, `backend/src/orders/order-state.ts`, `backend/src/orders/order.service.ts`.
+- **Liên quan:** `FR-34`–`FR-39`, `docs/diagrams/activity-theo-doi-don.puml`, `docs/diagrams/class-diagram.puml`, `apps/api/src/orders/order-state.ts`, `apps/api/src/orders/order.service.ts`.
 
 > **Quy ước đặt tên:** `00x` là số tạm theo thư mục ADR của nhóm trong bản `dev(2)`. TV7 cần xác nhận số ADR chính thức trước khi merge.
 >
@@ -48,7 +48,7 @@ Sử dụng `OrderStatus` gồm: `PENDING`, `PAYMENT_FAILED`, `PAID`, `PREPARING
 
 ### 3.2. Vị trí áp dụng quy tắc và kiểm soát quyền
 
-- Tập trung bảng chuyển trạng thái và hàm `canTransition()` / `assertTransition()` tại `backend/src/orders/order-state.ts` (NestJS); frontend chỉ hiển thị lựa chọn hợp lệ, không phải nơi quyết định cuối cùng.
+- Tập trung bảng chuyển trạng thái và hàm `canTransition()` / `assertTransition()` tại `apps/api/src/orders/order-state.ts` (NestJS); frontend chỉ hiển thị lựa chọn hợp lệ, không phải nơi quyết định cuối cùng.
 - `PATCH /orders/:id/status` chỉ dành cho `STAFF` (JWT hợp lệ); nhân viên chỉ thực hiện các chuyển đổi vận hành: `PAID → PREPARING → READY → COMPLETED`. Token thiếu/hết hạn trả `401`, role `CUSTOMER` trả `403`.
 - TV5 chịu trách nhiệm cập nhật trạng thái thanh toán; TV4 chịu trách nhiệm hủy hợp lệ. Khách không thể tự gán trạng thái bất kỳ qua API nhân viên.
 - Chuyển trạng thái không hợp lệ trả `409 Conflict`, giữ nguyên trạng thái đã lưu.
@@ -93,20 +93,20 @@ Theo FR-39, **chỉ khi đơn chuyển `READY → COMPLETED`**, ghi một `Loyal
 
 | Tạo phẩm / file | Yêu cầu thực hiện |
 |---|---|
-| `backend/src/orders/order-state.ts` | Duy trì bảng `validTransitions`, đặc biệt cấm `PAID → CANCELLED` |
-| `backend/src/orders/order.service.ts` | Chỉ cập nhật qua transaction; khi `READY → COMPLETED` ghi điểm một lần |
-| `backend/prisma/schema.prisma` + migration | Thêm `LoyaltyTransaction` và quan hệ `User (1) – (0..*) LoyaltyTransaction`, `Order (1) – (0..1) LoyaltyTransaction` |
-| `backend/src/payments/payments.service.ts` (TV5) | Không cộng điểm ở `PAID`; retry `PAYMENT_FAILED` thống nhất thứ tự trạng thái |
-| `backend/src/orders/order-state.spec.ts` | Test từng chuyển đổi hợp lệ/không hợp lệ; đặc biệt `PAID → CANCELLED` phải bị từ chối |
+| `apps/api/src/orders/order-state.ts` | Duy trì bảng `validTransitions`, đặc biệt cấm `PAID → CANCELLED` |
+| `apps/api/src/orders/order.service.ts` | Chỉ cập nhật qua transaction; khi `READY → COMPLETED` ghi điểm một lần |
+| `apps/api/prisma/schema.prisma` + migration | Chưa có `LoyaltyTransaction`; cần thêm model và unique `orderId` |
+| `apps/api/src/payments/payments.service.ts` (TV5) | Bỏ cộng điểm ở `PAID`; retry `PAYMENT_FAILED` thống nhất thứ tự trạng thái |
+| `apps/api/src/orders/order-state.spec.ts` | Test từng chuyển đổi hợp lệ/không hợp lệ; đặc biệt `PAID → CANCELLED` phải bị từ chối |
 | Integration test | Khách `PATCH` nhận 403; chuyển sai nhận 409; hoàn thành ghi điểm đúng một lần, request trùng không cộng thêm |
-| `docs/srs.md` (TV2) | Chỉnh mô tả cũ vẫn cho phép `PAID → CANCELLED` để khớp Class Diagram v3 |
+| `docs/srs.md` (TV2) | Đã chỉnh mô tả cũ, không cho phép `PAID → CANCELLED` |
 
 **Tiêu chí xác nhận quyết định đã triển khai:** Unit test bảng trạng thái pass; migration chạy; tích điểm và đổi trạng thái trong cùng transaction; integration test đảm bảo một đơn không cộng điểm hai lần; sơ đồ và API Contract khớp với bản code cuối.
 
 ## 7. Các điểm cần phối hợp trước khi merge
 
 1. **TV7:** Chốt số ADR chính thức (thay `00x`), duyệt nội dung và ghép đoạn kiến trúc TV6 vào `architecture.md`.
-2. **TV2/TV4:** Sửa các chỗ SRS còn ghi `PAID → CANCELLED` theo quyết định Class Diagram v3.
+2. **TV2/TV4:** Đã sửa các chỗ SRS còn ghi `PAID → CANCELLED` theo quyết định Class Diagram v3.
 3. **TV5:** Chuyển việc cộng điểm từ lúc thanh toán sang lúc hoàn thành, xác nhận retry thanh toán; đảm bảo một Order có thể có nhiều Payment.
 4. **TV6:** Đối chiếu code và test với ADR sau khi rebase từ `dev` mới nhất.
 
@@ -117,4 +117,4 @@ Theo FR-39, **chỉ khi đơn chuyển `READY → COMPLETED`**, ghi một `Loyal
 - `docs/srs.md` (FR-34 đến FR-39).
 - `docs/diagrams/activity-theo-doi-don.puml` (TV6, PR #10 đã merge).
 - `docs/diagrams/class-diagram.puml` (Class Diagram v3 do TV7 chốt).
-- `backend/src/orders/order-state.ts` (bảng chuyển trạng thái đang có trong ZIP `dev(2)`).
+- `apps/api/src/orders/order-state.ts` (bảng chuyển trạng thái đang có trong workspace).
