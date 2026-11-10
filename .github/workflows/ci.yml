@@ -17,13 +17,14 @@ jobs:
       - name: Set up Node.js environment
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Check Backend Build (apps/api)
         run: |
           if [ -d "apps/api" ]; then
             cd apps/api
             npm install --legacy-peer-deps
+            npx prisma generate
             npm run build --if-present
           fi
 
