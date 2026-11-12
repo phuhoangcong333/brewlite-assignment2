@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { register } from '@/lib/orders-api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -51,34 +52,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const API_URL =
-          process.env.NEXT_PUBLIC_API_URL ??
-          'http://localhost:3001';
-
-        const response = await fetch(
-          `${API_URL}/auth/register`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email,
-              password,
-            }),
-          },
-        );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          Array.isArray(data.message)
-            ? data.message.join(', ')
-            : data.message || 'Đăng ký thất bại',
-        );
-      }
-
+      await register(email, password);
       setMessage('Đăng ký thành công!');
 
       setTimeout(() => {

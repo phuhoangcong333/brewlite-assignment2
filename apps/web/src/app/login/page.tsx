@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { getToken } from '@/lib/auth';
+import { login } from '@/lib/orders-api';
 
 function subscribeToAuth(callback: () => void) {
   window.addEventListener('auth-changed', callback);
@@ -42,30 +43,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL ??
-        'http://localhost:3001';
-
-      const response = await fetch(
-        `${API_URL}/auth/login`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Đăng nhập thất bại');
-      }
-
+      const data = await login(email, password);
       localStorage.setItem('access_token', data.access_token);
       window.dispatchEvent(new Event('auth-changed'));
 
