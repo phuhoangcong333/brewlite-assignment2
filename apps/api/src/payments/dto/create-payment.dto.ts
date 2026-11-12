@@ -2,6 +2,7 @@ import {
   IsIn,
   IsInt,
   IsString,
+  IsOptional,
   Matches,
   Max,
   MaxLength,
@@ -15,6 +16,11 @@ export class CreatePaymentDto {
   @Min(1)
   @Max(2_147_483_647) // khớp kiểu Int của Postgres, tránh lỗi 500 khi orderId quá lớn
   orderId!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  amount?: number;
 
   @IsString()
   @IsIn(['CARD', 'WALLET'])
