@@ -213,7 +213,7 @@ khách hàng truy cập đến khi đơn hàng được ghi nhận.
   Bước                    Nội dung                  Kết quả cần kiểm tra
   ----------------------- ------------------------- -----------------------
   1                       Mở trang chủ tại          Giao diện tải thành
-                          `http://localhost:3000`   công, danh sách sản
+                          `http://loc alhost:3000`   công, danh sách sản
                                                     phẩm hiển thị
 
   2                       Truy cập `/register` và   Hệ thống phản hồi kết

@@ -27,7 +27,7 @@ export default function CartPage() {
       <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}>
         <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}>Giỏ hàng của bạn</h1>
 
-        <div style={{ width: "100%", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "20px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", boxSizing: "border-box" }}>
+        <div className="cart-panel" style={{ width: "100%", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "20px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", boxSizing: "border-box" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {items.map((i) => {
               const toppingText =
@@ -36,8 +36,8 @@ export default function CartPage() {
                   : "Không topping";
 
               return (
-                <div key={i.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div className="cart-item" key={i.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #f3f4f6" }}>
+                  <div className="cart-item__details" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <div style={{ width: 64, height: 64, minWidth: 64, borderRadius: "12px", background: "#fef3c7", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {i.imageUrl ? (
                         <img src={i.imageUrl} alt={i.name} style={{ width: 64, height: 64, objectFit: "cover" }} />
@@ -52,7 +52,7 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <div className="cart-item__controls" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <div style={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: "8px", overflow: "hidden" }}>
                       <button
                         onClick={() => setQty(i.key, Math.max(1, i.qty - 1))}

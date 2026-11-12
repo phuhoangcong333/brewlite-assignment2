@@ -71,10 +71,12 @@ export default function Header() {
       }}
     >
       <div
+        className="site-header__inner"
         style={{
           maxWidth: "1150px",
           margin: "0 auto",
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "14px 24px",
@@ -96,8 +98,10 @@ export default function Header() {
 
         {!hideNavigation && (
           <div
+            className="site-header__nav"
             style={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "center",
               gap: "12px",
               whiteSpace: "nowrap",

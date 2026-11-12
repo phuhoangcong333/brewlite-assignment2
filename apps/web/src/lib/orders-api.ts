@@ -1,9 +1,11 @@
 import type { CartItem } from "./cart";
 import { calcUnitPrice } from "./pricing";
 import type { Size } from "./types";
+import { API_BASE_URL, USE_MOCK_DATA } from "./api-client";
+import { setToken } from "./auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const USE_MOCK = false;
+const API_URL = API_BASE_URL;
+const USE_MOCK = USE_MOCK_DATA;
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function getToken(): string | null {
@@ -97,10 +99,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const MOCK_KEY = "brewlite_mock_orders";
 const readMock = (): Order[] => {
+  const savedOrders = localStorage.getItem(MOCK_KEY);
+  if (!savedOrders) return [];
   try {
-    return JSON.parse(localStorage.getItem(MOCK_KEY) ?? "[]");
+    const orders: unknown = JSON.parse(savedOrders);
+    if (!Array.isArray(orders)) {
+      throw new Error("Dữ liệu đơn hàng giả lập không hợp lệ");
+    }
+    return orders as Order[];
   } catch {
-    return [];
+    throw new ApiError(500, "Không thể đọc dữ liệu đơn hàng giả lập");
   }
 };
 const writeMock = (o: Order[]) =>
@@ -115,7 +123,9 @@ type AuthResponse = {
 export async function login(email: string, password: string) {
   if (USE_MOCK) {
     await delay(300);
-    return { access_token: "mock-token", user: { id: 1, email } } as AuthResponse;
+    const access_token = `mock-token:${encodeURIComponent(email)}`;
+    setToken(access_token);
+    return { access_token, user: { id: 1, email } } satisfies AuthResponse;
   }
   return request<AuthResponse>("/auth/login", {
     method: "POST",
@@ -193,11 +203,28 @@ export async function getMyOrders(): Promise<Order[]> {
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser> {
+  if (USE_MOCK) {
+    await delay(100);
+    const token = getToken();
+    if (!token?.startsWith("mock-token:")) {
+      throw new ApiError(401, "Vui lòng đăng nhập lại");
+    }
+    const email = decodeURIComponent(token.slice("mock-token:".length));
+    return {
+      id: 1,
+      email,
+      role: email.toLowerCase() === "staff@brewlite.local" ? "STAFF" : "CUSTOMER",
+    };
+  }
   const response = await request<{ user: AuthenticatedUser }>("/auth/me");
   return response.user;
 }
 
 export async function getStaffOrders(): Promise<Order[]> {
+  if (USE_MOCK) {
+    await delay(300);
+    return readMock();
+  }
   return request<Order[]>("/orders/staff");
 }
 
@@ -236,10 +263,9 @@ export async function updateOrderStatus(
     await delay(300);
     const orders = readMock();
     const order = orders.find((o) => o.id === orderId);
-    if (order) {
-      order.status = status;
-      writeMock(orders);
-    }
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+    order.status = status;
+    writeMock(orders);
     return;
   }
   await request<void>(`/orders/${orderId}/status`, {
@@ -253,10 +279,9 @@ export async function cancelOrder(orderId: number): Promise<void> {
     await delay(300);
     const orders = readMock();
     const order = orders.find((o) => o.id === orderId);
-    if (order) {
-      order.status = "CANCELLED";
-      writeMock(orders);
-    }
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+    order.status = "CANCELLED";
+    writeMock(orders);
     return;
   }
   await request<void>(`/orders/${orderId}`, {
