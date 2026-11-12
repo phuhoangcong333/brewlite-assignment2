@@ -6,7 +6,7 @@ skinparam roundcorner 6
 skinparam ParticipantPadding 20
 skinparam BoxPadding 15
 
-title SEQUENCE DIAGRAM: QUY TRÌNH CHECKOUT (ĐẶT ĐƠN & THANH TOÁN)\nTask 2.2 - TV5 chủ trì | TV4 (Transaction, Tồn kho) & TV7 (JWT) góp | TV7 duyệt
+title SEQUENCE DIAGRAM: QUY TRÌNH CHECKOUT (ĐẶT ĐƠN & THANH TOÁN)\nTask 2.2 
 
 actor "Customer\n(Khách hàng)" as C
 boundary "Next.js UI\n(Client / PWA)" as UI

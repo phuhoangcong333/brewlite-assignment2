@@ -22,7 +22,7 @@ const isSerializationFailure = (error: unknown): boolean =>
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async processPayment(
     dto: CreatePaymentDto,
@@ -85,6 +85,9 @@ export class PaymentsService {
             throw new NotFoundException(
               `Không tìm thấy đơn hàng #${dto.orderId}`,
             );
+          if (dto.amount !== undefined && dto.amount !== order.total) {
+            throw new BadRequestException('Số tiền thanh toán không khớp với tổng đơn hàng');
+          }
           // Only one active transition can win. Inventory was reserved at order creation,
           // so payment deliberately does not reserve/decrement stock again.
           // A failed order must pass through PENDING before a retry can settle it.
