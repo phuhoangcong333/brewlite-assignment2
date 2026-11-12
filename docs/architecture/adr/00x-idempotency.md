@@ -45,12 +45,14 @@ Chọn **phương án A: Client sinh `Idempotency-Key` dạng UUIDv4 và Backend
    - Bắt buộc kiểm tra header `Idempotency-Key`. Nếu thiếu, trả về `400 Bad Request`.
    - **Tra cứu giao dịch cũ:** Truy vấn bảng `Payment` theo `idempotencyKey`.
      - *Nếu key đã tồn tại:*
-       + Kiểm tra quyền sở hữu (`Payment.order.userId == currentUserId`). Nếu khác người dùng, trả `409 Conflict`.
-       + Nếu đúng người dùng, lập tức trả về kết quả giao dịch cũ (`HTTP 200 OK`) kèm body dữ liệu đã lưu; **tuyệt đối không gọi cổng mock và không tạo payment mới**.
+      + Kiểm tra quyền sở hữu (`Payment.order.userId == currentUserId`). Nếu khác người dùng, không tiết lộ bản ghi và trả `404 Not Found`; nếu key dùng cho đơn khác của cùng người dùng, trả `409 Conflict`.
+      + Nếu đúng request, replay kết quả đã lưu; thành công là `200`, còn payment thất bại phải giữ mã `422`; **tuyệt đối không gọi cổng mock và không tạo payment mới**.
      - *Nếu key chưa tồn tại:*
        + Tiến hành gọi cổng thanh toán mô phỏng (`MockPaymentGatewayService`).
        + Mở database transaction: Lưu bản ghi `Payment` mới (chứa `idempotencyKey`), cập nhật trạng thái `Order` (`PAID` hoặc `PAYMENT_FAILED`).
-       + Ràng buộc `UNIQUE(idempotencyKey)` ở tầng database ngăn chặn triệt để trường hợp hai request trùng key gửi đồng thời trong cùng microsecond.
+      + Ràng buộc `UNIQUE(idempotencyKey)` kết hợp transaction Serializable và xử lý P2002/P2034 bảo đảm không tạo hai Payment; request thua race phải replay kết quả đã commit hoặc nhận 409 khi xung đột với key khác.
+
+    3. **Định dạng key:** Hợp đồng yêu cầu UUIDv4. Code hiện tại mới kiểm tra key không rỗng và dài tối đa 200 ký tự; cần bổ sung validation UUIDv4. Frontend đang dùng `crypto.randomUUID()`, nên production phải chạy HTTPS (hoặc dùng thư viện UUID).
 
 ---
 

@@ -1,0 +1,78 @@
+@startuml architecture-diagram
+title Sơ đồ kiến trúc BrewLite (TV7)
+
+skinparam defaultFontName Arial
+skinparam titleFontColor #1F3864
+skinparam shadowing false
+skinparam ArrowColor #444444
+skinparam roundCorner 8
+skinparam nodesep 40
+skinparam ranksep 50
+
+actor "Khách\n(CUSTOMER)" as Customer
+actor "Nhân viên\n(STAFF)" as Staff
+
+node "Thiết bị người dùng: trình duyệt / PWA" as Browser #FAFAFA {
+  component "<b>Next.js UI (React, TypeScript) - TV2</b>\nMobile-first, PWA: Manifest + Service Worker\nGiỏ hàng localStorage (TV3)\nAuth context: JWT localStorage (TV7)\nPolling GET /orders/:id 5-10 giây (TV6)" as UI #F3F8FE ##4A6FA5
+}
+
+cloud "AWS (TV1)" as AWS {
+  node "EC2 Ubuntu 24.04: Docker Compose" as EC2 {
+    node "Container apps/web" as WebC {
+      component "<b>Next.js - TV1</b>\nPhục vụ trang và tài nguyên PWA" as Web #F3F8FE ##4A6FA5
+    }
+    node "Container apps/api: NestJS (modular monolith)" as ApiC #FFFEF5 {
+      component "<b>Tầng chung - TV7</b>\nJwtAuthGuard, RolesGuard (JWT Bearer)\nValidationPipe (class-validator)\nExceptionFilter: {statusCode, error, message, requestId}\nnestjs-pino: log JSON + requestId\nConfigModule: kiểm tra biến môi trường" as Cross #FFFCEB ##B58A1B
+      component "<b>auth - TV7</b>\nPOST /auth/register\nPOST /auth/login" as MAuth #FFFCEB ##B58A1B
+      component "<b>health - TV7</b>\nGET /health (kiểm tra DB)" as MHealth #FFFCEB ##B58A1B
+      component "<b>products - TV1, TV2</b>\nGET /products\nGET /products/:id" as MProd #F3F8FE ##4A6FA5
+      component "<b>promotions - TV3</b>\nPOST /promotions/validate\nBáo giá: giá tính ở server" as MPromo #F4FBF4 ##5BA55B
+      component "<b>orders: đặt đơn, tồn kho - TV4</b>\nPOST /orders\n$transaction, trừ kho có điều kiện" as MOrder #FEF8EF ##D98E2B
+      component "<b>orders: theo dõi, điểm thưởng - TV6</b>\nGET /orders, GET /orders/:id\nPATCH /orders/:id/status\nState machine, LoyaltyTransaction" as MTrack #FDF4F4 ##C25B5B
+      component "<b>payments - TV5</b>\nPOST /payments\nIdempotency-Key" as MPay #FAF5FD ##8E5BB5
+      component "<b>Mock Payment Gateway - TV5</b>\nDịch vụ thanh toán mô phỏng" as MMock #FAF5FD ##8E5BB5
+      component "<b>Prisma Client + migrations</b>" as Prisma #FAFAFA ##777777
+    }
+  }
+  database "Amazon RDS\nPostgreSQL" as RDS #E8F0FE
+}
+
+cloud "GitHub (TV1)" as GH #FAFAFA {
+  component "<b>Monorepo</b>\napps/web, apps/api, docs/" as Repo #F3F8FE ##4A6FA5
+  component "<b>GitHub Actions</b>\nCI: lint, typecheck, build, test\nCD: deploy, smoke test /health, rollback" as CI #F3F8FE ##4A6FA5
+}
+
+Customer --> UI : dùng
+Staff --> UI : dùng
+UI --> Web : tải trang, tài nguyên PWA
+UI --> Cross : HTTPS REST/JSON + Authorization: Bearer JWT
+Cross --> MAuth
+Cross --> MHealth
+Cross --> MProd
+Cross --> MPromo
+Cross --> MOrder
+Cross --> MTrack
+Cross --> MPay
+MPay --> MMock : processPayment
+MAuth --> Prisma
+MProd --> Prisma
+MPromo --> Prisma
+MOrder --> Prisma
+MTrack --> Prisma
+MPay --> Prisma
+MHealth --> Prisma
+Prisma --> RDS : Private SQL / TCP 5432 from EC2 SG only
+Repo --> CI : push, PR vào dev/main
+CI ..> WebC : triển khai
+CI ..> MHealth : smoke test
+
+legend right
+  |= Màu |= Người phụ trách |
+  |<#CFE0F7>    | TV1, TV2 |
+  |<#CDEBCD>    | TV3 |
+  |<#FBDDB0>    | TV4 |
+  |<#E3CFF0>    | TV5 |
+  |<#F5C9C9>    | TV6 |
+  |<#FFEC99>    | TV7 |
+endlegend
+@enduml

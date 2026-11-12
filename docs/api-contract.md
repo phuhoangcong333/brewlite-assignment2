@@ -51,6 +51,7 @@ Mọi lỗi trả về theo cùng một dạng (TV7 làm bộ lọc lỗi chung)
 | 403 | Đã đăng nhập nhưng không đủ quyền | Khách gọi `PATCH /orders/:id/status` |
 | 404 | Không tìm thấy | `GET /orders/:id` không tồn tại |
 | 409 | Xung đột trạng thái | Email đã tồn tại, hết hàng |
+| 422 | Nghiệp vụ không thể xử lý | Thanh toán mô phỏng thất bại; đơn chuyển `PAYMENT_FAILED` |
 | 503 | Dịch vụ không sẵn sàng | `/health` khi mất kết nối database |
 
 ## 3. Bảng tổng hợp endpoint
@@ -523,40 +524,40 @@ Tạo đơn hàng mới từ giỏ hàng hiện tại, kiểm tra tồn kho và 
 
 ### 4.8. `POST /payments` (TV5)
 
-Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc có `Idempotency-Key` để chống trừ tiền trùng khi gửi lại; cập nhật đơn sang `PAID` khi thành công.
+Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc có `Idempotency-Key` để chống trừ tiền trùng khi gửi lại; server đọc `Order.total` và không nhận số tiền do client tự khai báo.
 
 - **Header:**
   - `Authorization: Bearer *** (vai trò `CUSTOMER`)
-  - `Idempotency-Key: <UUID>` (chuỗi duy nhất toàn cục)
+  - `Idempotency-Key: <UUIDv4>` (chuỗi duy nhất toàn cục; code hiện tại mới kiểm tra không rỗng và tối đa 200 ký tự)
 
 - **Request:**
 
 ```json
 {
   "orderId": 1042,
-  "amount": 85000,
-  "method": "MOCK_WALLET"
+  "method": "WALLET",
+  "walletId": "WALLET-1234"
 }
 ```
 
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
 | `orderId` | số nguyên (Int) | Có | Đơn hàng tồn tại, đang ở trạng thái `PENDING` hoặc `PAYMENT_FAILED` |
-| `amount` | số nguyên (Int) | Có | Đơn vị VNĐ, phải khớp chính xác với `Order.total` |
-| `method` | chuỗi (String) | Có | Chỉ chấp nhận `"MOCK_WALLET"` (Ví) hoặc `"MOCK_CARD"` (Thẻ) |
+| `method` | chuỗi (String) | Có | Chỉ chấp nhận `"WALLET"` hoặc `"CARD"` |
+| `walletId` | chuỗi | Có khi `method = WALLET` | Mã ví mô phỏng |
+| `cardNumber` | chuỗi | Có khi `method = CARD` | Số thẻ mô phỏng; đuôi `0000` làm thanh toán thất bại |
 
-- **Response 200 / 201** (201: tạo mới thành công; 200: trả lại kết quả cũ khi trùng Idempotency-Key):
+- **Response 200 / 201** (201: tạo mới thành công; 200: replay payment thành công khi trùng Idempotency-Key; replay payment thất bại giữ mã 422):
 
 ```json
 {
-  "id": 1,
+  "paymentId": 1,
   "orderId": 1042,
-  "idempotencyKey": "b1f4c0de-1111-4a2b-9c3d-0123456789ab",
   "amount": 85000,
-  "method": "MOCK_WALLET",
-  "status": "PAID",
-  "transactionId": "TXN-987654321",
-  "createdAt": "2026-11-06T08:35:00Z"
+  "method": "WALLET",
+  "payment_status": "PAID",
+  "order_status": "PAID",
+  "replayed": false
 }
 ```
 
@@ -564,17 +565,20 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 
 | Mã | Khi nào |
 |---|---|
-| 400 | Thiếu header `Idempotency-Key`, thiếu trường hoặc `amount` không khớp với tổng tiền đơn hàng |
+| 400 | Thiếu header `Idempotency-Key`, key rỗng/quá dài, hoặc request payment không hợp lệ |
 | 401 | Chưa đăng nhập, token sai hoặc token hết hạn |
-| 403 | Không có quyền thanh toán đơn hàng này (đơn không thuộc về người dùng hiện tại) |
-| 404 | Không tìm thấy đơn hàng theo `orderId` |
-| 409 | Đơn hàng không ở trạng thái được phép thanh toán (đã hoàn thành hoặc đã hủy) hoặc xung đột Idempotency-Key |
+| 404 | Không tìm thấy đơn hàng theo `orderId`, hoặc key thuộc payment của người dùng khác |
+| 409 | Đơn hàng không ở trạng thái được phép thanh toán (đã hoàn thành hoặc đã hủy), hoặc key dùng cho order/method khác |
 | 422 | Thanh toán mô phỏng thất bại (thẻ test lỗi đuôi `0000`, ví không đủ tiền); đơn chuyển `PAYMENT_FAILED`, giữ nguyên tồn kho để thử lại |
 
 - **Quy ước:**
   - `Idempotency-Key` là duy nhất toàn cục trong bảng `Payment`.
+  - Cùng key và cùng request không tạo `Payment` mới; kết quả đã lưu được replay. Cùng key nhưng khác `orderId` hoặc `method` trả `409`.
+  - Cùng key sau payment thất bại tiếp tục trả `422`; lần retry thanh toán phải dùng key mới.
   - Thanh toán thành công: Cập nhật `Order.status` sang `PAID` trong transaction.
   - Thanh toán thất bại (422): Cập nhật `Order.status` sang `PAYMENT_FAILED`, giữ nguyên tồn kho và giỏ hàng, cho phép khách đổi phương thức để thanh toán lại.
+
+**Trạng thái đối chiếu code:** DTO, unique key, replay và các nhánh xung đột đã có trong `apps/api`. Tuy nhiên service hiện chưa ném `UnprocessableEntityException` cho payment thất bại và chưa validate UUIDv4, nên HTTP 422/UUIDv4 trong hợp đồng là tiêu chí cần hoàn thiện, không phải bằng chứng code đã đạt đủ.
 
 
 ### 4.9. `GET /orders` (TV6)

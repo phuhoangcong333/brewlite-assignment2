@@ -146,6 +146,17 @@ class Order <<TV4>> {
   + transitionStatus(newStatus : OrderStatus) : void
 }
 
+note right of Order
+  State machine:
+  PENDING -> PAID | PAYMENT_FAILED | CANCELLED
+  PAYMENT_FAILED -> PENDING | CANCELLED
+  PAID -> PREPARING
+  PREPARING -> READY
+  READY -> COMPLETED
+  PAID -> CANCELLED: FORBIDDEN
+  COMPLETED/CANCELLED: terminal
+end note
+
 class OrderItem <<TV4>> {
   - id : Int
   - orderId : Int
