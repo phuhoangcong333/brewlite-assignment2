@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
 import { Size } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -10,14 +10,13 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { CreateOrderItemInput } from '../order.service';
 
-export class CreateOrderItemDto {
-  @Type(() => Number)
+export class CreateOrderItemDto implements CreateOrderItemInput {
   @IsInt()
   @Min(1)
   productId!: number;
 
-  @Type(() => Number)
   @IsInt()
   @Min(1)
   qty!: number;
@@ -41,4 +40,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   promoCode?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  promotionId?: number;
 }

@@ -86,6 +86,8 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
       status: 'PENDING',
       total: 90_000,
       discount: 0,
+      discountAmount: 0,
+      promotionId: null,
     });
     await expect(
       prisma.product.findUniqueOrThrow({
@@ -177,13 +179,29 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     );
     orderIds.push(order.id);
 
-    expect(order).toMatchObject({ total: 28_000, discount: 7_000 });
+    expect(order).toMatchObject({
+      total: 28_000,
+      discount: 7_000,
+      discountAmount: 7_000,
+    });
     await expect(
       prisma.order.findUniqueOrThrow({
         where: { id: order.id },
-        select: { promoCode: true, discount: true, total: true },
+        select: {
+          promoCode: true,
+          promotionId: true,
+          discount: true,
+          discountAmount: true,
+          total: true,
+        },
       }),
-    ).resolves.toEqual({ promoCode: code, discount: 7_000, total: 28_000 });
+    ).resolves.toEqual({
+      promoCode: code,
+      promotionId: order.promotionId ?? null,
+      discount: 7_000,
+      discountAmount: 7_000,
+      total: 28_000,
+    });
     await expect(
       prisma.promotion.findUniqueOrThrow({ where: { code } }),
     ).resolves.toMatchObject({ usageLeft: 0 });

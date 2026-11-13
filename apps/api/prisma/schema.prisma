@@ -59,17 +59,19 @@ model User {
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  status    OrderStatus @default(PENDING)
-  total     Int
-  discount  Int         @default(0)
-  promoCode String?
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  promotion Promotion?  @relation(fields: [promoCode], references: [code], onDelete: Restrict)
-  items     OrderItem[]
-  payments  Payment[]
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  promotionId    Int?
+  discountAmount Int         @default(0)
+  status         OrderStatus @default(PENDING)
+  total          Int
+  discount       Int         @default(0)
+  promoCode      String?
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  promotion      Promotion?  @relation(fields: [promoCode], references: [code], onDelete: Restrict)
+  items          OrderItem[]
+  payments       Payment[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
