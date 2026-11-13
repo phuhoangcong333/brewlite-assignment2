@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/header";
+import PwaRegister from "@/components/pwa-register";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
@@ -17,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BrewLite",
   description: "Đặt cà phê không dùng tiền mặt",
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -31,6 +38,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
+          <PwaRegister />
           <Header />
           {children}
         </AuthProvider>

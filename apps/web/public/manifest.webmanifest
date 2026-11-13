@@ -1,0 +1,10 @@
+{
+  "name": "BrewLite",
+  "short_name": "BrewLite",
+  "description": "Đặt cà phê không dùng tiền mặt",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "vi"
+}
