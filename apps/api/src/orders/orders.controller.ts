@@ -15,36 +15,44 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { JwtGuard } from '../auth/jwt.guard';
-import { StaffGuard } from '../auth/staff.guard';
+import type { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { TransitionOrderDto } from './dto/transition-order.dto';
 import { OrderService } from './order.service';
 
 type AuthenticatedRequest = Request & {
   user: {
-    sub: number;
+    id: number;
+    sub?: number;
     email: string;
+    role: UserRole;
   };
 };
 
+const getUserId = (request: AuthenticatedRequest): number =>
+  request.user.id ?? request.user.sub!;
+
 @Controller('orders')
-@UseGuards(JwtGuard)
+@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly orderService: OrderService) {}
 
   @Get()
   getOrders(@Req() req: AuthenticatedRequest) {
-    return this.orderService.getOrdersForUser(req.user.sub);
+    return this.orderService.getOrdersForUser(getUserId(req));
   }
 
   @Get('me')
   getMyOrders(@Req() req: AuthenticatedRequest) {
-    return this.orderService.getOrdersForUser(req.user.sub);
+    return this.orderService.getOrdersForUser(getUserId(req));
   }
 
   @Get('staff')
-  @UseGuards(StaffGuard)
+  @UseGuards(RolesGuard)
+  @Roles('STAFF')
   getOrdersForStaff() {
     return this.orderService.getOrdersForStaff();
   }
@@ -60,12 +68,13 @@ export class OrdersController {
 
 
     return dto.promoCode === undefined
-      ? this.orderService.createOrder(req.user.sub, dto.items)
-      : this.orderService.createOrder(req.user.sub, dto.items, dto.promoCode);
+      ? this.orderService.createOrder(getUserId(req), dto.items)
+      : this.orderService.createOrder(getUserId(req), dto.items, dto.promoCode);
   }
 
   @Patch(':id/status')
-  @UseGuards(StaffGuard)
+  @UseGuards(RolesGuard)
+  @Roles('STAFF')
   @HttpCode(HttpStatus.NO_CONTENT)
   async transitionOrder(
     @Param('id', ParseIntPipe) id: number,
@@ -84,7 +93,7 @@ export class OrdersController {
     await this.orderService.transitionOrderForUser(
       id,
       'CANCELLED',
-      req.user.sub,
+      getUserId(req),
     );
   }
 }

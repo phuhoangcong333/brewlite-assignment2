@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { UserRole } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -34,7 +35,7 @@ export class AuthController {
   me(
     @Req()
     request: Request & {
-      user?: { id: number; email: string; role: 'CUSTOMER' | 'STAFF' };
+      user?: { id: number; email: string; role: UserRole };
     },
   ) {
     return {
