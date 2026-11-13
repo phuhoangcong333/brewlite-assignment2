@@ -304,6 +304,8 @@ export class OrderService {
           ...(userId === undefined ? {} : { userId }),
         },
         select: {
+          userId: true,
+          total: true,
           status: true,
           items: { select: { productId: true, qty: true } },
         },
@@ -339,6 +341,21 @@ export class OrderService {
 
       if (changed.count !== 1) {
         throw new OrderTransitionConflictException(orderId);
+      }
+
+      if (from === 'READY' && to === 'COMPLETED') {
+        const points = Math.floor(order.total / 10_000);
+        await transaction.loyaltyTransaction.create({
+          data: {
+            userId: order.userId,
+            orderId,
+            points,
+          },
+        });
+        await transaction.user.update({
+          where: { id: order.userId },
+          data: { loyaltyPoints: { increment: points } },
+        });
       }
 
       if (

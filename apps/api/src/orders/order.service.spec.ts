@@ -169,6 +169,71 @@ describeDb('OrderService with PostgreSQL', () => {
     ).resolves.toEqual({ stock: 49, version: 1 });
   });
 
+  it('records loyalty only when an order reaches COMPLETED', async () => {
+    const product = await prisma.product.create({
+      data: {
+        name: `loyalty-test-${Date.now()}-${Math.random()}`,
+        price: 25_000,
+        stock: 1,
+        version: 1,
+      },
+      select: { id: true },
+    });
+    productIds.push(product.id);
+
+    const user = await prisma.user.create({
+      data: {
+        email: `loyalty-${Date.now()}-${Math.random()}@example.test`,
+        passwordHash: 'test-password-hash',
+      },
+      select: { id: true },
+    });
+    userIds.push(user.id);
+
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        status: 'PAID',
+        total: 25_000,
+        items: {
+          create: {
+            productId: product.id,
+            size: 'S',
+            qty: 1,
+            lineTotal: 25_000,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    orderIds.push(order.id);
+
+    await service.transitionOrder(order.id, 'PREPARING');
+    await service.transitionOrder(order.id, 'READY');
+
+    await expect(
+      prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { loyaltyPoints: true },
+      }),
+    ).resolves.toEqual({ loyaltyPoints: 0 });
+
+    await service.transitionOrder(order.id, 'COMPLETED');
+
+    await expect(
+      prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { loyaltyPoints: true },
+      }),
+    ).resolves.toEqual({ loyaltyPoints: 2 });
+    await expect(
+      prisma.loyaltyTransaction.findUniqueOrThrow({
+        where: { orderId: order.id },
+        select: { userId: true, points: true },
+      }),
+    ).resolves.toEqual({ userId: user.id, points: 2 });
+  });
+
   it('does not allow staff transitions to change payment-managed statuses', async () => {
     const { orderId } = await createOrder('PENDING');
 

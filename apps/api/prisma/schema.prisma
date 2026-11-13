@@ -56,6 +56,7 @@ model User {
   loyaltyPoints Int      @default(0)
   createdAt     DateTime @default(now())
   orders        Order[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Order {
@@ -70,9 +71,22 @@ model Order {
   promotion Promotion?  @relation(fields: [promoCode], references: [code], onDelete: Restrict)
   items     OrderItem[]
   payments  Payment[]
+  loyaltyTransaction LoyaltyTransaction?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+}
+
+model LoyaltyTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  orderId   Int      @unique
+  points    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model OrderItem {

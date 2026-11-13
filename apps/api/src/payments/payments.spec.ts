@@ -276,7 +276,7 @@ describeDb('PaymentsService with PostgreSQL', () => {
         where: { id: userId },
         select: { loyaltyPoints: true },
       }),
-    ).resolves.toEqual({ loyaltyPoints: 4 });
+    ).resolves.toEqual({ loyaltyPoints: 0 });
   });
 
   it('Task 8: thẻ có số cuối 0000 -> PAYMENT_FAILED, vẫn ghi 1 payment FAILED', async () => {
@@ -333,7 +333,7 @@ describeDb('PaymentsService with PostgreSQL', () => {
         where: { id: userId },
         select: { loyaltyPoints: true },
       }),
-    ).resolves.toEqual({ loyaltyPoints: 2 });
+    ).resolves.toEqual({ loyaltyPoints: 0 });
   });
 
   it('Task 10 (idempotency): gửi 2 lần cùng Idempotency-Key -> chỉ có 1 payment, lần 2 trả kết quả cũ', async () => {
@@ -354,7 +354,7 @@ describeDb('PaymentsService with PostgreSQL', () => {
         where: { id: userId },
         select: { loyaltyPoints: true },
       }),
-    ).resolves.toEqual({ loyaltyPoints: 2 });
+    ).resolves.toEqual({ loyaltyPoints: 0 });
   });
 
   it('Task 10 (idempotency): thanh toán thất bại rồi gửi lại cùng key -> vẫn trả PAYMENT_FAILED, không tạo payment mới', async () => {
