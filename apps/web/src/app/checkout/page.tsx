@@ -8,6 +8,7 @@ import { getToken } from "@/lib/auth";
 import { cartSubtotal, lineTotalOf, useCart, useHydrated } from "@/lib/cart";
 import { formatVND, TOPPINGS } from "@/lib/pricing";
 import { ApiError, createOrder, createPayment, type PaymentInput } from "@/lib/orders-api";
+import { ProtectedRoute } from "@/lib/auth-context";
 
 type Method = "WALLET" | "QR" | "CARD";
 type Step = "idle" | "creating" | "paying" | "done";
@@ -166,6 +167,7 @@ export default function CheckoutPage() {
   };
 
   return (
+    <ProtectedRoute>
     <div style={{ maxWidth: "750px", margin: "0 auto", padding: "32px 16px", boxSizing: "border-box" }}>
       <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}>Thanh toán đơn hàng</h1>
 
@@ -352,5 +354,6 @@ export default function CheckoutPage() {
         </button>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
