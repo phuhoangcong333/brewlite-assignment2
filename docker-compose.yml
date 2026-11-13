@@ -26,9 +26,9 @@ services:
     env_file:
       - ./apps/api/.env
     environment:
-      # Nếu chạy local cùng container DB thì giữ "db:5432", còn nếu nối AWS RDS thì đổi link RDS vào đây
-      DATABASE_URL: "postgresql://brewlite:brewlite123@db:5432/brewlite?schema=public"
-      JWT_SECRET: brewlite-doi-chuoi-bi-mat-nay
+      # Ở local tự lấy link db:5432 bên phải; trên EC2 tự lấy DATABASE_URL từ file .env gốc
+      DATABASE_URL: ${DATABASE_URL:-postgresql://brewlite:brewlite123@db:5432/brewlite?schema=public}
+      JWT_SECRET: ${JWT_SECRET:-brewlite-doi-chuoi-bi-mat-nay}
       PORT: 3001
     ports:
       - "3001:3001"
@@ -40,7 +40,8 @@ services:
     build:
       context: ./apps/web
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3001
+        # Ở local tự lấy localhost:3001; trên EC2 tự lấy IP 47.129.180.144:3001 từ file .env gốc
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
         NEXT_PUBLIC_USE_MOCK: "false"
     container_name: brewlite-frontend
     restart: unless-stopped
