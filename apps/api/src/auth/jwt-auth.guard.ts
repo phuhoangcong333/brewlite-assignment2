@@ -7,12 +7,13 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import type { UserRole } from '@prisma/client';
 
 type AuthenticatedRequest = Request & {
   user?: {
     id: number;
     email: string;
-    role: 'CUSTOMER' | 'STAFF';
+    role: UserRole;
   };
 };
 
@@ -36,6 +37,9 @@ export class JwtAuthGuard implements CanActivate {
         sub: number;
         email: string;
       }>(token, { algorithms: ['HS256'] });
+      if (!Number.isInteger(payload.sub) || payload.sub <= 0) {
+        throw new UnauthorizedException('Token không hợp lệ');
+      }
       const user = await this.authService.validateUser(payload.sub);
 
       if (!user) {
