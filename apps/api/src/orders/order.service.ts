@@ -124,6 +124,18 @@ export class OrderService {
     });
   }
 
+  /** Customer can read only an order belonging to their authenticated account. */
+  async getOrderForUser(orderId: number, userId: number) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { items: { include: { product: true } } },
+    });
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found`);
+    }
+    return order;
+  }
+
   async getOrdersForStaff() {
     return this.prisma.order.findMany({
       where: { status: { in: ['PAID', 'PREPARING', 'READY'] } },

@@ -49,6 +49,18 @@ export class OrdersController {
     return this.orderService.getOrdersForStaff();
   }
 
+  /** API Contract 4.10 — ownership enforced by user id from JWT. */
+  @Get(':id')
+  getOrderById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    if (id < 1) {
+      throw new BadRequestException('Order id must be positive');
+    }
+    return this.orderService.getOrderForUser(id, req.user.sub);
+  }
+
   @Post()
   createOrder(
     @Req() req: AuthenticatedRequest,
@@ -71,8 +83,10 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: TransitionOrderDto,
   ) {
+    if (id < 1) {
+      throw new BadRequestException('Order id must be positive');
+    }
     await this.orderService.transitionOrderForStaff(id, dto.status);
-
   }
 
   @Delete(':id')
