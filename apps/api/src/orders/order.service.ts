@@ -110,6 +110,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly inventoryRepository: PrismaInventoryRepository,
   ) {}
+
   async getOrdersForUser(userId: number) {
     return this.prisma.order.findMany({
       where: { userId },
@@ -178,11 +179,14 @@ export class OrderService {
     userId: number,
     items: readonly CreateOrderItemInput[],
     promoCode?: string,
+    promotionId?: number | null,
   ): Promise<{
     id: number;
     status: OrderStatus;
     total: number;
     discount: number;
+    discountAmount?: number;
+    promotionId?: number | null;
   }> {
     validateCreateOrderInput(userId, items);
 
@@ -213,11 +217,17 @@ export class OrderService {
           const subtotal = calculateOrderTotal(orderItems);
           let discount = 0;
           let appliedPromoCode: string | undefined;
+          let appliedPromotionId: number | null = promotionId ?? null;
 
           if (promoCode) {
             const promotion = await transaction.promotion.findUnique({
               where: { code: promoCode.trim().toUpperCase() },
-              select: { code: true, percent: true, expiresAt: true, usageLeft: true },
+              select: {
+                code: true,
+                percent: true,
+                expiresAt: true,
+                usageLeft: true,
+              },
             });
             const now = new Date();
             if (
@@ -225,11 +235,17 @@ export class OrderService {
               promotion.usageLeft <= 0 ||
               promotion.expiresAt <= now
             ) {
-              throw new RangeError(`Promotion ${promoCode} is invalid or expired`);
+              throw new RangeError(
+                `Promotion ${promoCode} is invalid or expired`,
+              );
             }
 
             discount = Math.floor((subtotal * promotion.percent) / 100);
             appliedPromoCode = promotion.code;
+            if ('id' in promotion && typeof (promotion as any).id === 'number') {
+              appliedPromotionId = (promotion as any).id;
+            }
+
             const consumed = await transaction.promotion.updateMany({
               where: {
                 code: promotion.code,
@@ -250,10 +266,19 @@ export class OrderService {
               userId,
               total,
               discount,
+              discountAmount: discount,
               promoCode: appliedPromoCode,
+              promotionId: appliedPromotionId,
               items: { create: orderItems },
             },
-            select: { id: true, status: true, total: true, discount: true },
+            select: {
+              id: true,
+              status: true,
+              total: true,
+              discount: true,
+              discountAmount: true,
+              promotionId: true,
+            },
           });
 
           return order;
@@ -277,7 +302,9 @@ export class OrderService {
         status: true,
         total: true,
         discount: true,
+        discountAmount: true,
         promoCode: true,
+        promotionId: true,
         createdAt: true,
         items: {
           select: {
