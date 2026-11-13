@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/http-exception.filter';
 
 // Nạp .env bằng Node có sẵn (>= 20.12), không cần thêm thư viện dotenv.
 // Chạy trước NestFactory.create nên getJwtSecret() đọc được JWT_SECRET.
@@ -13,6 +14,7 @@ try {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Không có pipe này thì toàn bộ decorator class-validator trong DTO
   // (RegisterDto, LoginDto, CreatePaymentDto, CreateOrderDto) KHÔNG được chạy.

@@ -8,6 +8,7 @@ import { getProducts } from "@/lib/api";
 import { ApiError, getMyOrders, type Order, type OrderStatus } from "@/lib/orders-api";
 import { formatVND } from "@/lib/pricing";
 import type { Product } from "@/lib/types";
+import { ProtectedRoute } from "@/lib/auth-context";
 
 const STATUS_TEXT: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   PENDING: { label: "Chờ thanh toán", color: "#b45309", bg: "#fef3c7" },
@@ -64,6 +65,7 @@ export default function OrderHistoryPage() {
   }
 
   return (
+    <ProtectedRoute>
     <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "32px 24px", boxSizing: "border-box" }}>      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
       <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>Lịch sử đơn hàng</h1>
       <Link href="/" style={{ fontSize: "14px", fontWeight: 500, color: "#d97706", textDecoration: "none" }}>
@@ -181,5 +183,6 @@ export default function OrderHistoryPage() {
         })}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

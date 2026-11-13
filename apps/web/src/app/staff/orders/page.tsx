@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { getToken } from "@/lib/auth";
+import { ProtectedRoute } from "@/lib/auth-context";
 import { formatVND } from "@/lib/pricing";
 import {
   ApiError,
@@ -149,15 +150,18 @@ export default function StaffOrdersPage() {
 
   if (accessDenied) {
     return (
+      <ProtectedRoute role="STAFF">
       <main style={{ maxWidth: "480px", margin: "80px auto", padding: "24px", textAlign: "center" }}>
         <h1 style={{ margin: "0 0 10px", fontSize: "24px" }}>Không tìm thấy trang</h1>
         <p style={{ color: "#6b7280" }}>Trang này không tồn tại hoặc bạn không có quyền truy cập.</p>
         <Link href="/" style={{ color: "#c2410c", textDecoration: "none" }}>Về trang chủ</Link>
       </main>
+      </ProtectedRoute>
     );
   }
 
   return (
+    <ProtectedRoute role="STAFF">
     <main
       style={{
         width: "100%",
@@ -372,5 +376,6 @@ export default function StaffOrdersPage() {
         </Link>
       </div>
     </main>
+    </ProtectedRoute>
   );
 }

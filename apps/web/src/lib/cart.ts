@@ -1,11 +1,16 @@
 "use client";
- 
-import { useEffect, useState } from "react";
+
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { calcUnitPrice } from "./pricing";
 import type { Size } from "./types";
- 
+
+export const MAX_QTY_PER_LINE = 10;
+export const MAX_LINES = 20;
+
+const SIZES: readonly Size[] = ["S", "M", "L"];
+
 export type CartItem = {
   key: string;
   productId: number;
@@ -16,52 +21,157 @@ export type CartItem = {
   toppings: string[];
   qty: number;
 };
- 
+
 export type NewCartItem = Omit<CartItem, "key">;
- 
+
+export type CartResult = { ok: true } | { ok: false; error: string };
+
+const makeKey = (i: NewCartItem) =>
+  `${i.productId}|${i.size}|${[...i.toppings].sort().join(",")}`;
+
+/* ---------- Hàm thuần (dễ test, không phụ thuộc store) ---------- */
+
+export function addItem(
+  items: CartItem[],
+  item: NewCartItem
+): { items: CartItem[]; error: string | null } {
+  if (!Number.isInteger(item.qty) || item.qty < 1) {
+    return { items, error: "Số lượng phải từ 1 trở lên." };
+  }
+  const key = makeKey(item);
+  const existing = items.find((i) => i.key === key);
+  if (existing) {
+    const qty = existing.qty + item.qty;
+    if (qty > MAX_QTY_PER_LINE) {
+      return { items, error: `Mỗi món tối đa ${MAX_QTY_PER_LINE} ly.` };
+    }
+    return {
+      items: items.map((i) => (i.key === key ? { ...i, qty } : i)),
+      error: null,
+    };
+  }
+  if (item.qty > MAX_QTY_PER_LINE) {
+    return { items, error: `Mỗi món tối đa ${MAX_QTY_PER_LINE} ly.` };
+  }
+  if (items.length >= MAX_LINES) {
+    return { items, error: `Giỏ hàng tối đa ${MAX_LINES} món khác nhau.` };
+  }
+  return { items: [...items, { ...item, key }], error: null };
+}
+
+export function setItemQty(items: CartItem[], key: string, qty: number): CartItem[] {
+  if (!Number.isFinite(qty)) return items;
+  if (qty <= 0) return items.filter((i) => i.key !== key);
+  const next = Math.min(Math.floor(qty), MAX_QTY_PER_LINE);
+  return items.map((i) => (i.key === key ? { ...i, qty: next } : i));
+}
+
+export function removeItem(items: CartItem[], key: string): CartItem[] {
+  return items.filter((i) => i.key !== key);
+}
+
+function isNewCartItem(r: unknown): r is NewCartItem {
+  if (typeof r !== "object" || r === null) return false;
+  const o = r as Record<string, unknown>;
+  return (
+    Number.isInteger(o.productId) &&
+    (o.productId as number) > 0 &&
+    typeof o.name === "string" &&
+    (o.imageUrl === null || typeof o.imageUrl === "string") &&
+    typeof o.basePrice === "number" &&
+    Number.isFinite(o.basePrice) &&
+    o.basePrice >= 0 &&
+    SIZES.includes(o.size as Size) &&
+    Array.isArray(o.toppings) &&
+    o.toppings.every((t) => typeof t === "string") &&
+    Number.isInteger(o.qty) &&
+    (o.qty as number) >= 1
+  );
+}
+
+/** Làm sạch dữ liệu đọc từ localStorage: bỏ dòng hỏng, gộp trùng, ép số lượng về giới hạn. */
+export function sanitizeItems(raw: unknown): CartItem[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: CartItem[] = [];
+  for (const r of raw) {
+    if (out.length >= MAX_LINES) break;
+    if (!isNewCartItem(r)) continue;
+    const key = makeKey(r);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      key,
+      productId: r.productId,
+      name: r.name,
+      imageUrl: r.imageUrl,
+      basePrice: r.basePrice,
+      size: r.size,
+      toppings: [...r.toppings],
+      qty: Math.min(r.qty, MAX_QTY_PER_LINE),
+    });
+  }
+  return out;
+}
+
+/** Cùng quy tắc chuẩn hóa với server: viết hoa, bỏ khoảng trắng. */
+export function sanitizePromotionCode(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const code = raw.replace(/\s+/g, "").toUpperCase().slice(0, 50);
+  return code || null;
+}
+
+/* ---------- Store ---------- */
+
 type CartState = {
   items: CartItem[];
-  add: (item: NewCartItem) => void;
+  promotionCode: string | null;
+  /** Lý do mã bị gỡ (không lưu vào localStorage). */
+  promoNotice: string | null;
+  add: (item: NewCartItem) => CartResult;
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
   clear: () => void;
+  setPromotionCode: (code: string | null) => void;
+  rejectPromotion: (message: string) => void;
 };
- 
-const makeKey = (i: NewCartItem) =>
-  `${i.productId}|${i.size}|${[...i.toppings].sort().join(",")}`;
- 
+
 export const useCart = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
-      add: (item) =>
-        set((s) => {
-          const key = makeKey(item);
-          const existing = s.items.find((i) => i.key === key);
-          if (existing) {
-            return {
-              items: s.items.map((i) =>
-                i.key === key ? { ...i, qty: i.qty + item.qty } : i
-              ),
-            };
-          }
-          return { items: [...s.items, { ...item, key }] };
-        }),
-      setQty: (key, qty) =>
-        set((s) => ({
-          items:
-            qty <= 0
-              ? s.items.filter((i) => i.key !== key)
-              : s.items.map((i) => (i.key === key ? { ...i, qty } : i)),
-        })),
-      remove: (key) =>
-        set((s) => ({ items: s.items.filter((i) => i.key !== key) })),
-      clear: () => set({ items: [] }),
+      promotionCode: null,
+      promoNotice: null,
+      add: (item) => {
+        const { items, error } = addItem(get().items, item);
+        if (error) return { ok: false, error };
+        set({ items });
+        return { ok: true };
+      },
+      setQty: (key, qty) => set((s) => ({ items: setItemQty(s.items, key, qty) })),
+      remove: (key) => set((s) => ({ items: removeItem(s.items, key) })),
+      clear: () => set({ items: [], promotionCode: null, promoNotice: null }),
+      setPromotionCode: (code) =>
+        set({ promotionCode: sanitizePromotionCode(code), promoNotice: null }),
+      rejectPromotion: (message) => set({ promotionCode: null, promoNotice: message }),
     }),
-    { name: "brewlite-cart" }
+    {
+      name: "brewlite-cart",
+      version: 1,
+      partialize: (s) => ({ items: s.items, promotionCode: s.promotionCode }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as { items?: unknown; promotionCode?: unknown };
+        return {
+          ...current,
+          items: sanitizeItems(p.items),
+          promotionCode: sanitizePromotionCode(p.promotionCode),
+        };
+      },
+    }
   )
 );
- 
+
+/* Giá ước tính phía client, chỉ để gửi `clientUnitPrice`. Giá hiển thị lấy từ server. */
 export const unitPriceOf = (i: CartItem) =>
   calcUnitPrice(i.basePrice, i.size, i.toppings);
 export const lineTotalOf = (i: CartItem) => unitPriceOf(i) * i.qty;
@@ -69,10 +179,14 @@ export const cartSubtotal = (items: CartItem[]) =>
   items.reduce((sum, i) => sum + lineTotalOf(i), 0);
 export const cartCount = (items: CartItem[]) =>
   items.reduce((sum, i) => sum + i.qty, 0);
- 
+
+const subscribeNothing = () => () => {};
+
+/** true sau khi trang đã chạy trên trình duyệt (tránh lệch dữ liệu giữa server và client). */
 export function useHydrated() {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  return hydrated;
+  return useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false
+  );
 }
- 

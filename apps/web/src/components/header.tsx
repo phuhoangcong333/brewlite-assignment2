@@ -3,57 +3,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { cartCount, useCart, useHydrated } from "@/lib/cart";
-import { getCurrentUser, getToken } from "@/lib/orders-api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const hydrated = useHydrated();
   const count = useCart((s) => cartCount(s.items));
-  const [isStaff, setIsStaff] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const refreshRole = () => {
-      if (!getToken()) {
-        setIsStaff(false);
-        setIsAuthenticated(false);
-        return;
-      }
-
-      void getCurrentUser()
-        .then((user) => {
-          if (active) {
-            setIsStaff(user.role === "STAFF");
-            setIsAuthenticated(true);
-          }
-        })
-        .catch(() => {
-          if (active) {
-            setIsStaff(false);
-            setIsAuthenticated(false);
-          }
-        });
-    };
-
-    refreshRole();
-    window.addEventListener("auth-changed", refreshRole);
-    window.addEventListener("storage", refreshRole);
-    return () => {
-      active = false;
-      window.removeEventListener("auth-changed", refreshRole);
-      window.removeEventListener("storage", refreshRole);
-    };
-  }, []);
+  const { user, logout } = useAuth();
+  const isStaff = user?.role === "STAFF";
+  const isAuthenticated = user !== null;
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    window.dispatchEvent(new Event("auth-changed"));
-    setIsAuthenticated(false);
-    setIsStaff(false);
+    logout();
     router.replace("/login");
   };
 
