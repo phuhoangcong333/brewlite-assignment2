@@ -114,16 +114,6 @@ export class PaymentsService {
               'Đơn hàng vừa được xử lý; hãy tải lại trạng thái',
             );
 
-          if (success) {
-            const earnedPoints = Math.floor(order.total / 10_000);
-            if (earnedPoints > 0) {
-              await tx.user.update({
-                where: { id: order.userId },
-                data: { loyaltyPoints: { increment: earnedPoints } },
-              });
-            }
-          }
-
           const payment = await tx.payment.create({
             data: {
               orderId: order.id,
