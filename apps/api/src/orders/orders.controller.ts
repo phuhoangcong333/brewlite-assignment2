@@ -66,7 +66,7 @@ export class OrdersController {
     if (id < 1) {
       throw new BadRequestException('Order id must be positive');
     }
-    return this.orderService.getOrderForUser(id, req.user.sub);
+    return this.orderService.getOrderForUser(id, getUserId(req));
   }
 
   @Post()
