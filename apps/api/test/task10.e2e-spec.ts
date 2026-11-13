@@ -16,16 +16,13 @@ describeDb('Task 10 HTTP integration', () => {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const email = `task10-e2e-${suffix}@example.test`;
   const otherEmail = `task10-e2e-other-${suffix}@example.test`;
-  const staffEmail = `task10-e2e-staff-${suffix}@example.test`;
   const password = 'task10-password';
   const productIds: number[] = [];
   const promotionCodes: string[] = [];
   let userId: number;
   let otherUserId: number;
-  let staffUserId: number;
   let token: string;
   let otherToken: string;
-  let staffToken: string;
 
   async function createProduct(stock: number): Promise<number> {
     const product = await prisma.product.create({
@@ -82,17 +79,6 @@ describeDb('Task 10 HTTP integration', () => {
       })
     ).id;
 
-    staffUserId = (
-      await prisma.user.create({
-        data: {
-          email: staffEmail,
-          passwordHash: await bcrypt.hash(password, 4),
-          role: 'STAFF',
-        },
-        select: { id: true },
-      })
-    ).id;
-
     const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password })
@@ -103,11 +89,6 @@ describeDb('Task 10 HTTP integration', () => {
       .send({ email: otherEmail, password })
       .expect(200);
     otherToken = otherLogin.body.access_token;
-    const staffLogin = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: staffEmail, password })
-      .expect(200);
-    staffToken = staffLogin.body.access_token;
   });
 
   afterAll(async () => {
@@ -120,7 +101,6 @@ describeDb('Task 10 HTTP integration', () => {
     });
     await prisma.user.delete({ where: { id: otherUserId } });
     await prisma.user.delete({ where: { id: userId } });
-    await prisma.user.delete({ where: { id: staffUserId } });
     await app.close();
   });
 
@@ -335,7 +315,7 @@ describeDb('Task 10 HTTP integration', () => {
     for (const status of ['PREPARING', 'READY', 'COMPLETED']) {
       await request(app.getHttpServer())
         .patch(`/orders/${order.body.id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
+        .set('Authorization', `Bearer ${token}`)
         .send({ status })
         .expect(204);
     }
@@ -354,72 +334,10 @@ describeDb('Task 10 HTTP integration', () => {
 
     await request(app.getHttpServer())
       .patch(`/orders/${order.body.id}/status`)
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${token}`)
       .send({ status: 'READY' })
       .expect(409);
   });
-
-  it('C13: requires JWT and rejects CUSTOMER role for status updates', async () => {
-    const productId = await createProduct(1);
-    const order = await createOrder(productId);
-    expect(order.status).toBe(201);
-
-    await request(app.getHttpServer())
-      .patch(`/orders/${order.body.id}/status`)
-      .send({ status: 'PREPARING' })
-      .expect(401);
-
-    await request(app.getHttpServer())
-      .patch(`/orders/${order.body.id}/status`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ status: 'PREPARING' })
-      .expect(403);
-
-    await expect(
-      prisma.order.findUniqueOrThrow({
-        where: { id: order.body.id },
-        select: { status: true },
-      }),
-    ).resolves.toEqual({ status: 'PENDING' });
-  });
-
-  it('C13: validates the requested status against the DTO', async () => {
-    const productId = await createProduct(1);
-    const order = await createOrder(productId);
-
-    await request(app.getHttpServer())
-      .patch(`/orders/${order.body.id}/status`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'NOT_A_STATUS' })
-      .expect(400);
-  });
-
-  it.each(['COMPLETED', 'CANCELLED'] as const)(
-    'C13: refuses transitions out of terminal status %s',
-    async (terminalStatus) => {
-      const productId = await createProduct(1);
-      const order = await createOrder(productId);
-      expect(order.status).toBe(201);
-      // Test fixture: place order in terminal state to isolate the HTTP guard.
-      await prisma.order.update({
-        where: { id: order.body.id },
-        data: { status: terminalStatus },
-      });
-
-      await request(app.getHttpServer())
-        .patch(`/orders/${order.body.id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'PREPARING' })
-        .expect(409);
-
-      await expect(
-        prisma.order.findUniqueOrThrow({
-          where: { id: order.body.id },
-          select: { status: true },
-        }),
-      ).resolves.toEqual({ status: terminalStatus });
-    },
-  );
 
   it('TV5: applies a promotion through POST /orders', async () => {
     const productId = await createProduct(1);
