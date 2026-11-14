@@ -32,7 +32,7 @@ describe("inventory API", () => {
   });
 
   it("updates a product recipe through PUT with the items payload", () => {
-    const items = [{ ingredientId: 7, amountRequired: 20 }];
+    const items = [{ size: "M" as const, ingredientId: 7, amountRequired: 20 }];
     void updateProductRecipe(4, items);
 
     expect(apiRequest).toHaveBeenCalledWith("/ingredients/recipes/4", {

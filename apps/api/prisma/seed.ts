@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Size } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -138,26 +138,30 @@ async function seed(): Promise<void> {
 
     for (const product of allProducts) {
       const recipeList = productRecipes[product.name] ?? [];
-      for (const item of recipeList) {
-        const ingredientId = ingredientMap.get(item.ingredientName);
-        if (!ingredientId) continue;
+      for (const size of Object.values(Size)) {
+        for (const item of recipeList) {
+          const ingredientId = ingredientMap.get(item.ingredientName);
+          if (!ingredientId) continue;
 
-        await transaction.recipeItem.upsert({
-          where: {
-            productId_ingredientId: {
+          await transaction.recipeItem.upsert({
+            where: {
+              productId_ingredientId_size: {
+                productId: product.id,
+                ingredientId,
+                size,
+              },
+            },
+            create: {
               productId: product.id,
               ingredientId,
+              size,
+              amountRequired: item.amountRequired,
             },
-          },
-          create: {
-            productId: product.id,
-            ingredientId,
-            amountRequired: item.amountRequired,
-          },
-          update: {
-            amountRequired: item.amountRequired,
-          },
-        });
+            update: {
+              amountRequired: item.amountRequired,
+            },
+          });
+        }
       }
     }
 

@@ -44,9 +44,7 @@ export default function MenuPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-4">
-      <h1 className="mb-4 text-2xl font-bold">
-        BrewLite - Menu
-      </h1>
+      <h1 className="mb-4 text-2xl font-bold">BrewLite - Menu</h1>
 
       {loading && <p>Đang tải menu...</p>}
 
@@ -54,10 +52,7 @@ export default function MenuPage() {
         <div className="rounded border border-red-300 bg-red-50 p-4 text-red-700">
           <p>{error}</p>
 
-          <button
-            onClick={load}
-            className="mt-2 underline"
-          >
+          <button onClick={load} className="mt-2 underline">
             Thử lại
           </button>
         </div>
@@ -68,46 +63,54 @@ export default function MenuPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {products.map((p) => (
-          <div
-            key={p.id}
-            className="flex flex-col justify-between rounded-lg border p-3 transition hover:shadow-md"
-          >
-            <Link href={`/products/${p.id}`}>
-              <div className="mb-2 flex h-28 items-center justify-center rounded bg-amber-100 text-4xl">
-                {p.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.imageUrl}
-                    alt={p.name}
-                    className="h-full w-full rounded object-cover"
-                  />
-                ) : (
-                  "☕"
-                )}
-              </div>
-
-              <p className="font-medium">{p.name}</p>
-
-              <p className="text-amber-700">
-                {formatVND(p.price)}
-              </p>
-            </Link>
-
-            <p
-              className={`mt-3 rounded-md py-1.5 text-center text-xs font-semibold ${
-                p.availableQuantity > 0
-                  ? "bg-amber-50 text-amber-800"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-              aria-live="polite"
+        {products.map((p) => {
+          const availableSizes = (["S", "M", "L"] as const).filter(
+            (size) => p.availableQuantityBySize[size] > 0,
+          );
+          return (
+            <div
+              key={p.id}
+              className="flex flex-col justify-between rounded-lg border p-3 transition hover:shadow-md"
             >
-              {p.availableQuantity > 0
-                ? `Có thể pha: ${p.availableQuantity} ly`
-                : "Hết hàng"}
-            </p>
-          </div>
-        ))}
+              <Link href={`/products/${p.id}`}>
+                <div className="mb-2 flex h-28 items-center justify-center rounded bg-amber-100 text-4xl">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="h-full w-full rounded object-cover"
+                    />
+                  ) : (
+                    "☕"
+                  )}
+                </div>
+
+                <p className="font-medium">{p.name}</p>
+
+                <p className="text-amber-700">{formatVND(p.price)}</p>
+              </Link>
+
+              <p
+                className={`mt-3 rounded-md py-1.5 text-center text-xs font-semibold ${
+                  availableSizes.length > 0
+                    ? "bg-amber-50 text-amber-800"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+                aria-live="polite"
+              >
+                {availableSizes.length > 0
+                  ? availableSizes
+                      .map(
+                        (size) =>
+                          `${size}: ${p.availableQuantityBySize[size]} ly`,
+                      )
+                      .join(" · ")
+                  : "Hết hàng"}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </main>
   );

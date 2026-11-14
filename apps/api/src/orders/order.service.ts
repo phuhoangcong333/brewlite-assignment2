@@ -207,6 +207,7 @@ export class OrderService {
               recipeItems: {
                 select: {
                   ingredientId: true,
+                  size: true,
                   amountRequired: true,
                   ingredient: {
                     select: {
@@ -228,7 +229,9 @@ export class OrderService {
 
           if (hasRecipeItems) {
             if (products.length !== productIds.length) {
-              throw new BadRequestException('Không tìm thấy sản phẩm trong hệ thống');
+              throw new BadRequestException(
+                'Không tìm thấy sản phẩm trong hệ thống',
+              );
             }
 
             const productMap = new Map(products.map((p) => [p.id, p]));
@@ -257,7 +260,16 @@ export class OrderService {
                 );
               }
 
-              for (const recipe of product.recipeItems) {
+              const sizeRecipes = product.recipeItems.filter(
+                (recipe) => recipe.size === item.size,
+              );
+              if (sizeRecipes.length === 0) {
+                throw new BadRequestException(
+                  `Món "${product.name}" chưa có công thức cho size ${item.size}`,
+                );
+              }
+
+              for (const recipe of sizeRecipes) {
                 const needed = recipe.amountRequired * item.qty;
                 const existing = requiredIngredients.get(recipe.ingredientId);
                 if (existing) {
@@ -303,10 +315,7 @@ export class OrderService {
             }
           } else {
             // Giữ nguyên luồng chuẩn khi sản phẩm không gắn RecipeItem (tương thích bộ test hiện có)
-            const updates = planReserve(
-              items,
-              toInventorySnapshots(products),
-            );
+            const updates = planReserve(items, toInventorySnapshots(products));
 
             const applied =
               await this.inventoryRepository.applyUpdatesInTransaction(
@@ -423,7 +432,7 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
-          items: { select: { productId: true, qty: true } },
+          items: { select: { productId: true, size: true, qty: true } },
         },
       });
 
@@ -454,6 +463,7 @@ export class OrderService {
             recipeItems: {
               select: {
                 ingredientId: true,
+                size: true,
                 amountRequired: true,
                 ingredient: {
                   select: { id: true, version: true },
@@ -472,7 +482,10 @@ export class OrderService {
             const productMap = new Map(products.map((p) => [p.id, p]));
             for (const item of order.items) {
               const product = productMap.get(item.productId);
-              for (const recipe of product?.recipeItems ?? []) {
+              const sizeRecipes = (product?.recipeItems ?? []).filter(
+                (recipe) => recipe.size === item.size,
+              );
+              for (const recipe of sizeRecipes) {
                 const restoreAmount = recipe.amountRequired * item.qty;
                 const current = ingredientReleases.get(recipe.ingredientId);
                 if (current) {

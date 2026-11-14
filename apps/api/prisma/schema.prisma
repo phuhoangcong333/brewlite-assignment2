@@ -139,9 +139,10 @@ model RecipeItem {
   id             Int        @id @default(autoincrement())
   productId      Int
   ingredientId   Int
+  size           Size       @default(M)
   amountRequired Int
   product        Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 
-  @@unique([productId, ingredientId])
+  @@unique([productId, ingredientId, size])
 }

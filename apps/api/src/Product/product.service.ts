@@ -1,23 +1,39 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-export function computeAvailableQuantity(
+export type AvailableQuantityBySize = Record<Size, number>;
+
+export function computeAvailableQuantities(
   recipeItems: readonly {
+    size: Size;
     amountRequired: number;
     ingredient: { stockQuantity: number };
   }[],
   fallbackStock: number,
-): number {
+): AvailableQuantityBySize {
   if (!recipeItems || recipeItems.length === 0) {
-    return fallbackStock;
+    return { S: fallbackStock, M: fallbackStock, L: fallbackStock };
   }
 
-  const quantities = recipeItems.map((item) => {
-    if (item.amountRequired <= 0) return 0;
-    return Math.floor(item.ingredient.stockQuantity / item.amountRequired);
-  });
+  const quantities: AvailableQuantityBySize = { S: 0, M: 0, L: 0 };
+  for (const size of Object.values(Size)) {
+    const sizeRecipes = recipeItems.filter((item) => item.size === size);
+    if (sizeRecipes.length === 0) continue;
 
-  return Math.max(0, Math.min(...quantities));
+    quantities[size] = Math.max(
+      0,
+      Math.min(
+        ...sizeRecipes.map((item) =>
+          item.amountRequired <= 0
+            ? 0
+            : Math.floor(item.ingredient.stockQuantity / item.amountRequired),
+        ),
+      ),
+    );
+  }
+
+  return quantities;
 }
 
 @Injectable()
@@ -37,14 +53,18 @@ export class ProductService {
     });
 
     return products.map((product) => {
-      const availableQuantity = computeAvailableQuantity(
+      const availableQuantityBySize = computeAvailableQuantities(
         product.recipeItems,
         product.stock,
+      );
+      const availableQuantity = Math.min(
+        ...Object.values(availableQuantityBySize),
       );
 
       return {
         ...product,
         availableQuantity,
+        availableQuantityBySize,
         stock: availableQuantity,
       };
     });
@@ -66,14 +86,18 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm có id ${id}`);
     }
 
-    const availableQuantity = computeAvailableQuantity(
+    const availableQuantityBySize = computeAvailableQuantities(
       product.recipeItems,
       product.stock,
+    );
+    const availableQuantity = Math.min(
+      ...Object.values(availableQuantityBySize),
     );
 
     return {
       ...product,
       availableQuantity,
+      availableQuantityBySize,
       stock: availableQuantity,
     };
   }
