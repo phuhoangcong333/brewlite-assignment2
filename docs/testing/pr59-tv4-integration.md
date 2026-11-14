@@ -100,3 +100,11 @@ API/payload và các quy ước chi tiết: `docs/ingredient-inventory-api.md`. 
 | Bàn giao | docs/ingredient-inventory-api.md; docs/testing/pr59-tv4-integration.md |
 
 AppModule nằm trong 5 file conflict ban đầu nhưng sau resolve giữ nguyên bản dev TV4, nên không còn xuất hiện trong diff cuối. Frontend TV4 không bị sửa bởi PR #59; thay đổi giao diện theo dõi và Playwright thuộc PR #61.
+# Bổ sung tích hợp dev ngày 15/11/2026
+
+- Giữ `Product.category`, lọc danh mục và menu mới của Issue #52.
+- Giữ công thức và tồn khả dụng riêng cho S/M/L từ TV4; đặt đơn chỉ trừ công thức đúng size, snapshot lưu đúng lượng đã dùng.
+- API công thức chuẩn yêu cầu đủ S/M/L, cho phép cùng nguyên liệu ở các size khác nhau. Alias cũ không truyền size được mở rộng cả ba size để tương thích.
+- Sửa migration size: chỉ sao chép từ M gốc, tránh nhân đôi L khi database đã có công thức. Regression test chạy chính SQL migration trong schema PostgreSQL riêng và kiểm tra giữ nguyên định lượng.
+- Database test cuối riêng: `brewlite_final_acceptance_tests`, đủ 7 migrations. Không reset database ứng dụng.
+

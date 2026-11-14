@@ -1,25 +1,45 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecipesService } from '../inventory/recipes.service';
 import { UpdateRecipeDto } from '../inventory/dto/update-recipe.dto';
 
-export function computeAvailableQuantity(
+export type AvailableQuantityBySize = Record<Size, number>;
+
+export function computeAvailableQuantities(
   recipeItems: readonly {
+    size: Size;
     amountRequired: number;
     ingredient: { stockQuantity: number };
   }[],
   fallbackStock: number,
-): number {
+): AvailableQuantityBySize {
   if (!recipeItems || recipeItems.length === 0) {
-    return fallbackStock;
+    return { S: fallbackStock, M: fallbackStock, L: fallbackStock };
   }
 
-  const quantities = recipeItems.map((item) => {
-    if (item.amountRequired <= 0) return 0;
-    return Math.floor(item.ingredient.stockQuantity / item.amountRequired);
-  });
+  const quantities: AvailableQuantityBySize = { S: 0, M: 0, L: 0 };
+  for (const size of Object.values(Size)) {
+    const sizeRecipes = recipeItems.filter((item) => item.size === size);
+    if (sizeRecipes.length === 0) continue;
 
-  return Math.max(0, Math.min(...quantities));
+    quantities[size] = Math.max(
+      0,
+      Math.min(
+        ...sizeRecipes.map((item) =>
+          item.amountRequired <= 0
+            ? 0
+            : Math.floor(item.ingredient.stockQuantity / item.amountRequired),
+        ),
+      ),
+    );
+  }
+
+  return quantities;
 }
 
 @Injectable()
@@ -34,19 +54,34 @@ export class ProductService {
   }
 
   async updateRecipe(id: number, dto: UpdateRecipeDto) {
+    const hasSizes = dto.ingredients.some((entry) => entry.size !== undefined);
+    if (hasSizes && dto.ingredients.some((entry) => entry.size === undefined)) {
+      throw new BadRequestException(
+        'Specify size for every ingredient or omit size for all',
+      );
+    }
     return (
       await this.recipes.replace(
         id,
-        dto.ingredients.map((entry) => ({
-          ingredientId: entry.ingredientId,
-          amountRequired: entry.quantity,
-        })),
+        dto.ingredients.flatMap((entry) =>
+          (hasSizes ? [entry.size!] : Object.values(Size)).map((size) => ({
+            size,
+            ingredientId: entry.ingredientId,
+            amountRequired: entry.quantity,
+          })),
+        ),
       )
     ).recipeItems;
   }
 
-  async getAllProducts() {
+  async getAllProducts(category?: string) {
+    const normalizedCategory = category?.trim().toUpperCase();
+
     const products = await this.prisma.product.findMany({
+      where:
+        normalizedCategory && normalizedCategory !== 'ALL'
+          ? { category: normalizedCategory }
+          : undefined,
       orderBy: { id: 'asc' },
       include: {
         recipeItems: {
@@ -58,14 +93,18 @@ export class ProductService {
     });
 
     return products.map((product) => {
-      const availableQuantity = computeAvailableQuantity(
+      const availableQuantityBySize = computeAvailableQuantities(
         product.recipeItems,
         product.stock,
+      );
+      const availableQuantity = Math.min(
+        ...Object.values(availableQuantityBySize),
       );
 
       return {
         ...product,
         availableQuantity,
+        availableQuantityBySize,
         stock: availableQuantity,
       };
     });
@@ -87,14 +126,18 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm có id ${id}`);
     }
 
-    const availableQuantity = computeAvailableQuantity(
+    const availableQuantityBySize = computeAvailableQuantities(
       product.recipeItems,
       product.stock,
+    );
+    const availableQuantity = Math.min(
+      ...Object.values(availableQuantityBySize),
     );
 
     return {
       ...product,
       availableQuantity,
+      availableQuantityBySize,
       stock: availableQuantity,
     };
   }

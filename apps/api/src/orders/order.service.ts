@@ -217,6 +217,7 @@ export class OrderService {
                 recipeItems: {
                   select: {
                     ingredientId: true,
+                    size: true,
                     amountRequired: true,
                     ingredient: {
                       select: {
@@ -274,7 +275,14 @@ export class OrderService {
                   );
                 }
 
-                for (const recipe of product.recipeItems) {
+                const sizeRecipes = product.recipeItems.filter(
+                  (recipe) => recipe.size === item.size,
+                );
+                if (sizeRecipes.length === 0)
+                  throw new BadRequestException(
+                    `Món "${product.name}" chưa có công thức cho size ${item.size}`,
+                  );
+                for (const recipe of sizeRecipes) {
                   const needed = recipe.amountRequired * item.qty;
                   const existing = requiredIngredients.get(recipe.ingredientId);
                   if (existing) {
@@ -456,7 +464,7 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
-          items: { select: { productId: true, qty: true } },
+          items: { select: { productId: true, size: true, qty: true } },
           usesIngredientInventory: true,
           ingredients: { select: { ingredientId: true, quantity: true } },
         },
@@ -494,7 +502,9 @@ export class OrderService {
               products.map((product) => [product.id, product.recipeItems]),
             );
             for (const item of order.items) {
-              for (const recipe of recipes.get(item.productId) ?? []) {
+              for (const recipe of (recipes.get(item.productId) ?? []).filter(
+                (recipe) => recipe.size === item.size,
+              )) {
                 ingredientReleases.set(
                   recipe.ingredientId,
                   (ingredientReleases.get(recipe.ingredientId) ?? 0) +

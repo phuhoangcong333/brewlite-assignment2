@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { CatalogRepository } from '../repositories';
 import { CatalogProduct, CatalogTopping } from '../promotion.types';
 import { PrismaService } from '../../prisma/prisma.service';
-import { computeAvailableQuantity } from '../../Product/product.service';
+import { Size } from '@prisma/client';
+import { computeAvailableQuantities } from '../../Product/product.service';
 
-const SIZES: CatalogProduct['sizes'] = [
-  { id: 1, extraPrice: 0 },
-  { id: 2, extraPrice: 5_000 },
-  { id: 3, extraPrice: 10_000 },
+const SIZES: { id: number; size: Size; extraPrice: number }[] = [
+  { id: 1, size: Size.S, extraPrice: 0 },
+  { id: 2, size: Size.M, extraPrice: 5_000 },
+  { id: 3, size: Size.L, extraPrice: 10_000 },
 ];
 
 const TOPPINGS: CatalogTopping[] = [
@@ -31,14 +32,23 @@ export class PrismaCatalogRepository extends CatalogRepository {
       },
     });
 
-    return rows.map((product) => ({
-      id: product.id,
-      name: product.name,
-      imageUrl: product.imageUrl,
-      basePrice: product.price,
-      stock: computeAvailableQuantity(product.recipeItems, product.stock),
-      sizes: SIZES,
-    }));
+    return rows.map((product) => {
+      const availableQuantityBySize = computeAvailableQuantities(
+        product.recipeItems,
+        product.stock,
+      );
+      return {
+        id: product.id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        basePrice: product.price,
+        sizes: SIZES.map(({ id, size, extraPrice }) => ({
+          id,
+          extraPrice,
+          stock: availableQuantityBySize[size],
+        })),
+      };
+    });
   }
 
   async findToppings(ids: number[]): Promise<CatalogTopping[]> {

@@ -1,6 +1,8 @@
 import { Transform, Type } from 'class-transformer';
+import { Size } from '@prisma/client';
 import {
   IsArray,
+  IsEnum,
   ArrayMinSize,
   ArrayMaxSize,
   ArrayUnique,
@@ -59,6 +61,9 @@ export class CreateIngredientDto {
 }
 
 export class RecipeItemInputDto {
+  @IsEnum(Size)
+  size!: Size;
+
   @IsInt()
   @Min(1)
   @Max(2_147_483_647)
@@ -74,7 +79,9 @@ export class UpdateProductRecipeDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
-  @ArrayUnique((item: RecipeItemInputDto) => item?.ingredientId)
+  @ArrayUnique(
+    (item: RecipeItemInputDto) => `${item?.size}:${item?.ingredientId}`,
+  )
   @ValidateNested({ each: true })
   @Type(() => RecipeItemInputDto)
   items!: RecipeItemInputDto[];
