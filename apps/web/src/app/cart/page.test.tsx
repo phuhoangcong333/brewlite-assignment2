@@ -6,6 +6,9 @@ import { useQuote } from "@/lib/use-quote";
 import CartPage from "./page";
 
 vi.mock("@/lib/use-quote", () => ({ useQuote: vi.fn() }));
+vi.mock("@/lib/use-toppings", () => ({
+  useToppings: () => ({ toppings: [], loading: false, error: null }),
+}));
 
 const cartItem: CartItem = {
   key: "1|M|pearl",
@@ -23,7 +26,7 @@ const quoteItem = (over: Partial<QuoteItem> = {}): QuoteItem => ({
   productName: "Trà sữa trân châu",
   imageUrl: null,
   sizeId: 2,
-  toppingIds: [1],
+  toppingIds: ["pearl"],
   quantity: 2,
   status: "AVAILABLE",
   unavailableToppingIds: [],

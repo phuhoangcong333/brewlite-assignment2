@@ -26,10 +26,10 @@ export type QuoteItem = {
   productName: string;
   imageUrl: string | null;
   sizeId: number;
-  toppingIds: number[];
+  toppingIds: string[];
   quantity: number;
   status: QuoteItemStatus;
-  unavailableToppingIds: number[];
+  unavailableToppingIds: string[];
   unitPrice: number;
   lineTotal: number;
   priceChanged: boolean;

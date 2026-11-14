@@ -1,4 +1,4 @@
-import { SIZE_IDS, TOPPING_IDS } from "./catalog-ids";
+import { SIZE_IDS } from "./catalog-ids";
 import { unitPriceOf, type CartItem } from "./cart";
 import type { Quote } from "./quote-types";
 
@@ -6,9 +6,9 @@ export type QuoteRequest = {
   items: {
     productId: number;
     sizeId: number;
-    toppingIds: number[];
+    toppingIds: string[];
     quantity: number;
-    clientUnitPrice: number;
+    clientUnitPrice?: number;
   }[];
   promotionCode?: string;
 };
@@ -26,11 +26,11 @@ export function buildQuoteRequest(
     items: items.map((i) => ({
       productId: i.productId,
       sizeId: SIZE_IDS[i.size],
-      toppingIds: i.toppings
-        .map((t) => TOPPING_IDS[t])
-        .filter((id): id is number => Number.isInteger(id)),
+      toppingIds: i.toppings,
       quantity: i.qty,
-      clientUnitPrice: unitPriceOf(i),
+      ...(i.toppings.length === 0
+        ? { clientUnitPrice: unitPriceOf(i) }
+        : {}),
     })),
   };
   if (promotionCode) request.promotionCode = promotionCode;

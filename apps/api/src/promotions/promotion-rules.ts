@@ -10,7 +10,13 @@ function formatVnd(n: number): string {
 }
 
 /** Số tiền giảm (BR-08): PERCENT làm tròn xuống và không vượt mức tối đa; không bao giờ vượt tạm tính. */
-export function computeDiscount(promo: Promotion, subtotal: number): number {
+export function computeDiscount(
+  promo: Pick<
+    Promotion,
+    'discountType' | 'discountValue' | 'maxDiscountAmount'
+  >,
+  subtotal: number,
+): number {
   let discount: number;
   if (promo.discountType === 'PERCENT') {
     discount = Math.floor((subtotal * promo.discountValue) / 100);

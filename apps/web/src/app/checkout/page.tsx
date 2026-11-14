@@ -5,10 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { getToken } from "@/lib/auth";
-import { cartSubtotal, lineTotalOf, useCart, useHydrated } from "@/lib/cart";
-import { formatVND, TOPPINGS } from "@/lib/pricing";
+import { useCart, useHydrated } from "@/lib/cart";
+import { formatVND } from "@/lib/pricing";
+import { createUuidV4 } from "@/lib/uuid";
 import { ApiError, createOrder, createPayment, type PaymentInput } from "@/lib/orders-api";
 import { ProtectedRoute } from "@/lib/auth-context";
+import { useQuote } from "@/lib/use-quote";
+import { useToppings } from "@/lib/use-toppings";
 
 type Method = "WALLET" | "QR" | "CARD";
 type Step = "idle" | "creating" | "paying" | "done";
@@ -18,6 +21,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const hydrated = useHydrated();
   const { items, clear } = useCart();
+  const toppingCatalog = useToppings();
   const [method, setMethod] = useState<Method>("WALLET");
   const [walletProvider, setWalletProvider] = useState<WalletProvider>("MoMo");
   const [walletPhone, setWalletPhone] = useState("");
@@ -33,6 +37,10 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string | null>(null);
   const [stockConflict, setStockConflict] = useState(false);
+  const { quote, loading: quoteLoading, error: quoteError } = useQuote(
+    items,
+    promoCode.trim() || null,
+  );
 
   const orderId = useRef<number | null>(null);
   const idemKey = useRef<string | null>(null);
@@ -70,8 +78,16 @@ export default function CheckoutPage() {
     );
   }
 
-  const total = cartSubtotal(items);
-  const payableTotal = orderTotal ?? total;
+  const quoteUnavailable = quote?.items.some((item) => item.status !== "AVAILABLE") ?? false;
+  const hasSelectedToppings = items.some((item) => item.toppings.length > 0);
+  const canCreateOrder =
+    !!quote &&
+    !quoteLoading &&
+    !quoteError &&
+    !quoteUnavailable &&
+    (!hasSelectedToppings ||
+      (!toppingCatalog.loading && !toppingCatalog.error));
+  const payableTotal = orderTotal ?? quote?.total ?? 0;
   const detail =
     method === "WALLET"
       ? linkedWallet?.lastFour ?? ""
@@ -80,10 +96,15 @@ export default function CheckoutPage() {
         : qrPayload ?? "";
 
   const ensureOrder = async () => {
-    if (orderId.current !== null) {
-      return { id: orderId.current, total: orderTotal ?? total };
+    if (!canCreateOrder) {
+      throw new Error(
+        quoteError ?? "Vui lòng đợi báo giá hợp lệ trước khi tạo đơn.",
+      );
     }
-    const order = await createOrder(items, promoCode);
+    if (orderId.current !== null) {
+      return { id: orderId.current, total: orderTotal ?? quote?.total ?? 0 };
+    }
+    const order = await createOrder(items, promoCode, toppingCatalog.toppings);
     orderId.current = order.id;
     setOrderTotal(order.total);
     return order;
@@ -132,7 +153,7 @@ export default function CheckoutPage() {
       const order = await ensureOrder();
       const id = order.id;
       setStep("paying");
-      if (!idemKey.current) idemKey.current = crypto.randomUUID();
+      if (!idemKey.current) idemKey.current = createUuidV4();
 
       const input: PaymentInput =
         method === "CARD"
@@ -172,17 +193,25 @@ export default function CheckoutPage() {
       <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}>Thanh toán đơn hàng</h1>
 
       <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "20px", padding: "32px", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
+        {toppingCatalog.error && (
+          <p role="alert" style={{ color: "#b91c1c", fontSize: "13px" }}>
+            Không tải được danh sách topping: {toppingCatalog.error}
+          </p>
+        )}
         {/* Danh sách món */}
         <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "24px" }}>
-          {items.map((i) => {
-            const toppingText = i.toppings.length > 0 ? i.toppings.map((id) => TOPPINGS.find((t) => t.id === id)?.name ?? id).join(", ") : "Không topping";
+          {items.map((i, index) => {
+            const quoteItem = quote?.items[index];
+            const toppingText = i.toppings.length > 0 ? i.toppings.map((id) => toppingCatalog.toppings.find((t) => t.id === id)?.name ?? id).join(", ") : "Không topping";
             return (
               <div key={i.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: "1px solid #f3f4f6" }}>
                 <div>
                   <p style={{ margin: "0 0 2px 0", fontWeight: 600, fontSize: "14px" }}>{i.name} (Size {i.size}) x{i.qty}</p>
                   <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>{toppingText}</p>
                 </div>
-                <span style={{ fontWeight: 600, fontSize: "14px" }}>{formatVND(lineTotalOf(i))}</span>
+                <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                  {quoteItem ? formatVND(quoteItem.lineTotal) : "—"}
+                </span>
               </div>
             );
           })}
@@ -190,7 +219,9 @@ export default function CheckoutPage() {
 
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "18px", fontWeight: "bold", marginBottom: "24px", paddingTop: "12px", borderTop: "2px solid #f3f4f6" }}>
           <span>Tổng tiền:</span>
-          <span style={{ color: "#d97706" }}>{formatVND(payableTotal)}</span>
+          <span style={{ color: "#d97706" }}>
+            {orderTotal !== null || quote ? formatVND(payableTotal) : "—"}
+          </span>
         </div>
 
         {/* Mã khuyến mãi */}
@@ -331,17 +362,17 @@ export default function CheckoutPage() {
 
         <button
           onClick={handleConfirm}
-          disabled={busy || !detail || (method === "QR" && !qrPayload)}
+          disabled={busy || !detail || !canCreateOrder || (method === "QR" && !qrPayload)}
           style={{
             width: "100%",
             padding: "14px",
-            background: busy || !detail || (method === "QR" && !qrPayload) ? "#9ca3af" : "#d97706",
+            background: busy || !detail || !canCreateOrder || (method === "QR" && !qrPayload) ? "#9ca3af" : "#d97706",
             color: "#ffffff",
             border: "none",
             borderRadius: "12px",
             fontWeight: 600,
             fontSize: "15px",
-            cursor: busy || !detail || (method === "QR" && !qrPayload) ? "not-allowed" : "pointer",
+            cursor: busy || !detail || !canCreateOrder || (method === "QR" && !qrPayload) ? "not-allowed" : "pointer",
           }}
         >
           {busy

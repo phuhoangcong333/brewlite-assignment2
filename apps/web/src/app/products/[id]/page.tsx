@@ -5,13 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProduct } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { calcUnitPrice, formatVND, SIZE_EXTRA, TOPPINGS } from "@/lib/pricing";
+import { calcUnitPrice, formatVND, SIZE_EXTRA } from "@/lib/pricing";
+import { useToppings } from "@/lib/use-toppings";
 import type { Product, Size } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const addToCart = useCart((s) => s.add);
+  const toppingCatalog = useToppings();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,9 +38,18 @@ export default function ProductDetailPage() {
   if (error) return <p className="p-4 text-red-600">{error}</p>;
   if (!product) return <p className="p-4">Không tìm thấy sản phẩm.</p>;
 
-  const unitPrice = calcUnitPrice(product.price, size, toppings);
+  const unitPrice = calcUnitPrice(product.price, size, toppings, toppingCatalog.toppings);
   const availableQuantity = product.availableQuantityBySize[size];
-  const canAdd = availableQuantity > 0 && qty <= availableQuantity;
+  const selectedToppingsAvailable = toppingCatalog.toppings
+    .filter((topping) => toppings.includes(topping.id))
+    .every((topping) => topping.availableQuantity >= qty);
+  const canAdd =
+    availableQuantity > 0 &&
+    qty <= availableQuantity &&
+    (toppings.length === 0 ||
+      (!toppingCatalog.loading &&
+        !toppingCatalog.error &&
+        selectedToppingsAvailable));
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -113,18 +124,39 @@ export default function ProductDetailPage() {
 
       <section className="mt-4">
         <h2 className="mb-2 font-medium">Topping</h2>
+        {toppingCatalog.error && (
+          <p role="alert" className="mb-2 text-sm text-red-600">
+            {toppingCatalog.error}
+          </p>
+        )}
         <div className="flex flex-col gap-1">
-          {TOPPINGS.map((t) => (
-            <label key={t.id} className="flex items-center gap-2">
+          {toppingCatalog.toppings.map((t) => (
+            <label
+              key={t.id}
+              className={`flex items-center gap-2 ${
+                t.availableQuantity === 0 ? "text-gray-400" : ""
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={toppings.includes(t.id)}
                 onChange={() => toggleTopping(t.id)}
+                disabled={
+                  toppingCatalog.loading ||
+                  t.availableQuantity === 0 ||
+                  (toppings.includes(t.id) === false &&
+                    t.availableQuantity < qty)
+                }
               />
-              {t.name} (+{formatVND(t.price)})
+              {t.name} (+{formatVND(t.price)}) · còn {t.availableQuantity} phần
             </label>
           ))}
         </div>
+        {!selectedToppingsAvailable && (
+          <p className="mt-1 text-sm text-red-600">
+            Tồn kho topping không đủ cho số lượng đã chọn.
+          </p>
+        )}
       </section>
 
       <section className="mt-4 flex items-center gap-3">

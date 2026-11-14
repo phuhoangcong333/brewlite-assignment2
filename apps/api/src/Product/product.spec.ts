@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
@@ -12,6 +13,7 @@ type MockProductRow = {
   stock: number;
   version: number;
   recipeItems: {
+    size: Size;
     amountRequired: number;
     ingredient: { stockQuantity: number };
   }[];
@@ -28,7 +30,21 @@ function setup() {
       stock: 10,
       version: 0,
       recipeItems: [
-        { amountRequired: 25, ingredient: { stockQuantity: 200 } },
+        {
+          size: Size.S,
+          amountRequired: 25,
+          ingredient: { stockQuantity: 200 },
+        },
+        {
+          size: Size.M,
+          amountRequired: 25,
+          ingredient: { stockQuantity: 200 },
+        },
+        {
+          size: Size.L,
+          amountRequired: 25,
+          ingredient: { stockQuantity: 200 },
+        },
       ],
     },
     {
@@ -40,7 +56,21 @@ function setup() {
       stock: 10,
       version: 0,
       recipeItems: [
-        { amountRequired: 30, ingredient: { stockQuantity: 150 } },
+        {
+          size: Size.S,
+          amountRequired: 30,
+          ingredient: { stockQuantity: 150 },
+        },
+        {
+          size: Size.M,
+          amountRequired: 30,
+          ingredient: { stockQuantity: 150 },
+        },
+        {
+          size: Size.L,
+          amountRequired: 30,
+          ingredient: { stockQuantity: 150 },
+        },
       ],
     },
     {
@@ -89,6 +119,11 @@ describe('Task 4.3 - GET /products & lọc danh mục', () => {
       category: 'COFFEE',
       availableQuantity: 8,
       stock: 8,
+    });
+    expect(result[0].availableQuantityBySize).toEqual({
+      S: 8,
+      M: 8,
+      L: 8,
     });
     expect(result[2]).toMatchObject({
       id: 3,

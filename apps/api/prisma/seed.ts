@@ -32,6 +32,25 @@ const ingredients = [
   { name: 'Đào ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Vải ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
+  { name: 'Trân châu', unit: 'g', stockQuantity: 1_500 },
+  { name: 'Kem / Kem cheese', unit: 'ml', stockQuantity: 1_000 },
+];
+
+const toppings = [
+  {
+    id: 'pearl',
+    name: 'Trân châu',
+    ingredientName: 'Trân châu',
+    price: 5_000,
+    amountPerPortion: 50,
+  },
+  {
+    id: 'cream',
+    name: 'Kem / Kem cheese',
+    ingredientName: 'Kem / Kem cheese',
+    price: 5_000,
+    amountPerPortion: 30,
+  },
 ];
 
 type RecipeIngredient = {
@@ -192,6 +211,29 @@ async function seed(): Promise<void> {
         update: {},
       });
       ingredientMap.set(ing.name, savedIngredient.id);
+    }
+
+    for (const topping of toppings) {
+      const ingredientId = ingredientMap.get(topping.ingredientName);
+      if (!ingredientId) {
+        throw new Error(`Missing ingredient for topping "${topping.name}"`);
+      }
+
+      await transaction.topping.upsert({
+        where: { id: topping.id },
+        create: {
+          id: topping.id,
+          name: topping.name,
+          price: topping.price,
+          amountPerPortion: topping.amountPerPortion,
+          ingredientId,
+        },
+        update: {
+          name: topping.name,
+          price: topping.price,
+          ingredientId,
+        },
+      });
     }
 
     // 2. Gán công thức định lượng (RecipeItem) cho 8 món trong bảng Product

@@ -171,12 +171,19 @@ export const useCart = create<CartState>()(
   )
 );
 
-/* Giá ước tính phía client, chỉ để gửi `clientUnitPrice`. Giá hiển thị lấy từ server. */
-export const unitPriceOf = (i: CartItem) =>
-  calcUnitPrice(i.basePrice, i.size, i.toppings);
-export const lineTotalOf = (i: CartItem) => unitPriceOf(i) * i.qty;
-export const cartSubtotal = (items: CartItem[]) =>
-  items.reduce((sum, i) => sum + lineTotalOf(i), 0);
+/* Giá ước tính chỉ dùng khi có catalog; giá khách hàng thấy lấy từ báo giá server. */
+export const unitPriceOf = (
+  i: CartItem,
+  toppings: readonly { id: string; price: number }[] = [],
+) => calcUnitPrice(i.basePrice, i.size, i.toppings, toppings);
+export const lineTotalOf = (
+  i: CartItem,
+  toppings: readonly { id: string; price: number }[] = [],
+) => unitPriceOf(i, toppings) * i.qty;
+export const cartSubtotal = (
+  items: CartItem[],
+  toppings: readonly { id: string; price: number }[] = [],
+) => items.reduce((sum, i) => sum + lineTotalOf(i, toppings), 0);
 export const cartCount = (items: CartItem[]) =>
   items.reduce((sum, i) => sum + i.qty, 0);
 

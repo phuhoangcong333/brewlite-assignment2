@@ -39,10 +39,10 @@ export interface QuoteItem {
   productName: string;
   imageUrl: string | null;
   sizeId: number;
-  toppingIds: number[];
+  toppingIds: string[];
   quantity: number;
   status: QuoteItemStatus;
-  unavailableToppingIds: number[];
+  unavailableToppingIds: string[];
   unitPrice: number;
   lineTotal: number;
   priceChanged: boolean;
@@ -60,7 +60,7 @@ export interface Quote {
 export interface CartItemInput {
   productId: number;
   sizeId: number;
-  toppingIds: number[];
+  toppingIds: string[];
   quantity: number;
   note?: string | null;
   clientUnitPrice?: number | null;
@@ -76,7 +76,7 @@ export interface CatalogProduct {
 }
 
 export interface CatalogTopping {
-  id: number;
+  id: string;
   price: number;
   stock: number;
 }

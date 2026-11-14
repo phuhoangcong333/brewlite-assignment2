@@ -24,7 +24,7 @@ describe('POST /promotions/validate (tích hợp, ValidationPipe thật)', () =>
   afterAll(async () => app.close());
 
   const post = (body: unknown) => request(app.getHttpServer()).post('/promotions/validate').send(body as object);
-  const item = (over: Record<string, unknown> = {}) => ({ productId: 1, sizeId: 1, toppingIds: [1], quantity: 2, ...over });
+  const item = (over: Record<string, unknown> = {}) => ({ productId: 1, sizeId: 1, toppingIds: ['pearl'], quantity: 2, ...over });
 
   it('200 (không phải 201) và báo giá đúng theo hợp đồng', async () => {
     const res = await post({ items: [item({ note: 'ít đá', clientUnitPrice: 50000 })], promotionCode: 'brew2026' });
@@ -92,8 +92,8 @@ describe('POST /promotions/validate (tích hợp, ValidationPipe thật)', () =>
   it('400 khi thiếu productId hoặc sizeId, topping trùng hoặc sai kiểu', async () => {
     expect((await post({ items: [{ sizeId: 1, quantity: 1 }] })).status).toBe(400);
     expect((await post({ items: [{ productId: 1, quantity: 1 }] })).status).toBe(400);
-    expect((await post({ items: [item({ toppingIds: [1, 1] })] })).status).toBe(400);
-    expect((await post({ items: [item({ toppingIds: ['a'] })] })).status).toBe(400);
+    expect((await post({ items: [item({ toppingIds: ['pearl', 'pearl'] })] })).status).toBe(400);
+    expect((await post({ items: [item({ toppingIds: [1] })] })).status).toBe(400);
   });
 
   it('không cần JWT: không trả 401 hoặc 403', async () => {

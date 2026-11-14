@@ -6,9 +6,19 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
   Min,
+  NotEquals,
   ValidateNested,
 } from 'class-validator';
+
+export class AdjustIngredientStockDto {
+  @IsInt()
+  @Min(-2_147_483_648)
+  @Max(2_147_483_647)
+  @NotEquals(0)
+  amount!: number;
+}
 
 export class RestockIngredientDto {
   // Hỗ trợ cả 'amount' hoặc 'quantity' hoặc 'stockQuantity' từ Frontend gửi lên

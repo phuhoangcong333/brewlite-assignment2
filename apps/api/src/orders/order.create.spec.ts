@@ -13,6 +13,7 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
   const userIds: number[] = [];
   const productIds: number[] = [];
   const ingredientIds: number[] = [];
+  const toppingIds: string[] = [];
   const promotionCodes: string[] = [];
 
   async function createUser(): Promise<number> {
@@ -53,6 +54,25 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     return ingredient.id;
   }
 
+  async function createTopping(stockQuantity: number): Promise<{
+    id: string;
+    ingredientId: number;
+  }> {
+    const ingredientId = await createIngredient(stockQuantity);
+    const id = `order-create-topping-${Date.now()}-${Math.random()}`;
+    await prisma.topping.create({
+      data: {
+        id,
+        name: id,
+        price: 5_000,
+        amountPerPortion: 50,
+        ingredientId,
+      },
+    });
+    toppingIds.push(id);
+    return { id, ingredientId };
+  }
+
   beforeAll(async () => {
     await prisma.$connect();
   });
@@ -69,6 +89,10 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+    }
+    if (toppingIds.length > 0) {
+      await prisma.topping.deleteMany({ where: { id: { in: toppingIds } } });
+      toppingIds.length = 0;
     }
     if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
@@ -91,13 +115,14 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
   it('creates the order and reserves stock in the same transaction', async () => {
     const userId = await createUser();
     const productId = await createProduct(10);
+    const topping = await createTopping(500);
 
     const order = await service.createOrder(userId, [
       {
         productId,
         qty: 2,
         size: 'M',
-        toppings: ['Trân châu'],
+        toppings: [topping.id],
       },
     ]);
     orderIds.push(order.id);
@@ -116,16 +141,31 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     await expect(
       prisma.orderItem.findMany({
         where: { orderId: order.id },
-        select: { productId: true, qty: true, lineTotal: true, toppings: true },
+        select: {
+          productId: true,
+          qty: true,
+          lineTotal: true,
+          toppings: true,
+          toppingIds: true,
+          toppingAmounts: true,
+        },
       }),
     ).resolves.toEqual([
       {
         productId,
         qty: 2,
         lineTotal: 90_000,
-        toppings: ['Trân châu'],
+        toppings: [topping.id],
+        toppingIds: [topping.id],
+        toppingAmounts: [50],
       },
     ]);
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: topping.ingredientId },
+        select: { stockQuantity: true, version: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 400, version: 1 });
   });
 
   it('reserves the ingredients for each ordered size', async () => {
@@ -170,6 +210,61 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
       { size: 'S', qty: 2 },
       { size: 'M', qty: 1 },
       { size: 'L', qty: 1 },
+    ]);
+  });
+
+  it('rejects an exhausted topping and rolls back all inventory reservations', async () => {
+    const userId = await createUser();
+    const productId = await createProduct(10);
+    const topping = await createTopping(49);
+
+    await expect(
+      service.createOrder(userId, [
+        { productId, qty: 1, size: 'S', toppings: [topping.id] },
+      ]),
+    ).rejects.toThrow('Không đủ nguyên liệu');
+
+    await expect(
+      prisma.product.findUniqueOrThrow({
+        where: { id: productId },
+        select: { stock: true, version: true },
+      }),
+    ).resolves.toEqual({ stock: 10, version: 0 });
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: topping.ingredientId },
+        select: { stockQuantity: true, version: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 49, version: 0 });
+  });
+
+  it('uses the same topping portion for size S and size L', async () => {
+    const userId = await createUser();
+    const productId = await createProduct(10);
+    const topping = await createTopping(500);
+
+    const order = await service.createOrder(userId, [
+      { productId, qty: 1, size: 'S', toppings: [topping.id] },
+      { productId, qty: 1, size: 'L', toppings: [topping.id] },
+    ]);
+    orderIds.push(order.id);
+
+    expect(order.total).toBe(90_000);
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: topping.ingredientId },
+        select: { stockQuantity: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 400 });
+    await expect(
+      prisma.orderItem.findMany({
+        where: { orderId: order.id },
+        select: { size: true, toppingAmounts: true },
+        orderBy: { id: 'asc' },
+      }),
+    ).resolves.toEqual([
+      { size: 'S', toppingAmounts: [50] },
+      { size: 'L', toppingAmounts: [50] },
     ]);
   });
 
@@ -258,5 +353,32 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
         select: { stock: true },
       }),
     ).resolves.toEqual({ stock: 9 });
+  });
+
+  it('caps the promotion discount at the order subtotal', async () => {
+    const userId = await createUser();
+    const productId = await createProduct(10);
+    const code = `TV150-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 7)
+      .toUpperCase()}`;
+    promotionCodes.push(code);
+    await prisma.promotion.create({
+      data: {
+        code,
+        percent: 150,
+        expiresAt: new Date(Date.now() + 60_000),
+        usageLeft: 1,
+      },
+    });
+
+    const order = await service.createOrder(
+      userId,
+      [{ productId, qty: 1, size: 'S' }],
+      code,
+    );
+    orderIds.push(order.id);
+
+    expect(order).toMatchObject({ total: 0, discount: 35_000 });
   });
 });

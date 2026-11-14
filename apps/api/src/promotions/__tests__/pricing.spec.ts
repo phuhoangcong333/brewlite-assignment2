@@ -27,7 +27,7 @@ const quote = (
 describe('priceItem – công thức giá (BR-02)', () => {
   it('đơn giá = giá cơ bản + phụ thu size + tổng giá topping', () => {
     const r = priceItem(
-      item({ sizeId: 2, toppingIds: [1, 2], quantity: 2 }),
+      item({ sizeId: 2, toppingIds: ['pearl', 'cream'], quantity: 2 }),
       PRODUCTS[0],
       toppingMap,
     );
@@ -74,9 +74,9 @@ describe('priceItem – công thức giá (BR-02)', () => {
   });
 
   it('topping hết hàng: TOPPING_OUT_OF_STOCK kèm danh sách topping hết', () => {
-    const r = priceItem(item({ toppingIds: [1, 3] }), PRODUCTS[0], toppingMap);
+    const r = priceItem(item({ toppingIds: ['pearl', 'syrup'] }), PRODUCTS[0], toppingMap);
     expect(r.status).toBe('TOPPING_OUT_OF_STOCK');
-    expect(r.unavailableToppingIds).toEqual([3]);
+    expect(r.unavailableToppingIds).toEqual(['syrup']);
     expect(r.lineTotal).toBe(0);
   });
 
@@ -88,7 +88,7 @@ describe('priceItem – công thức giá (BR-02)', () => {
       'PRODUCT_NOT_FOUND',
     );
     expect(
-      priceItem(item({ toppingIds: [77] }), PRODUCTS[0], toppingMap).status,
+      priceItem(item({ toppingIds: ['unknown'] }), PRODUCTS[0], toppingMap).status,
     ).toBe('PRODUCT_NOT_FOUND');
   });
 
@@ -113,7 +113,7 @@ describe('priceItem – công thức giá (BR-02)', () => {
 describe('buildQuote – tổng tiền (FR-06)', () => {
   it('tạm tính là tổng thành tiền các dòng, tổng = tạm tính khi không có mã', () => {
     const q = quote([
-      item({ quantity: 2, toppingIds: [1] }),
+      item({ quantity: 2, toppingIds: ['pearl'] }),
       item({ productId: 2, quantity: 1 }),
     ]);
     expect(q.subtotal).toBe(2 * 50000 + 30000);
@@ -126,7 +126,7 @@ describe('buildQuote – tổng tiền (FR-06)', () => {
     const q = quote([
       item({ quantity: 2 }),
       item({ productId: 3 }),
-      item({ toppingIds: [3] }),
+      item({ toppingIds: ['syrup'] }),
     ]);
     expect(q.subtotal).toBe(90000);
     expect(q.items.map((i) => i.status)).toEqual([
@@ -138,7 +138,7 @@ describe('buildQuote – tổng tiền (FR-06)', () => {
 
   it('mã hợp lệ: trừ giảm giá khỏi tạm tính', () => {
     const q = quote(
-      [item({ sizeId: 2, toppingIds: [1, 2], quantity: 2 })],
+      [item({ sizeId: 2, toppingIds: ['pearl', 'cream'], quantity: 2 })],
       'BREW2026',
     );
     expect(q.subtotal).toBe(126000);
@@ -187,7 +187,7 @@ describe('buildQuote – tổng tiền (FR-06)', () => {
 
   it('tiền là số nguyên', () => {
     const q = quote(
-      [item({ quantity: 3, toppingIds: [1, 2] })],
+      [item({ quantity: 3, toppingIds: ['pearl', 'cream'] })],
       'BREW2026',
       promo({ discountValue: 7 }),
     );

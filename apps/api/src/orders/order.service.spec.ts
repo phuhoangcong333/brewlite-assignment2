@@ -15,6 +15,7 @@ describeDb('OrderService with PostgreSQL', () => {
   const userIds: number[] = [];
   const productIds: number[] = [];
   const ingredientIds: number[] = [];
+  const toppingIds: string[] = [];
 
   async function createOrder(
     status: OrderStatus = 'PENDING',
@@ -133,6 +134,74 @@ describeDb('OrderService with PostgreSQL', () => {
     return { orderId: order.id, ingredientId: ingredient.id };
   }
 
+  async function createToppingBackedOrder(): Promise<{
+    orderId: number;
+    ingredientId: number;
+  }> {
+    const product = await prisma.product.create({
+      data: {
+        name: `order-cancel-topping-${Date.now()}-${Math.random()}`,
+        price: 1000,
+        stock: 48,
+        version: 1,
+      },
+      select: { id: true },
+    });
+    productIds.push(product.id);
+
+    const ingredient = await prisma.ingredient.create({
+      data: {
+        name: `order-cancel-topping-ingredient-${Date.now()}-${Math.random()}`,
+        unit: 'g',
+        stockQuantity: 400,
+        version: 1,
+      },
+      select: { id: true },
+    });
+    ingredientIds.push(ingredient.id);
+
+    const toppingId = `order-cancel-topping-${Date.now()}-${Math.random()}`;
+    toppingIds.push(toppingId);
+    await prisma.topping.create({
+      data: {
+        id: toppingId,
+        name: toppingId,
+        price: 5_000,
+        amountPerPortion: 100,
+        ingredientId: ingredient.id,
+      },
+    });
+
+    const user = await prisma.user.create({
+      data: {
+        email: `order-cancel-topping-${Date.now()}-${Math.random()}@example.test`,
+        passwordHash: 'test-password-hash',
+      },
+      select: { id: true },
+    });
+    userIds.push(user.id);
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        total: 12_000,
+        items: {
+          create: {
+            productId: product.id,
+            size: 'S',
+            qty: 2,
+            toppings: [toppingId],
+            toppingIds: [toppingId],
+            toppingAmounts: [50],
+            lineTotal: 12_000,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    orderIds.push(order.id);
+    return { orderId: order.id, ingredientId: ingredient.id };
+  }
+
   beforeAll(async () => {
     await prisma.$connect();
   });
@@ -149,6 +218,10 @@ describeDb('OrderService with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+    }
+    if (toppingIds.length > 0) {
+      await prisma.topping.deleteMany({ where: { id: { in: toppingIds } } });
+      toppingIds.length = 0;
     }
     if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
@@ -356,6 +429,19 @@ describeDb('OrderService with PostgreSQL', () => {
         select: { stockQuantity: true, version: true },
       }),
     ).resolves.toEqual({ stockQuantity: 1_000, version: 1 });
+  });
+
+  it('restores topping ingredients using the stored topping ids when cancelling', async () => {
+    const { orderId, ingredientId } = await createToppingBackedOrder();
+
+    await service.transitionOrder(orderId, 'CANCELLED');
+
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: ingredientId },
+        select: { stockQuantity: true, version: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 500, version: 2 });
   });
 
   it.each(['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const)(
