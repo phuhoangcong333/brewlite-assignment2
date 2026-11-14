@@ -96,13 +96,15 @@ export default function MenuPage() {
 
             <p
               className={`mt-3 rounded-md py-1.5 text-center text-xs font-semibold ${
-                p.stock > 0
+                p.availableQuantity > 0
                   ? "bg-amber-50 text-amber-800"
                   : "bg-gray-100 text-gray-500"
               }`}
               aria-live="polite"
             >
-              {p.stock > 0 ? `Còn lại trong kho: ${p.stock}` : "Hết hàng"}
+              {p.availableQuantity > 0
+                ? `Có thể pha: ${p.availableQuantity} ly`
+                : "Hết hàng"}
             </p>
           </div>
         ))}

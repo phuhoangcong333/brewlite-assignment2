@@ -71,21 +71,38 @@ export default function Header() {
             }}
           >
             {isStaff && (
-              <Link
-                href="/staff/orders"
-                style={{
-                  padding: "8px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: "#4b5563",
-                  textDecoration: "none",
-                  boxSizing: "border-box",
-                }}
-              >
-                Nhân viên
-              </Link>
+              <>
+                <Link
+                  href="/staff/orders"
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#4b5563",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Đơn hàng
+                </Link>
+                <Link
+                  href="/staff/inventory"
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#4b5563",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Kho nguyên liệu
+                </Link>
+              </>
             )}
 
             <Link
