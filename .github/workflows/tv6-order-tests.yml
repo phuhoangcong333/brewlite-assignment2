@@ -1,0 +1,60 @@
+name: TV6 state, loyalty and browser E2E
+
+on:
+  pull_request:
+    branches: [dev, main, fix/tv6-state-loyalty-21]
+  workflow_dispatch:
+
+jobs:
+  order-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: brewlite
+          POSTGRES_PASSWORD: brewlite_test_only
+          POSTGRES_DB: brewlite_tv6_tests
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U brewlite -d brewlite_tv6_tests"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://brewlite:brewlite_test_only@127.0.0.1:5432/brewlite_tv6_tests?schema=public
+      E2E_DATABASE_URL: postgresql://brewlite:brewlite_test_only@127.0.0.1:5432/brewlite_tv6_tests?schema=public
+      JWT_SECRET: brewlite-ci-test-only-secret
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/api
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx prisma generate && npx prisma migrate deploy
+        working-directory: apps/api
+      - run: npm test -- --runInBand
+        working-directory: apps/api
+      - run: npm run test:e2e -- --runInBand
+        working-directory: apps/api
+      - run: npm test -- --maxWorkers=1 --minWorkers=1
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run test:e2e
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tv6-playwright-results
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7

@@ -15,16 +15,7 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authorized, setAuthorized] = useState(false);
-
-  const load = () => {
-    setLoading(true);
-    setError(null);
-
-    getProducts()
-      .then(setProducts)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -34,9 +25,28 @@ export default function MenuPage() {
       return;
     }
 
-    setAuthorized(true);
-    load();
-  }, [router]);
+    let active = true;
+    const load = async () => {
+      try {
+        const data = await getProducts();
+        if (!active) return;
+        setProducts(data);
+        setError(null);
+      } catch (e) {
+        if (active)
+          setError(e instanceof Error ? e.message : "Không tải được menu");
+      } finally {
+        if (active) {
+          setAuthorized(true);
+          setLoading(false);
+        }
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [router, retryCount]);
 
   if (!authorized) {
     return null;
@@ -44,9 +54,7 @@ export default function MenuPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-4">
-      <h1 className="mb-4 text-2xl font-bold">
-        BrewLite - Menu
-      </h1>
+      <h1 className="mb-4 text-2xl font-bold">BrewLite - Menu</h1>
 
       {loading && <p>Đang tải menu...</p>}
 
@@ -55,7 +63,11 @@ export default function MenuPage() {
           <p>{error}</p>
 
           <button
-            onClick={load}
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              setRetryCount((value) => value + 1);
+            }}
             className="mt-2 underline"
           >
             Thử lại
@@ -89,9 +101,7 @@ export default function MenuPage() {
 
               <p className="font-medium">{p.name}</p>
 
-              <p className="text-amber-700">
-                {formatVND(p.price)}
-              </p>
+              <p className="text-amber-700">{formatVND(p.price)}</p>
             </Link>
 
             <p
