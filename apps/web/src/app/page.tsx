@@ -146,7 +146,29 @@ export default function MenuPage() {
       {!loading && !error && products.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {products.map((p) => {
-            const isOutOfStock = p.availableQuantity <= 0;
+            const legacyAvailable =
+              (p as Product & { availableQuantity?: number })
+                .availableQuantity ?? 0;
+
+            const availableSizes = p.availableQuantityBySize
+              ? (["S", "M", "L"] as const).filter(
+                  (size) => p.availableQuantityBySize[size] > 0,
+                )
+              : null;
+
+            const isOutOfStock = availableSizes
+              ? availableSizes.length === 0
+              : legacyAvailable <= 0;
+
+            const stockLabel = isOutOfStock
+              ? "Hết hàng"
+              : availableSizes
+                ? availableSizes
+                    .map(
+                      (size) => `${size}: ${p.availableQuantityBySize[size]} ly`,
+                    )
+                    .join(" · ")
+                : `Có thể pha: ${legacyAvailable} ly`;
 
             return (
               <div
@@ -208,9 +230,7 @@ export default function MenuPage() {
                   }`}
                   aria-live="polite"
                 >
-                  {!isOutOfStock
-                    ? `Có thể pha: ${p.availableQuantity} ly`
-                    : "Hết hàng"}
+                  {stockLabel}
                 </button>
               </div>
             );

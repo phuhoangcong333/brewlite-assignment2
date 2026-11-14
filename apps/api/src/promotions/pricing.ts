@@ -45,7 +45,7 @@ export function priceItem(
   const unavailableToppingIds = tops.filter((t) => t.stock < input.quantity).map((t) => t.id);
 
   let status: QuoteItem['status'] = 'AVAILABLE';
-  if (product.stock < input.quantity) status = 'OUT_OF_STOCK';
+  if (size.stock < input.quantity) status = 'OUT_OF_STOCK';
   else if (unavailableToppingIds.length > 0) status = 'TOPPING_OUT_OF_STOCK';
 
   return {

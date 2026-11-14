@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
+import { Size } from '@prisma/client';
 import {
+  IsEnum,
   IsArray,
   IsInt,
   IsOptional,
@@ -39,6 +41,9 @@ export class CreateIngredientDto {
 }
 
 export class RecipeItemInputDto {
+  @IsEnum(Size)
+  size!: Size;
+
   @IsInt()
   @Min(1)
   ingredientId!: number;

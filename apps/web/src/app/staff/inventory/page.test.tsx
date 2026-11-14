@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getToken } from "@/lib/auth";
@@ -52,10 +58,23 @@ const product = {
   name: "Cà phê sữa",
   price: 35000,
   imageUrl: null,
-  availableQuantity: 5,
+  availableQuantityBySize: { S: 5, M: 4, L: 3 },
   recipeItems: [
     {
       ingredientId: ingredient.id,
+      size: "S" as const,
+      amountRequired: 20,
+      ingredient,
+    },
+    {
+      ingredientId: ingredient.id,
+      size: "M" as const,
+      amountRequired: 20,
+      ingredient,
+    },
+    {
+      ingredientId: ingredient.id,
+      size: "L" as const,
       amountRequired: 20,
       ingredient,
     },
@@ -87,13 +106,17 @@ describe("trang kho nguyên liệu", () => {
   it("nhập kho bằng lượng đã nhập và cập nhật tồn kho hiển thị", async () => {
     render(<StaffInventoryPage />);
 
-    expect(await screen.findByText("100 g", { selector: "strong" })).toBeTruthy();
+    expect(
+      await screen.findByText("100 g", { selector: "strong" }),
+    ).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Số lượng nhập thêm Bột cà phê"), {
       target: { value: "50" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Nhập kho" }));
 
-    expect(await screen.findByText("150 g", { selector: "strong" })).toBeTruthy();
+    expect(
+      await screen.findByText("150 g", { selector: "strong" }),
+    ).toBeTruthy();
     expect(restockIngredient).toHaveBeenCalledWith(ingredient.id, 50);
     expect((await screen.findByRole("status")).textContent).toContain(
       "Đã nhập thêm 50 g Bột cà phê.",
@@ -104,14 +127,16 @@ describe("trang kho nguyên liệu", () => {
     render(<StaffInventoryPage />);
 
     const amountInput = await screen.findByLabelText(
-      "Định lượng nguyên liệu 1 cho Cà phê sữa",
+      "Định lượng size M nguyên liệu 1 cho Cà phê sữa",
     );
     fireEvent.change(amountInput, { target: { value: "25" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu công thức" }));
 
     await waitFor(() => {
       expect(updateProductRecipe).toHaveBeenCalledWith(product.id, [
-        { ingredientId: ingredient.id, amountRequired: 25 },
+        { size: "S", ingredientId: ingredient.id, amountRequired: 20 },
+        { size: "M", ingredientId: ingredient.id, amountRequired: 25 },
+        { size: "L", ingredientId: ingredient.id, amountRequired: 20 },
       ]);
     });
     expect((await screen.findByRole("status")).textContent).toContain(

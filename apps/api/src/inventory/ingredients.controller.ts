@@ -11,6 +11,7 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffGuard } from '../auth/staff.guard';
@@ -109,6 +110,22 @@ export class IngredientsController {
     productId: number,
     dto: UpdateProductRecipeDto,
   ) {
+    const sizes = new Set(dto.items.map(({ size }) => size));
+    if (Object.values(Size).some((size) => !sizes.has(size))) {
+      throw new BadRequestException(
+        'Công thức phải có định lượng cho size S, M và L',
+      );
+    }
+
+    const recipeKeys = dto.items.map(
+      ({ size, ingredientId }) => `${size}:${ingredientId}`,
+    );
+    if (new Set(recipeKeys).size !== recipeKeys.length) {
+      throw new BadRequestException(
+        'Mỗi nguyên liệu chỉ được xuất hiện một lần trong cùng một size',
+      );
+    }
+
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
@@ -126,6 +143,7 @@ export class IngredientsController {
           data: dto.items.map((item) => ({
             productId,
             ingredientId: item.ingredientId,
+            size: item.size,
             amountRequired: item.amountRequired,
           })),
         });
