@@ -31,3 +31,22 @@ export function assertTransition(from: OrderStatus, to: OrderStatus): void {
     throw new InvalidTransitionException(from, to);
   }
 }
+
+export type CancellationActor = 'CUSTOMER' | 'STAFF';
+
+export function canCancelOrder(
+  status: OrderStatus,
+  actor: CancellationActor,
+): boolean {
+  return actor === 'STAFF'
+    ? status === 'PENDING' || status === 'PREPARING'
+    : status === 'PENDING' || status === 'PAYMENT_FAILED';
+}
+
+export function assertCanCancelOrder(
+  status: OrderStatus,
+  actor: CancellationActor,
+): void {
+  if (!canCancelOrder(status, actor))
+    throw new InvalidTransitionException(status, 'CANCELLED');
+}

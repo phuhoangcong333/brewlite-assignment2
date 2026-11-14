@@ -18,7 +18,13 @@ import {
   planReserve,
 } from '../inventory/inventory.plan';
 import { planCancel } from './order-cancel.plan';
-import { assertTransition, OrderStatus } from './order-state';
+import {
+  assertCanCancelOrder,
+  assertTransition,
+  CancellationActor,
+  OrderStatus,
+} from './order-state';
+import { calculateLoyaltyPoints } from './loyalty-points';
 
 const MAX_CREATE_ATTEMPTS = 3;
 const SIZE_PRICE: Record<Size, number> = {
@@ -140,7 +146,7 @@ export class OrderService {
 
   async getOrdersForStaff() {
     return this.prisma.order.findMany({
-      where: { status: { in: ['PAID', 'PREPARING', 'READY'] } },
+      where: { status: { in: ['PENDING', 'PAID', 'PREPARING', 'READY'] } },
       orderBy: { createdAt: 'asc' },
       include: {
         items: {
@@ -166,7 +172,7 @@ export class OrderService {
       throw new NotFoundException(`Order ${orderId} was not found`);
     }
 
-    await this.transitionOrder(orderId, to);
+    await this.transitionOrder(orderId, to, userId);
   }
 
   async transitionOrderForStaff(
@@ -181,11 +187,11 @@ export class OrderService {
       throw new NotFoundException(`Order ${orderId} was not found`);
     }
 
-    if (!['PREPARING', 'READY', 'COMPLETED'].includes(to)) {
+    if (!['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'].includes(to)) {
       throw new InvalidTransitionException(order.status, to);
     }
 
-    await this.transitionOrder(orderId, to);
+    await this.transitionOrder(orderId, to, undefined, 'STAFF');
   }
 
   async createOrder(
@@ -453,6 +459,7 @@ export class OrderService {
     orderId: number,
     to: OrderStatus,
     userId?: number,
+    actor: CancellationActor = 'CUSTOMER',
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findFirst({
@@ -475,7 +482,8 @@ export class OrderService {
       }
 
       const from = order.status as OrderStatus;
-      assertTransition(from, to);
+      if (to === 'CANCELLED') assertCanCancelOrder(from, actor);
+      else assertTransition(from, to);
 
       let releaseUpdates: InventoryUpdate[] = [];
       const ingredientReleases = new Map<number, number>();
@@ -517,6 +525,7 @@ export class OrderService {
               from,
               order.items,
               toInventorySnapshots(products),
+              actor,
             );
           }
         }
@@ -531,8 +540,11 @@ export class OrderService {
         throw new OrderTransitionConflictException(orderId);
       }
 
-      if (from === 'READY' && to === 'COMPLETED') {
-        const points = Math.floor(order.total / 10_000);
+      const points =
+        from === 'READY' && to === 'COMPLETED'
+          ? calculateLoyaltyPoints(order.total)
+          : 0;
+      if (points > 0) {
         await transaction.loyaltyTransaction.create({
           data: {
             userId: order.userId,
