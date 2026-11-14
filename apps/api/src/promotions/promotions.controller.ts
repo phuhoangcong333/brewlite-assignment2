@@ -6,9 +6,10 @@ import { PromotionsService } from './promotions.service';
 export class PromotionsController {
   constructor(private readonly service: PromotionsService) {}
 
-  /**
-   * POST /promotions/validate: báo giá và kiểm tra mã khuyến mãi (không cần JWT).
-   * whitelist loại bỏ mọi trường lạ (ví dụ price, unitPrice do client tự thêm); trả 200, không phải 201.
+    /**
+   * POST /promotions/validate: báo giá và kiểm tra mã khuyến mãi (không cần JWT); trả 200, không phải 201.
+   * Trường ngoài DTO (ví dụ price, unitPrice do client tự thêm) bị từ chối 400 bởi ValidationPipe toàn cục
+   * trong main.ts (forbidNonWhitelisted). Giá luôn tính từ dữ liệu server.
    */
   @Post('validate')
   @HttpCode(200)
