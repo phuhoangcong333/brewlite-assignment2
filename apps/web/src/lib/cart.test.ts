@@ -106,8 +106,9 @@ describe("setItemQty và removeItem", () => {
 describe("tính tiền ước tính", () => {
   it("đơn giá = giá gốc + size + topping", () => {
     const [i] = addItem([], item({ size: "M", toppings: ["pearl"], qty: 2 })).items;
-    expect(unitPriceOf(i)).toBe(45000 + 5000 + 5000);
-    expect(lineTotalOf(i)).toBe(110000);
+    const toppingCatalog = [{ id: "pearl", price: 5000 }];
+    expect(unitPriceOf(i, toppingCatalog)).toBe(45000 + 5000 + 5000);
+    expect(lineTotalOf(i, toppingCatalog)).toBe(110000);
   });
 
   it("tạm tính và tổng số ly", () => {

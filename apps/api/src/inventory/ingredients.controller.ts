@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
   Get,
   NotFoundException,
   Param,
@@ -16,10 +17,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffGuard } from '../auth/staff.guard';
 import {
+  AdjustIngredientStockDto,
   CreateIngredientDto,
   RestockIngredientDto,
   UpdateProductRecipeDto,
 } from './dto/ingredient.dto';
+
+const MAX_STOCK_QUANTITY = 2_147_483_647;
 
 @Controller('ingredients')
 @UseGuards(JwtAuthGuard, StaffGuard)
@@ -41,6 +45,77 @@ export class IngredientsController {
         },
       },
     });
+  }
+
+  @Patch(':id/adjust')
+  async adjustStock(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AdjustIngredientStockDto,
+  ) {
+    if (
+      !Number.isSafeInteger(dto.amount) ||
+      dto.amount === 0 ||
+      dto.amount < -MAX_STOCK_QUANTITY - 1 ||
+      dto.amount > MAX_STOCK_QUANTITY
+    ) {
+      throw new BadRequestException(
+        'Số lượng điều chỉnh phải là số nguyên khác 0 trong giới hạn cho phép',
+      );
+    }
+
+    const existing = await this.prisma.ingredient.findUnique({
+      where: { id },
+      select: { id: true, stockQuantity: true, version: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Không tìm thấy nguyên liệu ID ${id}`);
+    }
+
+    const isReduction = dto.amount < 0;
+    const adjustment = Math.abs(dto.amount);
+    const updated = await this.prisma.ingredient.updateMany({
+      where: {
+        id,
+        version: existing.version,
+        stockQuantity: isReduction
+          ? { gte: adjustment }
+          : { lte: MAX_STOCK_QUANTITY - adjustment },
+      },
+      data: {
+        stockQuantity: isReduction
+          ? { decrement: adjustment }
+          : { increment: adjustment },
+        version: { increment: 1 },
+      },
+    });
+
+    if (updated.count !== 1) {
+      const current = await this.prisma.ingredient.findUnique({
+        where: { id },
+        select: { stockQuantity: true },
+      });
+      if (!current) {
+        throw new NotFoundException(`Không tìm thấy nguyên liệu ID ${id}`);
+      }
+      if (isReduction && current.stockQuantity < adjustment) {
+        throw new BadRequestException(
+          'Số lượng điều chỉnh làm tồn kho nhỏ hơn 0',
+        );
+      }
+      if (
+        !isReduction &&
+        current.stockQuantity > MAX_STOCK_QUANTITY - adjustment
+      ) {
+        throw new BadRequestException(
+          'Số lượng điều chỉnh vượt quá giới hạn tồn kho',
+        );
+      }
+      throw new ConflictException(
+        'Tồn kho vừa được cập nhật, vui lòng tải lại và thử lại',
+      );
+    }
+
+    return this.prisma.ingredient.findUniqueOrThrow({ where: { id } });
   }
 
   // 2. Thêm mới một nguyên liệu (nếu cần)

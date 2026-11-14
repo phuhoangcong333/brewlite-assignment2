@@ -46,6 +46,19 @@ export function restockIngredient(
   );
 }
 
+export function adjustIngredientStock(
+  ingredientId: number,
+  amount: number,
+): Promise<InventoryIngredient> {
+  return apiRequest<InventoryIngredient>(
+    `/ingredients/${ingredientId}/adjust`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ amount }),
+    },
+  );
+}
+
 export function updateProductRecipe(
   productId: number,
   items: RecipeItemInput[],

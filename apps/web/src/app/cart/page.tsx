@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MAX_QTY_PER_LINE, useCart, useHydrated } from "@/lib/cart";
-import { formatVND, TOPPINGS } from "@/lib/pricing";
+import { formatVND } from "@/lib/pricing";
 import type { QuoteItemStatus } from "@/lib/quote-types";
 import { useQuote } from "@/lib/use-quote";
+import { useToppings } from "@/lib/use-toppings";
 
 const STATUS_TEXT: Record<QuoteItemStatus, string | null> = {
   AVAILABLE: null,
@@ -51,6 +52,7 @@ export default function CartPage() {
     rejectPromotion,
   } = useCart();
   const { quote, loading, error, retry } = useQuote(items, promotionCode);
+  const { toppings, error: toppingCatalogError } = useToppings();
   const [codeInput, setCodeInput] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -136,13 +138,18 @@ export default function CartPage() {
         </div>
 
         <div className="cart-panel" style={{ width: "100%", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "20px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", boxSizing: "border-box", opacity: loading ? 0.7 : 1 }}>
+          {toppingCatalogError && (
+            <p role="alert" className="mb-4 text-sm text-red-600">
+              Không tải được tên topping: {toppingCatalogError}
+            </p>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {items.map((i, idx) => {
               const q = quote?.items[idx];
               const statusText = q ? STATUS_TEXT[q.status] : null;
               const toppingText =
                 i.toppings.length > 0
-                  ? i.toppings.map((id) => TOPPINGS.find((t) => t.id === id)?.name ?? id).join(", ")
+                  ? i.toppings.map((id) => toppings.find((t) => t.id === id)?.name ?? id).join(", ")
                   : "Không topping";
 
               return (

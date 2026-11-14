@@ -3,7 +3,7 @@ import { PromotionsService } from '../promotions.service';
 import { InMemoryCatalog, InMemoryPromotions, NOW, promo } from './fixtures';
 
 const dto = (over: Partial<ValidateCartDto> = {}): ValidateCartDto => ({
-  items: [{ productId: 1, sizeId: 1, toppingIds: [1], quantity: 2 }],
+  items: [{ productId: 1, sizeId: 1, toppingIds: ['pearl'], quantity: 2 }],
   ...over,
 });
 

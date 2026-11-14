@@ -30,9 +30,9 @@ export const PRODUCTS: CatalogProduct[] = [
 ];
 
 export const TOPPINGS: CatalogTopping[] = [
-  { id: 1, price: 5000, stock: 50 },
-  { id: 2, price: 7000, stock: 50 },
-  { id: 3, price: 6000, stock: 0 },
+  { id: 'pearl', price: 5000, stock: 50 },
+  { id: 'cream', price: 7000, stock: 50 },
+  { id: 'syrup', price: 6000, stock: 0 },
 ];
 
 export const T = (iso: string) => new Date(iso);
@@ -58,7 +58,7 @@ export class InMemoryCatalog extends CatalogRepository {
   async findProducts(ids: number[]) {
     return PRODUCTS.filter((p) => ids.includes(p.id));
   }
-  async findToppings(ids: number[]) {
+  async findToppings(ids: string[]) {
     return TOPPINGS.filter((t) => ids.includes(t.id));
   }
 }

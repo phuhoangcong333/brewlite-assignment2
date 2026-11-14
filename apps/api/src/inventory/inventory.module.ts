@@ -5,10 +5,11 @@ import { InventoryRepository } from './inventory.repository';
 import { InventoryService } from './inventory.service';
 import { PrismaInventoryRepository } from './prisma-inventory.repository';
 import { IngredientsController } from './ingredients.controller';
+import { ToppingsController } from './toppings.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [IngredientsController],
+  controllers: [IngredientsController, ToppingsController],
   providers: [
     PrismaInventoryRepository,
     {

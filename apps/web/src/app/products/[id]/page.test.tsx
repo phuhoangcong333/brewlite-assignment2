@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProduct } from "@/lib/api";
+import { useToppings } from "@/lib/use-toppings";
 import ProductDetailPage from "./page";
 
 vi.mock("next/navigation", () => ({
@@ -15,6 +16,36 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({ getProduct: vi.fn() }));
+vi.mock("@/lib/use-toppings", () => ({ useToppings: vi.fn() }));
+
+const toppingCatalog = [
+  {
+    id: "pearl",
+    name: "Trân châu",
+    price: 5000,
+    amountPerPortion: 50,
+    unit: "g",
+    stockQuantity: 100,
+    availableQuantity: 2,
+  },
+  {
+    id: "cream",
+    name: "Kem",
+    price: 5000,
+    amountPerPortion: 30,
+    unit: "g",
+    stockQuantity: 0,
+    availableQuantity: 0,
+  },
+];
+
+beforeEach(() => {
+  vi.mocked(useToppings).mockReturnValue({
+    toppings: toppingCatalog,
+    loading: false,
+    error: null,
+  });
+});
 
 afterEach(() => {
   cleanup();
@@ -62,5 +93,26 @@ describe("trang chi tiết sản phẩm", () => {
       (screen.getByRole("button", { name: "Hết hàng" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+  });
+
+  it("uses backend topping prices and disables toppings with no portions left", async () => {
+    vi.mocked(getProduct).mockResolvedValue({
+      id: 1,
+      name: "Cà phê sữa",
+      price: 35000,
+      imageUrl: null,
+      availableQuantityBySize: { S: 5, M: 2, L: 1 },
+    });
+
+    render(<ProductDetailPage />);
+
+    const pearl = await screen.findByLabelText(/Trân châu/);
+    const cream = screen.getByLabelText(/Kem/);
+    expect((cream as HTMLInputElement).disabled).toBe(true);
+
+    fireEvent.click(pearl);
+    expect(
+      screen.getByRole("button", { name: "Thêm vào giỏ - 45.000đ" }),
+    ).toBeTruthy();
   });
 });

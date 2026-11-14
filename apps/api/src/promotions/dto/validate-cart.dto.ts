@@ -26,9 +26,8 @@ export class CartItemDto {
   @IsArray()
   @ArrayMaxSize(20)
   @ArrayUnique()
-  @IsInt({ each: true })
-  @Min(1, { each: true })
-  toppingIds: number[] = [];
+  @IsString({ each: true })
+  toppingIds: string[] = [];
 
   @IsInt()
   @Min(1)

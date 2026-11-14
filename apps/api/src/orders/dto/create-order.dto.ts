@@ -2,6 +2,8 @@ import { Type } from 'class-transformer';
 import { Size } from '@prisma/client';
 import {
   ArrayMinSize,
+  ArrayMaxSize,
+  ArrayUnique,
   IsArray,
   IsEnum,
   IsInt,
@@ -27,6 +29,8 @@ export class CreateOrderItemDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique()
   @IsString({ each: true })
   toppings?: string[];
 }

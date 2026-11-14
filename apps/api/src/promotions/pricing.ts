@@ -17,14 +17,14 @@ import {
 export function priceItem(
   input: CartItemInput,
   product: CatalogProduct | undefined,
-  toppings: Map<number, CatalogTopping>,
+  toppings: Map<string, CatalogTopping>,
 ): QuoteItem {
   const base = {
     productId: input.productId,
     sizeId: input.sizeId,
     toppingIds: input.toppingIds,
     quantity: input.quantity,
-    unavailableToppingIds: [] as number[],
+    unavailableToppingIds: [] as string[],
   };
   const notFound: QuoteItem = {
     ...base,
