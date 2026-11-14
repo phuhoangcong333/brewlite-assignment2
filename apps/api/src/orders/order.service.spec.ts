@@ -1,9 +1,13 @@
+import {
+  attachIngredient,
+  ingredientQuantity,
+} from '../../test/helpers/ingredient-fixtures';
 import { PrismaService } from '../prisma/prisma.service';
 import { describeDb } from '../../test/helpers/describe-db';
 import { InvalidTransitionException } from '../common/errors';
-import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
 import { OrderService } from './order.service';
 import { OrderStatus } from './order-state';
+import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
 
 describeDb('OrderService with PostgreSQL', () => {
   const prisma = new PrismaService();
@@ -29,6 +33,12 @@ describeDb('OrderService with PostgreSQL', () => {
       select: { id: true },
     });
     productIds.push(product.id);
+    const ingredientId = await attachIngredient(
+      prisma,
+      product.id,
+      49,
+      ingredientIds,
+    );
 
     const user = await prisma.user.create({
       data: {
@@ -43,6 +53,7 @@ describeDb('OrderService with PostgreSQL', () => {
       data: {
         userId: user.id,
         status,
+        ingredients: { create: { ingredientId, quantity: 1 } },
         total: 1000,
         items: {
           create: {
@@ -149,6 +160,10 @@ describeDb('OrderService with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+      await prisma.ingredient.deleteMany({
+        where: { id: { in: ingredientIds } },
+      });
+      ingredientIds.length = 0;
     }
     if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
@@ -176,12 +191,7 @@ describeDb('OrderService with PostgreSQL', () => {
     expect(
       results.filter((result) => result.status === 'rejected'),
     ).toHaveLength(1);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 50, version: 2 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(50);
   });
 
   it('allows only cancellation or payment to win when both race', async () => {
@@ -202,16 +212,13 @@ describeDb('OrderService with PostgreSQL', () => {
       where: { id: orderId },
       select: { status: true },
     });
-    const product = await prisma.product.findUniqueOrThrow({
-      where: { id: productId },
-      select: { stock: true, version: true },
-    });
+    const product = await ingredientQuantity(prisma, productId);
 
     if (order.status === 'CANCELLED') {
-      expect(product).toEqual({ stock: 50, version: 2 });
+      expect(product).toBe(50);
     } else {
       expect(order.status).toBe('PAID');
-      expect(product).toEqual({ stock: 49, version: 1 });
+      expect(product).toBe(49);
     }
   });
 
@@ -220,12 +227,7 @@ describeDb('OrderService with PostgreSQL', () => {
 
     await service.transitionOrder(orderId, 'PENDING');
 
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 49, version: 1 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(49);
   });
 
   it('supports the PAID -> PREPARING -> READY -> COMPLETED lifecycle', async () => {
@@ -241,12 +243,7 @@ describeDb('OrderService with PostgreSQL', () => {
       ).resolves.toEqual({ status });
     }
 
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 49, version: 1 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(49);
   });
 
   it('records loyalty only when an order reaches COMPLETED', async () => {
@@ -336,12 +333,7 @@ describeDb('OrderService with PostgreSQL', () => {
       await expect(
         service.transitionOrder(orderId, 'CANCELLED'),
       ).resolves.toBeUndefined();
-      await expect(
-        prisma.product.findUniqueOrThrow({
-          where: { id: productId },
-          select: { stock: true, version: true },
-        }),
-      ).resolves.toEqual({ stock: 50, version: 2 });
+      await expect(ingredientQuantity(prisma, productId)).resolves.toBe(50);
     },
   );
 
@@ -366,12 +358,7 @@ describeDb('OrderService with PostgreSQL', () => {
       await expect(
         service.transitionOrder(orderId, 'CANCELLED'),
       ).rejects.toBeInstanceOf(InvalidTransitionException);
-      await expect(
-        prisma.product.findUniqueOrThrow({
-          where: { id: productId },
-          select: { stock: true, version: true },
-        }),
-      ).resolves.toEqual({ stock: 49, version: 1 });
+      await expect(ingredientQuantity(prisma, productId)).resolves.toBe(49);
     },
   );
 
@@ -387,11 +374,6 @@ describeDb('OrderService with PostgreSQL', () => {
         select: { status: true },
       }),
     ).resolves.toEqual({ status: 'PENDING' });
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 49, version: 1 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(49);
   });
 });

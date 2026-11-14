@@ -159,6 +159,9 @@ vite.config.ts.timestamp-*
 # Astro generated types
 .astro/
 
+apps/web/playwright-report/
+apps/web/test-results/
+
 # Turbo Repo
 .turbo
 # TernJS port file
