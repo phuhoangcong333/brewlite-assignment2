@@ -67,4 +67,3 @@ Chi tiết kiểm thử quyền truy cập, lịch sử/chi tiết, hoàn kho v�
 - Các bước PAID → PREPARING → READY → COMPLETED giữ nguyên; trạng thái kết thúc không chuyển tiếp.
 - Hủy đơn và hoàn nguyên liệu từ snapshot nằm trong cùng transaction, chốt bằng trạng thái cũ để chống hoàn hai lần. Không hoàn tiền, không sửa giao dịch thanh toán, không cộng điểm cho đơn hủy.
 - Bảng hủy theo vai trò có 14 unit cases, bổ sung kiểm tra hoàn snapshot đúng một lần và tương thích kho sản phẩm cũ trên PostgreSQL.
-
