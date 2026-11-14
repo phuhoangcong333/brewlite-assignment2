@@ -25,47 +25,94 @@ const ingredients = [
   { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
 ];
 
-const productRecipes: Record<
-  string,
-  Array<{ ingredientName: string; amountRequired: number }>
-> = {
+type RecipeIngredient = {
+  ingredientName: string;
+  size: Size;
+  amountRequired: number;
+};
+
+const productRecipes: Record<string, RecipeIngredient[]> = {
   'Cà phê sữa': [
-    { ingredientName: 'Cà phê hạt', amountRequired: 25 },
-    { ingredientName: 'Sữa đặc', amountRequired: 40 },
+    { ingredientName: 'Cà phê hạt', size: Size.S, amountRequired: 20 },
+    { ingredientName: 'Sữa đặc', size: Size.S, amountRequired: 35 },
+    { ingredientName: 'Cà phê hạt', size: Size.M, amountRequired: 25 },
+    { ingredientName: 'Sữa đặc', size: Size.M, amountRequired: 40 },
+    { ingredientName: 'Cà phê hạt', size: Size.L, amountRequired: 30 },
+    { ingredientName: 'Sữa đặc', size: Size.L, amountRequired: 50 },
   ],
   Americano: [
-    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
-    { ingredientName: 'Đường', amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.S, amountRequired: 16 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 8 },
+    { ingredientName: 'Cà phê hạt', size: Size.M, amountRequired: 20 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.L, amountRequired: 25 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 15 },
   ],
   Cappuccino: [
-    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
-    { ingredientName: 'Sữa tươi', amountRequired: 120 },
-    { ingredientName: 'Đường', amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.S, amountRequired: 16 },
+    { ingredientName: 'Sữa tươi', size: Size.S, amountRequired: 90 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 8 },
+    { ingredientName: 'Cà phê hạt', size: Size.M, amountRequired: 20 },
+    { ingredientName: 'Sữa tươi', size: Size.M, amountRequired: 120 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.L, amountRequired: 25 },
+    { ingredientName: 'Sữa tươi', size: Size.L, amountRequired: 150 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 15 },
   ],
   'Trà đào': [
-    { ingredientName: 'Trà đen', amountRequired: 15 },
-    { ingredientName: 'Đào ngâm', amountRequired: 50 },
-    { ingredientName: 'Đường', amountRequired: 20 },
+    { ingredientName: 'Trà đen', size: Size.S, amountRequired: 12 },
+    { ingredientName: 'Đào ngâm', size: Size.S, amountRequired: 40 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 15 },
+    { ingredientName: 'Trà đen', size: Size.M, amountRequired: 15 },
+    { ingredientName: 'Đào ngâm', size: Size.M, amountRequired: 50 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 20 },
+    { ingredientName: 'Trà đen', size: Size.L, amountRequired: 20 },
+    { ingredientName: 'Đào ngâm', size: Size.L, amountRequired: 70 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 25 },
   ],
   Latte: [
-    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
-    { ingredientName: 'Sữa tươi', amountRequired: 150 },
-    { ingredientName: 'Đường', amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.S, amountRequired: 16 },
+    { ingredientName: 'Sữa tươi', size: Size.S, amountRequired: 110 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 8 },
+    { ingredientName: 'Cà phê hạt', size: Size.M, amountRequired: 20 },
+    { ingredientName: 'Sữa tươi', size: Size.M, amountRequired: 150 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 10 },
+    { ingredientName: 'Cà phê hạt', size: Size.L, amountRequired: 25 },
+    { ingredientName: 'Sữa tươi', size: Size.L, amountRequired: 190 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 15 },
   ],
   'Bạc xỉu': [
-    { ingredientName: 'Cà phê hạt', amountRequired: 15 },
-    { ingredientName: 'Sữa đặc', amountRequired: 50 },
-    { ingredientName: 'Sữa tươi', amountRequired: 60 },
+    { ingredientName: 'Cà phê hạt', size: Size.S, amountRequired: 12 },
+    { ingredientName: 'Sữa đặc', size: Size.S, amountRequired: 40 },
+    { ingredientName: 'Sữa tươi', size: Size.S, amountRequired: 45 },
+    { ingredientName: 'Cà phê hạt', size: Size.M, amountRequired: 15 },
+    { ingredientName: 'Sữa đặc', size: Size.M, amountRequired: 50 },
+    { ingredientName: 'Sữa tươi', size: Size.M, amountRequired: 60 },
+    { ingredientName: 'Cà phê hạt', size: Size.L, amountRequired: 20 },
+    { ingredientName: 'Sữa đặc', size: Size.L, amountRequired: 65 },
+    { ingredientName: 'Sữa tươi', size: Size.L, amountRequired: 80 },
   ],
   'Trà vải': [
-    { ingredientName: 'Trà đen', amountRequired: 15 },
-    { ingredientName: 'Vải ngâm', amountRequired: 50 },
-    { ingredientName: 'Đường', amountRequired: 20 },
+    { ingredientName: 'Trà đen', size: Size.S, amountRequired: 12 },
+    { ingredientName: 'Vải ngâm', size: Size.S, amountRequired: 40 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 15 },
+    { ingredientName: 'Trà đen', size: Size.M, amountRequired: 15 },
+    { ingredientName: 'Vải ngâm', size: Size.M, amountRequired: 50 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 20 },
+    { ingredientName: 'Trà đen', size: Size.L, amountRequired: 20 },
+    { ingredientName: 'Vải ngâm', size: Size.L, amountRequired: 70 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 25 },
   ],
   'Matcha latte': [
-    { ingredientName: 'Bột Matcha', amountRequired: 15 },
-    { ingredientName: 'Sữa tươi', amountRequired: 150 },
-    { ingredientName: 'Đường', amountRequired: 15 },
+    { ingredientName: 'Bột Matcha', size: Size.S, amountRequired: 12 },
+    { ingredientName: 'Sữa tươi', size: Size.S, amountRequired: 110 },
+    { ingredientName: 'Đường', size: Size.S, amountRequired: 10 },
+    { ingredientName: 'Bột Matcha', size: Size.M, amountRequired: 15 },
+    { ingredientName: 'Sữa tươi', size: Size.M, amountRequired: 150 },
+    { ingredientName: 'Đường', size: Size.M, amountRequired: 15 },
+    { ingredientName: 'Bột Matcha', size: Size.L, amountRequired: 20 },
+    { ingredientName: 'Sữa tươi', size: Size.L, amountRequired: 190 },
+    { ingredientName: 'Đường', size: Size.L, amountRequired: 20 },
   ],
 };
 
@@ -138,30 +185,28 @@ async function seed(): Promise<void> {
 
     for (const product of allProducts) {
       const recipeList = productRecipes[product.name] ?? [];
-      for (const size of Object.values(Size)) {
-        for (const item of recipeList) {
-          const ingredientId = ingredientMap.get(item.ingredientName);
-          if (!ingredientId) continue;
+      for (const item of recipeList) {
+        const ingredientId = ingredientMap.get(item.ingredientName);
+        if (!ingredientId) continue;
 
-          await transaction.recipeItem.upsert({
-            where: {
-              productId_ingredientId_size: {
-                productId: product.id,
-                ingredientId,
-                size,
-              },
-            },
-            create: {
+        await transaction.recipeItem.upsert({
+          where: {
+            productId_ingredientId_size: {
               productId: product.id,
               ingredientId,
-              size,
-              amountRequired: item.amountRequired,
+              size: item.size,
             },
-            update: {
-              amountRequired: item.amountRequired,
-            },
-          });
-        }
+          },
+          create: {
+            productId: product.id,
+            ingredientId,
+            size: item.size,
+            amountRequired: item.amountRequired,
+          },
+          update: {
+            amountRequired: item.amountRequired,
+          },
+        });
       }
     }
 
