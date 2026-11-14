@@ -68,8 +68,9 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | `GET /health` | TV7 | Không | Mọi người | Smoke test sau deploy | Đã điền |
 | `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
 | `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Đã điền |
-| `GET /orders` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` (tất cả) | Lịch sử đơn | Khung |
-| `GET /orders/:id` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` | Theo dõi đơn | Khung |
+| `GET /orders` | TV6 | Có | Chỉ lịch sử của tài khoản hiện tại | Lịch sử đơn | Đã kiểm thử |
+| `GET /orders/staff` | TV6 | Có | Chỉ STAFF | Hàng đợi PAID/PREPARING/READY | Đã kiểm thử |
+| `GET /orders/:id` | TV6 | Có | Chỉ chủ sở hữu đơn, kể cả tài khoản STAFF | Theo dõi đơn | Đã kiểm thử |
 | `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Khung |
 
 ## 4. Chi tiết từng endpoint
@@ -640,16 +641,21 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
   "id": 105,
   "userId": 1,
   "total": 95000,
+  "discount": 5000,
+  "promoCode": null,
   "status": "READY",
   "createdAt": "2026-11-06T08:30:00Z",
   "items": [
     {
       "productId": 1,
-      "quantity": 2,
-      "price": 45000,
-      "sizeId": 1
+      "qty": 2,
+      "lineTotal": 100000,
+      "size": "M",
+      "toppings": ["Kem"],
+      "product": { "id": 1, "name": "Cà phê sữa", "price": 40000 }
     }
-  ]
+  ],
+  "loyaltyTransaction": null
 }
 ```
 
@@ -659,6 +665,8 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 - Trạng thái gồm: `PENDING`, `PAID`, `PAYMENT_FAILED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`.
 - Frontend tự gọi lại API sau mỗi 5 đến 10 giây để cập nhật trạng thái.
 - API chỉ lấy dữ liệu, không thay đổi trạng thái đơn hàng.
+- `loyaltyTransaction` là null khi chưa được cộng điểm; sau COMPLETED có `{ "points": 9, "createdAt": "..." }`. Tổng dưới 10.000đ không tạo ledger 0 điểm.
+- STAFF xem hàng đợi xử lý qua `GET /orders/staff`, không được dùng endpoint chi tiết để đọc đơn của khách khác.
 
 **Lỗi:**
 
@@ -699,7 +707,7 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 - Không được bỏ qua bước hoặc cập nhật đơn đã hoàn thành/hủy.
 - Thanh toán và hủy đơn được xử lý bởi nghiệp vụ tương ứng, không thông qua endpoint này.
 - Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống ghi nhận `LoyaltyTransaction`.
-- Điểm thưởng dự kiến: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả.
+- Điểm thưởng: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả sau giảm giá; nếu bằng 0 thì không tạo giao dịch điểm.
 - Mỗi đơn hàng chỉ được cộng điểm một lần.
 - Việc cập nhật trạng thái và ghi nhận điểm thưởng thực hiện trong cùng database transaction.
 
@@ -719,9 +727,9 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 ```json
 {
   "statusCode": 409,
-  "error": "Conflict",
-  "message": "Invalid order status transition: PAID -> COMPLETED",
-  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+  "message": "Cannot transition order from PAID to COMPLETED",
+  "path": "/orders/105/status",
+  "timestamp": "2026-11-14T08:30:00.000Z"
 }
 ```
 
