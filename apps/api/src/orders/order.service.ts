@@ -19,6 +19,7 @@ import {
 } from '../inventory/inventory.plan';
 import { planCancel } from './order-cancel.plan';
 import { assertTransition, OrderStatus } from './order-state';
+import { calculateLoyaltyPoints } from './loyalty-points';
 
 const MAX_CREATE_ATTEMPTS = 3;
 const SIZE_PRICE: Record<Size, number> = {
@@ -157,7 +158,7 @@ export class OrderService {
       throw new NotFoundException(`Order ${orderId} was not found`);
     }
 
-    await this.transitionOrder(orderId, to);
+    await this.transitionOrder(orderId, to, userId);
   }
 
   async transitionOrderForStaff(
@@ -228,7 +229,9 @@ export class OrderService {
 
           if (hasRecipeItems) {
             if (products.length !== productIds.length) {
-              throw new BadRequestException('Không tìm thấy sản phẩm trong hệ thống');
+              throw new BadRequestException(
+                'Không tìm thấy sản phẩm trong hệ thống',
+              );
             }
 
             const productMap = new Map(products.map((p) => [p.id, p]));
@@ -303,10 +306,7 @@ export class OrderService {
             }
           } else {
             // Giữ nguyên luồng chuẩn khi sản phẩm không gắn RecipeItem (tương thích bộ test hiện có)
-            const updates = planReserve(
-              items,
-              toInventorySnapshots(products),
-            );
+            const updates = planReserve(items, toInventorySnapshots(products));
 
             const applied =
               await this.inventoryRepository.applyUpdatesInTransaction(
@@ -504,8 +504,11 @@ export class OrderService {
         throw new OrderTransitionConflictException(orderId);
       }
 
-      if (from === 'READY' && to === 'COMPLETED') {
-        const points = Math.floor(order.total / 10_000);
+      const points =
+        from === 'READY' && to === 'COMPLETED'
+          ? calculateLoyaltyPoints(order.total)
+          : 0;
+      if (points > 0) {
         await transaction.loyaltyTransaction.create({
           data: {
             userId: order.userId,
