@@ -1,6 +1,6 @@
 # Bàn giao TV6: Backend tồn kho, Issue #21 và Issue #28
 
-Phạm vi chốt ngày 15/11/2026. Nền tích hợp: dev `84e833a`, đã gồm TV4 theo size và menu danh mục Issue #52. Không bao gồm Issue #55 hoặc hoàn tiền.
+Phạm vi chốt ngày 15/11/2026. Nền tích hợp: dev `2ce131f`, đã gồm TV4 theo size và menu danh mục Issue #52. Không bao gồm Issue #55 hoặc hoàn tiền.
 
 ## Checklist công việc
 
@@ -23,11 +23,11 @@ Phạm vi chốt ngày 15/11/2026. Nền tích hợp: dev `84e833a`, đã gồm 
 
 | Kiểm tra | Kết quả |
 | --- | --- |
-| Backend unit/integration, PostgreSQL | 232/232, 23 suites |
+| Backend unit/integration, PostgreSQL | 249 test thực thi PASS, 25 suites; 1 TODO có sẵn của Issue #25 |
 | HTTP API/PostgreSQL | 165/165, 7 suites |
 | Frontend Vitest | 57/57, 9 files |
 | Playwright Chromium desktop + Pixel 5 giả lập | 14/14, 7 ca mỗi project |
-| Tổng | **468 passed**, không cộng trùng các tập con |
+| Tổng | **485 test thực thi passed**, không cộng trùng các tập con; 1 TODO khuyến mãi ngoài phạm vi |
 | Prisma generate, migrate deploy | PASS, đủ 7 migrations |
 | Prisma schema diff | Không có khác biệt với database |
 | Seed chạy lại sau sửa công thức và lượng kho | PASS, giữ nguyên sửa đổi STAFF và stock |

@@ -31,6 +31,8 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 - [x] Bổ sung workflow CI chạy backend, frontend và Playwright, lưu HTML/JSON/trace khi lỗi.
 - [x] Cập nhật Swagger và API contract cho endpoint, DTO, response thực tế và phân quyền.
 
+Lượt cuối được chạy lại sau khi dev merge PR #66 (khuyến mãi), nền `2ce131f`. Bộ backend có thêm **1 it.todo có sẵn của Issue #25** về báo giá nhiều dòng vượt tổng tồn; đây là test chưa triển khai của đồng đội, ngoài phạm vi #21/#28. 249 test backend thực thi đều pass. Không coi TODO là test đã chạy.
+
 ## Môi trường và bằng chứng
 
 - Windows, Node.js 24, Prisma 6.19, PostgreSQL 16 trong Docker, Next.js 16.3.8, Playwright Chromium.
@@ -41,9 +43,9 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 
 | Nhóm kiểm tra | Kết quả chạy |
 | --- | --- |
-| Backend unit/integration, gồm PostgreSQL | 23 suites, 232 tests PASS |
+| Backend unit/integration, gồm PostgreSQL | 25 suites, 249 tests PASS |
 | HTTP E2E toàn bộ backend | 7 suites, 165 tests PASS |
-| Riêng state/points unit | 77 tests PASS (đã nằm trong 232) |
+| Riêng state/points unit | 77 tests PASS (đã nằm trong 249) |
 | Riêng loyalty HTTP + DB | 15 tests PASS (đã nằm trong 165) |
 | Riêng status/history HTTP + DB | 73 tests PASS (đã nằm trong 165) |
 | Riêng tồn kho nguyên liệu tích hợp TV4 | 44 HTTP tests PASS (đã nằm trong 165) |
@@ -56,7 +58,7 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 | Lint các file frontend thay đổi | PASS |
 | Lint toàn frontend | Exit 0; còn 1 warning img có sẵn ở trang lịch sử |
 
-Kết quả bản tích hợp cuối ngày 15/11/2026: **468 test pass (232 + 165 + 57 + 14)**. Các số riêng state/loyalty/status/inventory là tập con, không cộng lần nữa vào tổng test.
+Kết quả bản tích hợp cuối ngày 15/11/2026: **485 test pass (249 + 165 + 57 + 14)**. Các số riêng state/loyalty/status/inventory là tập con, không cộng lần nữa vào tổng test.
 
 Bổ sung 18 HTTP tests trong `staff-cancellation.e2e-spec.ts`: hủy PENDING/PREPARING, JWT/role bị hạ quyền, trạng thái cuối, ID sai, hủy trùng/đồng thời với khách hoặc READY, rollback khi hoàn kho tràn Int32, giữ nguyên Payment và không cộng điểm.
 
