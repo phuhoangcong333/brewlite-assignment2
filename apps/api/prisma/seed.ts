@@ -4,14 +4,23 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 const products = [
-  { name: 'Cà phê sữa', price: 35_000, imageUrl: '/image/Picture1.png' },
-  { name: 'Americano', price: 40_000, imageUrl: '/image/Picture2.png' },
-  { name: 'Cappuccino', price: 45_000, imageUrl: '/image/Picture3.png' },
-  { name: 'Trà đào', price: 39_000, imageUrl: '/image/Picture4.png' },
-  { name: 'Latte', price: 45_000, imageUrl: '/image/Picture5.png' },
-  { name: 'Bạc xỉu', price: 38_000, imageUrl: '/image/Picture6.png' },
-  { name: 'Trà vải', price: 39_000, imageUrl: '/image/Picture7.png' },
-  { name: 'Matcha latte', price: 50_000, imageUrl: '/image/Picture8.png' },
+  // Danh mục Cà phê (COFFEE)
+  { name: 'Cà phê sữa', price: 29_000, category: 'COFFEE', imageUrl: '/image/Picture1.png', stock: 10 },
+  { name: 'Americano', price: 35_000, category: 'COFFEE', imageUrl: '/image/Picture2.png', stock: 10 },
+  { name: 'Cappuccino', price: 45_000, category: 'COFFEE', imageUrl: '/image/Picture3.png', stock: 10 },
+  { name: 'Latte', price: 45_000, category: 'COFFEE', imageUrl: '/image/Picture5.png', stock: 10 },
+  { name: 'Bạc xỉu', price: 32_000, category: 'COFFEE', imageUrl: '/image/Picture6.png', stock: 10 },
+
+  // Danh mục Trà trái cây (FRUIT_TEA)
+  { name: 'Trà đào', price: 39_000, category: 'FRUIT_TEA', imageUrl: '/image/Picture4.png', stock: 10 },
+  { name: 'Trà vải', price: 39_000, category: 'FRUIT_TEA', imageUrl: '/image/Picture7.png', stock: 10 },
+  { name: 'Trà chanh sả', price: 35_000, category: 'FRUIT_TEA', imageUrl: '/image/Picture4.png', stock: 10 },
+  { name: 'Trà dâu tằm', price: 42_000, category: 'FRUIT_TEA', imageUrl: '/image/Picture7.png', stock: 0 }, // Hết hàng
+
+  // Danh mục Trà sữa & Matcha (MILK_TEA)
+  { name: 'Matcha latte', price: 50_000, category: 'MILK_TEA', imageUrl: '/image/Picture8.png', stock: 10 },
+  { name: 'Trà sữa truyền thống', price: 35_000, category: 'MILK_TEA', imageUrl: '/image/Picture8.png', stock: 10 },
+  { name: 'Trà sữa ô long nướng', price: 42_000, category: 'MILK_TEA', imageUrl: '/image/Picture8.png', stock: 0 }, // Hết hàng
 ];
 
 const ingredients = [
@@ -151,19 +160,27 @@ async function seed(): Promise<void> {
     staffPassword === undefined ? undefined : await bcrypt.hash(staffPassword, 12);
 
   await prisma.$transaction(async (transaction) => {
-    const existingProducts = await transaction.product.findMany({
-      where: { name: { in: products.map(({ name }) => name) } },
-      select: { name: true },
-    });
-    const existingNames = new Set(existingProducts.map(({ name }) => name));
-    const missingProducts = products.filter(
-      ({ name }) => !existingNames.has(name),
-    );
-
-    if (missingProducts.length > 0) {
-      await transaction.product.createMany({
-        data: missingProducts.map((product) => ({ ...product, stock: 50 })),
+    for (const product of products) {
+      const existing = await transaction.product.findFirst({
+        where: { name: product.name },
+        select: { id: true },
       });
+
+      if (existing) {
+        await transaction.product.update({
+          where: { id: existing.id },
+          data: {
+            price: product.price,
+            category: product.category,
+            imageUrl: product.imageUrl,
+            stock: product.stock,
+          },
+        });
+      } else {
+        await transaction.product.create({
+          data: product,
+        });
+      }
     }
 
     // 1. Khởi tạo danh sách nguyên liệu mẫu (Ingredient)

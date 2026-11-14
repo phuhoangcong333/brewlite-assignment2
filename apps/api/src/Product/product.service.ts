@@ -40,8 +40,14 @@ export function computeAvailableQuantities(
 export class ProductService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAllProducts() {
+  async getAllProducts(category?: string) {
+    const normalizedCategory = category?.trim().toUpperCase();
+
     const products = await this.prisma.product.findMany({
+      where:
+        normalizedCategory && normalizedCategory !== 'ALL'
+          ? { category: normalizedCategory }
+          : undefined,
       orderBy: { id: 'asc' },
       include: {
         recipeItems: {
