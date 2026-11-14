@@ -10,13 +10,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({
-    href,
-    children,
-  }: {
-    href: string;
-    children: ReactNode;
-  }) => createElement("a", { href }, children),
+  default: ({ href, children }: { href: string; children: ReactNode }) =>
+    createElement("a", { href }, children),
 }));
 
 vi.mock("@/lib/api", () => ({ getProduct: vi.fn() }));
@@ -33,18 +28,22 @@ describe("trang chi tiết sản phẩm", () => {
       name: "Cà phê sữa",
       price: 35000,
       imageUrl: null,
-      availableQuantity: 2,
+      availableQuantityBySize: { S: 5, M: 2, L: 1 },
     });
 
     render(<ProductDetailPage />);
 
-    expect(await screen.findByText("Có thể pha: 2 ly")).toBeTruthy();
+    expect(await screen.findByText("Có thể pha: 2 ly (Size M)")).toBeTruthy();
     const increaseButton = screen.getByRole("button", { name: "+" });
     fireEvent.click(increaseButton);
     fireEvent.click(increaseButton);
 
     expect(screen.getByText("2")).toBeTruthy();
     expect((increaseButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /^L/ }));
+    expect(screen.getByText("Có thể pha: 1 ly (Size L)")).toBeTruthy();
+    expect(screen.getByText("1")).toBeTruthy();
   });
 
   it("chặn mua món không thể pha", async () => {
@@ -53,12 +52,12 @@ describe("trang chi tiết sản phẩm", () => {
       name: "Cà phê sữa",
       price: 35000,
       imageUrl: null,
-      availableQuantity: 0,
+      availableQuantityBySize: { S: 0, M: 0, L: 0 },
     });
 
     render(<ProductDetailPage />);
 
-    expect(await screen.findAllByText("Hết hàng")).toHaveLength(2);
+    expect(await screen.findAllByText("Hết hàng (Size M)")).toHaveLength(1);
     expect(
       (screen.getByRole("button", { name: "Hết hàng" }) as HTMLButtonElement)
         .disabled,

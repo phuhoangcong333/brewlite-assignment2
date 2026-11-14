@@ -1,5 +1,5 @@
 import { apiRequest } from "./api-client";
-import type { Product } from "./types";
+import type { Product, Size } from "./types";
 
 export type InventoryIngredient = {
   id: number;
@@ -10,6 +10,7 @@ export type InventoryIngredient = {
 
 export type RecipeItem = {
   ingredientId: number;
+  size: Size;
   amountRequired: number;
   ingredient: InventoryIngredient;
 };
@@ -20,6 +21,7 @@ export type InventoryProduct = Product & {
 
 export type RecipeItemInput = {
   ingredientId: number;
+  size: Size;
   amountRequired: number;
 };
 
@@ -48,11 +50,8 @@ export function updateProductRecipe(
   productId: number,
   items: RecipeItemInput[],
 ): Promise<{ id: number }> {
-  return apiRequest<{ id: number }>(
-    `/ingredients/recipes/${productId}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({ items }),
-    },
-  );
+  return apiRequest<{ id: number }>(`/ingredients/recipes/${productId}`, {
+    method: "PUT",
+    body: JSON.stringify({ items }),
+  });
 }

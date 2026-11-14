@@ -32,10 +32,7 @@ export interface PromotionResult {
 }
 
 export type QuoteItemStatus =
-  | 'AVAILABLE'
-  | 'OUT_OF_STOCK'
-  | 'TOPPING_OUT_OF_STOCK'
-  | 'PRODUCT_NOT_FOUND';
+  'AVAILABLE' | 'OUT_OF_STOCK' | 'TOPPING_OUT_OF_STOCK' | 'PRODUCT_NOT_FOUND';
 
 export interface QuoteItem {
   productId: number;
@@ -75,8 +72,7 @@ export interface CatalogProduct {
   name: string;
   imageUrl: string | null;
   basePrice: number;
-  stock: number;
-  sizes: { id: number; extraPrice: number }[];
+  sizes: { id: number; extraPrice: number; stock: number }[];
 }
 
 export interface CatalogTopping {
