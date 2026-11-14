@@ -4,12 +4,23 @@ import { apiRequest, ApiError, USE_MOCK_DATA } from "./api-client";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(category?: string): Promise<Product[]> {
   if (USE_MOCK_DATA) {
     await delay(500);
+    if (category && category !== "ALL") {
+      return MOCK_PRODUCTS.filter(
+        (p) => (p as Product & { category?: string }).category === category,
+      );
+    }
     return MOCK_PRODUCTS;
   }
-  return apiRequest<Product[]>("/products");
+
+  const path =
+    category && category !== "ALL"
+      ? `/products?category=${encodeURIComponent(category)}`
+      : "/products";
+
+  return apiRequest<Product[]>(path);
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
