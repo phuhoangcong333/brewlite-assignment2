@@ -18,7 +18,12 @@ import {
   planReserve,
 } from '../inventory/inventory.plan';
 import { planCancel } from './order-cancel.plan';
-import { assertTransition, OrderStatus } from './order-state';
+import {
+  assertCanCancelOrder,
+  assertTransition,
+  CancellationActor,
+  OrderStatus,
+} from './order-state';
 import { calculateLoyaltyPoints } from './loyalty-points';
 
 const MAX_CREATE_ATTEMPTS = 3;
@@ -141,7 +146,7 @@ export class OrderService {
 
   async getOrdersForStaff() {
     return this.prisma.order.findMany({
-      where: { status: { in: ['PAID', 'PREPARING', 'READY'] } },
+      where: { status: { in: ['PENDING', 'PAID', 'PREPARING', 'READY'] } },
       orderBy: { createdAt: 'asc' },
       include: {
         items: {
@@ -182,11 +187,11 @@ export class OrderService {
       throw new NotFoundException(`Order ${orderId} was not found`);
     }
 
-    if (!['PREPARING', 'READY', 'COMPLETED'].includes(to)) {
+    if (!['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'].includes(to)) {
       throw new InvalidTransitionException(order.status, to);
     }
 
-    await this.transitionOrder(orderId, to);
+    await this.transitionOrder(orderId, to, undefined, 'STAFF');
   }
 
   async createOrder(
@@ -454,6 +459,7 @@ export class OrderService {
     orderId: number,
     to: OrderStatus,
     userId?: number,
+    actor: CancellationActor = 'CUSTOMER',
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findFirst({
@@ -476,7 +482,8 @@ export class OrderService {
       }
 
       const from = order.status as OrderStatus;
-      assertTransition(from, to);
+      if (to === 'CANCELLED') assertCanCancelOrder(from, actor);
+      else assertTransition(from, to);
 
       let releaseUpdates: InventoryUpdate[] = [];
       const ingredientReleases = new Map<number, number>();
@@ -518,6 +525,7 @@ export class OrderService {
               from,
               order.items,
               toInventorySnapshots(products),
+              actor,
             );
           }
         }

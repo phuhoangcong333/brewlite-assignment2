@@ -325,6 +325,40 @@ describeDb('OrderService with PostgreSQL', () => {
     ).resolves.toEqual({ status: 'PENDING' });
   });
 
+  it.each(['PENDING', 'PREPARING'] as const)(
+    'staff cancels %s and restores the saved consumption only once',
+    async (status) => {
+      const { orderId, productId } = await createOrder(status);
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { usesIngredientInventory: true },
+      });
+      await service.transitionOrderForStaff(orderId, 'CANCELLED');
+      expect(await ingredientQuantity(prisma, productId)).toBe(50);
+      await expect(
+        service.transitionOrderForStaff(orderId, 'CANCELLED'),
+      ).rejects.toBeInstanceOf(InvalidTransitionException);
+      expect(await ingredientQuantity(prisma, productId)).toBe(50);
+      expect(
+        await prisma.loyaltyTransaction.count({ where: { orderId } }),
+      ).toBe(0);
+    },
+  );
+
+  it('staff cancellation still restores legacy product stock for a preparing order', async () => {
+    const { orderId, productId } = await createOrder('PREPARING');
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { usesIngredientInventory: false },
+    });
+    await service.transitionOrderForStaff(orderId, 'CANCELLED');
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
+        .stock,
+    ).toBe(50);
+    expect(await ingredientQuantity(prisma, productId)).toBe(49);
+  });
+
   it.each(['PENDING', 'PAYMENT_FAILED'] as const)(
     'restores inventory when cancelling from %s',
     async (status) => {

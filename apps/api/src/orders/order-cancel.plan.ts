@@ -4,13 +4,18 @@ import {
   InventoryWant,
   planRelease,
 } from '../inventory/inventory.plan';
-import { assertTransition, OrderStatus } from './order-state';
+import {
+  assertCanCancelOrder,
+  CancellationActor,
+  OrderStatus,
+} from './order-state';
 
 export function planCancel(
   status: OrderStatus,
   items: readonly InventoryWant[],
   current: readonly InventorySnapshot[],
+  actor: CancellationActor = 'CUSTOMER',
 ): InventoryUpdate[] {
-  assertTransition(status, 'CANCELLED');
+  assertCanCancelOrder(status, actor);
   return planRelease(items, current);
 }

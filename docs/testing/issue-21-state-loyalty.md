@@ -60,3 +60,11 @@ Kết quả chạy thực tế: 63 unit tests và 15 HTTP/PostgreSQL tests pass.
 | Hủy PAYMENT_FAILED không cộng điểm | order-loyalty.e2e-spec.ts |
 
 Chi tiết kiểm thử quyền truy cập, lịch sử/chi tiết, hoàn kho và Playwright nằm trong bổ sung Issue #28.
+# Cập nhật yêu cầu hủy đơn ngày 15/11/2026
+
+- STAFF được hủy **PENDING/PREPARING** qua `DELETE /orders/staff/:id` hoặc `PATCH /orders/:id/status` với `CANCELLED`.
+- CUSTOMER chỉ được hủy đơn của mình ở **PENDING/PAYMENT_FAILED** qua `DELETE /orders/:id`. Khách không được hủy PREPARING.
+- Các bước PAID → PREPARING → READY → COMPLETED giữ nguyên; trạng thái kết thúc không chuyển tiếp.
+- Hủy đơn và hoàn nguyên liệu từ snapshot nằm trong cùng transaction, chốt bằng trạng thái cũ để chống hoàn hai lần. Không hoàn tiền, không sửa giao dịch thanh toán, không cộng điểm cho đơn hủy.
+- Bảng hủy theo vai trò có 14 unit cases, bổ sung kiểm tra hoàn snapshot đúng một lần và tương thích kho sản phẩm cũ trên PostgreSQL.
+

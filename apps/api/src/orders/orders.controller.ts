@@ -58,14 +58,10 @@ export class OrdersController {
   }
 
   @Post()
-  createOrder(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateOrderDto,
-  ) {
+  createOrder(@Req() req: AuthenticatedRequest, @Body() dto: CreateOrderDto) {
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('Danh sách sản phẩm không được để trống');
     }
-
 
     return dto.promoCode === undefined
       ? this.orderService.createOrder(getUserId(req), dto.items)
@@ -81,7 +77,6 @@ export class OrdersController {
     @Body() dto: TransitionOrderDto,
   ) {
     await this.orderService.transitionOrderForStaff(id, dto.status);
-
   }
 
   @Delete(':id')
@@ -95,5 +90,13 @@ export class OrdersController {
       'CANCELLED',
       getUserId(req),
     );
+  }
+
+  @Delete('staff/:id')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async cancelOrderForStaff(@Param('id', ParseIntPipe) id: number) {
+    await this.orderService.transitionOrderForStaff(id, 'CANCELLED');
   }
 }
