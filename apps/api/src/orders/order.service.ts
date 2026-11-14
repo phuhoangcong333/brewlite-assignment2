@@ -158,6 +158,18 @@ export class OrderService {
     });
   }
 
+  async getOrderForUser(orderId: number, userId: number) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: {
+        items: { include: { product: true } },
+        loyaltyTransaction: { select: { points: true, createdAt: true } },
+      },
+    });
+    if (!order) throw new NotFoundException(`Order ${orderId} was not found`);
+    return order;
+  }
+
   async transitionOrderForUser(
     orderId: number,
     to: OrderStatus,

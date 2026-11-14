@@ -159,6 +159,7 @@ vite.config.ts.timestamp-*
 # Astro generated types
 .astro/
 
+# Playwright reports contain temporary sessions and are local/CI artifacts.
 apps/web/playwright-report/
 apps/web/test-results/
 

@@ -4,5 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   esbuild: { jsx: "automatic" },
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
-  test: { environment: "jsdom", css: false },
+  test: {
+    environment: "jsdom",
+    css: false,
+    include: ["src/**/*.test.{ts,tsx}"],
+  },
 });
