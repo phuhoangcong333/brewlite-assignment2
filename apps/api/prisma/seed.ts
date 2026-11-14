@@ -95,13 +95,17 @@ async function seed(): Promise<void> {
   const staffEmail = process.env.STAFF_EMAIL?.trim().toLowerCase();
   const staffPassword = process.env.STAFF_PASSWORD;
   if (Boolean(staffEmail) !== Boolean(staffPassword)) {
-    throw new Error('STAFF_EMAIL and STAFF_PASSWORD must be configured together');
+    throw new Error(
+      'STAFF_EMAIL and STAFF_PASSWORD must be configured together',
+    );
   }
   if (staffPassword !== undefined && staffPassword.length < 6) {
     throw new Error('STAFF_PASSWORD must contain at least 6 characters');
   }
   const staffPasswordHash =
-    staffPassword === undefined ? undefined : await bcrypt.hash(staffPassword, 12);
+    staffPassword === undefined
+      ? undefined
+      : await bcrypt.hash(staffPassword, 12);
 
   await prisma.$transaction(async (transaction) => {
     const existingProducts = await transaction.product.findMany({
@@ -133,10 +137,12 @@ async function seed(): Promise<void> {
     // 2. Gán công thức định lượng (RecipeItem) cho 8 món trong bảng Product
     const allProducts = await transaction.product.findMany({
       where: { name: { in: products.map(({ name }) => name) } },
-      select: { id: true, name: true },
+      select: { id: true, name: true, recipeItems: { select: { id: true } } },
     });
 
     for (const product of allProducts) {
+      // Preserve recipes edited by staff when Docker reruns seed on restart.
+      if (product.recipeItems.length > 0) continue;
       const recipeList = productRecipes[product.name] ?? [];
       for (const item of recipeList) {
         const ingredientId = ingredientMap.get(item.ingredientName);
