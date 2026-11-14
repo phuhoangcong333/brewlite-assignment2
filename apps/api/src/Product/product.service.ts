@@ -24,7 +24,7 @@ export function computeAvailableQuantity(
 export class ProductService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async getAllProducts() {
     const products = await this.prisma.product.findMany({
       orderBy: { id: 'asc' },
       include: {
@@ -45,12 +45,12 @@ export class ProductService {
       return {
         ...product,
         availableQuantity,
-        stock: availableQuantity, // Đồng bộ cả trường stock để tương thích ngược với code cũ
+        stock: availableQuantity,
       };
     });
   }
 
-  async findOne(id: number) {
+  async getProductById(id: number) {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -63,7 +63,7 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Product ${id} was not found`);
+      throw new NotFoundException(`Không tìm thấy sản phẩm có id ${id}`);
     }
 
     const availableQuantity = computeAvailableQuantity(
