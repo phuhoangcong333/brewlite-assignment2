@@ -146,6 +146,10 @@ export default function MenuPage() {
       {!loading && !error && products.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {products.map((p) => {
+            const legacyAvailable =
+              (p as Product & { availableQuantity?: number })
+                .availableQuantity ?? 0;
+
             const availableSizes = p.availableQuantityBySize
               ? (["S", "M", "L"] as const).filter(
                   (size) => p.availableQuantityBySize[size] > 0,
@@ -154,7 +158,7 @@ export default function MenuPage() {
 
             const isOutOfStock = availableSizes
               ? availableSizes.length === 0
-              : p.availableQuantity <= 0;
+              : legacyAvailable <= 0;
 
             const stockLabel = isOutOfStock
               ? "Hết hàng"
@@ -164,7 +168,7 @@ export default function MenuPage() {
                       (size) => `${size}: ${p.availableQuantityBySize[size]} ly`,
                     )
                     .join(" · ")
-                : `Có thể pha: ${p.availableQuantity} ly`;
+                : `Có thể pha: ${legacyAvailable} ly`;
 
             return (
               <div
