@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProductModule } from './Product/product.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ConfigModule } from '@nestjs/config';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ConfigModule } from '@nestjs/config';
     InventoryModule,
     OrdersModule,
     PaymentsModule,
+    PromotionsModule,
     PrismaModule,
     AuthModule,
   ],
