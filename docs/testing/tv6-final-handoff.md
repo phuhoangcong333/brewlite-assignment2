@@ -29,6 +29,9 @@ Phạm vi chốt ngày 15/11/2026. Nền tích hợp: dev `84e833a`, đã gồm 
 | Playwright Chromium desktop + Pixel 5 giả lập | 14/14, 7 ca mỗi project |
 | Tổng | **468 passed**, không cộng trùng các tập con |
 | Prisma generate, migrate deploy | PASS, đủ 7 migrations |
+| Prisma schema diff | Không có khác biệt với database |
+| Seed chạy lại sau sửa công thức và lượng kho | PASS, giữ nguyên sửa đổi STAFF và stock |
+| Cleanup fixture API/browser | PASS, không còn fixture nghiệm thu |
 | Nest build, Next production build --webpack | PASS |
 | Backend + frontend lint | Exit 0; 3 warning backend có sẵn và 1 warning img frontend có sẵn |
 | Conflict markers, git diff --check | PASS |

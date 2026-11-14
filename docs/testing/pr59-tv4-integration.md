@@ -107,4 +107,3 @@ AppModule nằm trong 5 file conflict ban đầu nhưng sau resolve giữ nguyê
 - API công thức chuẩn yêu cầu đủ S/M/L, cho phép cùng nguyên liệu ở các size khác nhau. Alias cũ không truyền size được mở rộng cả ba size để tương thích.
 - Sửa migration size: chỉ sao chép từ M gốc, tránh nhân đôi L khi database đã có công thức. Regression test chạy chính SQL migration trong schema PostgreSQL riêng và kiểm tra giữ nguyên định lượng.
 - Database test cuối riêng: `brewlite_final_acceptance_tests`, đủ 7 migrations. Không reset database ứng dụng.
-
