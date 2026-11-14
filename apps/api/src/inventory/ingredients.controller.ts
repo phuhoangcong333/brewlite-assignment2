@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
   Get,
   NotFoundException,
   Param,
@@ -14,6 +15,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffGuard } from '../auth/staff.guard';
+import { RecipesService } from './recipes.service';
 import {
   CreateIngredientDto,
   RestockIngredientDto,
@@ -23,7 +25,10 @@ import {
 @Controller('ingredients')
 @UseGuards(JwtAuthGuard, StaffGuard)
 export class IngredientsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recipes: RecipesService,
+  ) {}
 
   // 1. Lấy danh sách toàn bộ nguyên liệu trong kho
   @Get()
@@ -45,13 +50,19 @@ export class IngredientsController {
   // 2. Thêm mới một nguyên liệu (nếu cần)
   @Post()
   async create(@Body() dto: CreateIngredientDto) {
-    return this.prisma.ingredient.create({
-      data: {
-        name: dto.name.trim(),
-        unit: dto.unit.trim(),
-        stockQuantity: dto.stockQuantity,
-      },
-    });
+    try {
+      return await this.prisma.ingredient.create({
+        data: {
+          name: dto.name.trim(),
+          unit: dto.unit.trim(),
+          stockQuantity: dto.stockQuantity,
+        },
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002')
+        throw new ConflictException('Ingredient already exists');
+      throw error;
+    }
   }
 
   // 3. Nhập thêm nguyên liệu vào kho: PATCH /ingredients/:id/restock
@@ -61,6 +72,15 @@ export class IngredientsController {
     @Body() dto: RestockIngredientDto,
   ) {
     const addedAmount = dto.amount ?? dto.quantity ?? dto.stockQuantity;
+    if (
+      [dto.amount, dto.quantity, dto.stockQuantity].filter(
+        (value) => value != null,
+      ).length !== 1
+    ) {
+      throw new BadRequestException(
+        'Provide exactly one of amount, quantity or stockQuantity',
+      );
+    }
     if (
       addedAmount === undefined ||
       !Number.isSafeInteger(addedAmount) ||
@@ -78,13 +98,18 @@ export class IngredientsController {
       throw new NotFoundException(`Không tìm thấy nguyên liệu ID ${id}`);
     }
 
-    return this.prisma.ingredient.update({
-      where: { id },
+    const updated = await this.prisma.ingredient.updateMany({
+      where: { id, stockQuantity: { lte: 2_147_483_647 - addedAmount } },
       data: {
         stockQuantity: { increment: addedAmount },
         version: { increment: 1 },
       },
     });
+    if (updated.count !== 1)
+      throw new BadRequestException(
+        'Ingredient quantity exceeds storage capacity',
+      );
+    return this.prisma.ingredient.findUniqueOrThrow({ where: { id } });
   }
 
   // 4. Cập nhật công thức định lượng cho 1 món: PUT /ingredients/recipes/:productId
@@ -109,38 +134,6 @@ export class IngredientsController {
     productId: number,
     dto: UpdateProductRecipeDto,
   ) {
-    const product = await this.prisma.product.findUnique({
-      where: { id: productId },
-    });
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy món nước ID ${productId}`);
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.recipeItem.deleteMany({
-        where: { productId },
-      });
-
-      if (dto.items && dto.items.length > 0) {
-        await tx.recipeItem.createMany({
-          data: dto.items.map((item) => ({
-            productId,
-            ingredientId: item.ingredientId,
-            amountRequired: item.amountRequired,
-          })),
-        });
-      }
-
-      return tx.product.findUnique({
-        where: { id: productId },
-        include: {
-          recipeItems: {
-            include: {
-              ingredient: true,
-            },
-          },
-        },
-      });
-    });
+    return this.recipes.replace(productId, dto.items);
   }
 }

@@ -50,29 +50,31 @@ model Product {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique
-  passwordHash  String
-  role          UserRole @default(CUSTOMER)
-  loyaltyPoints Int      @default(0)
-  createdAt     DateTime @default(now())
-  orders        Order[]
+  id                  Int                  @id @default(autoincrement())
+  email               String               @unique
+  passwordHash        String
+  role                UserRole             @default(CUSTOMER)
+  loyaltyPoints       Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  orders              Order[]
   loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  status    OrderStatus @default(PENDING)
-  total     Int
-  discount  Int         @default(0)
-  promoCode String?
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  promotion Promotion?  @relation(fields: [promoCode], references: [code], onDelete: Restrict)
-  items     OrderItem[]
-  payments  Payment[]
-  loyaltyTransaction LoyaltyTransaction?
+  id                      Int                 @id @default(autoincrement())
+  userId                  Int
+  status                  OrderStatus         @default(PENDING)
+  total                   Int
+  discount                Int                 @default(0)
+  promoCode               String?
+  createdAt               DateTime            @default(now())
+  user                    User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  promotion               Promotion?          @relation(fields: [promoCode], references: [code], onDelete: Restrict)
+  items                   OrderItem[]
+  payments                Payment[]
+  loyaltyTransaction      LoyaltyTransaction?
+  usesIngredientInventory Boolean?
+  ingredients             OrderIngredient[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -127,12 +129,25 @@ model Promotion {
 }
 
 model Ingredient {
-  id            Int          @id @default(autoincrement())
-  name          String       @unique
-  unit          String       @default("g")
-  stockQuantity Int          @default(0)
-  version       Int          @default(0)
+  id            Int               @id @default(autoincrement())
+  name          String            @unique
+  unit          String            @default("g")
+  stockQuantity Int               @default(0)
+  version       Int               @default(0)
   recipeItems   RecipeItem[]
+  reservations  OrderIngredient[]
+}
+
+// Exact consumption at order creation; recipe edits cannot change refunds.
+model OrderIngredient {
+  orderId      Int
+  ingredientId Int
+  quantity     Int
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([orderId, ingredientId])
+  @@index([ingredientId])
 }
 
 model RecipeItem {
