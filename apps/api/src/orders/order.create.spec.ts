@@ -354,4 +354,31 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
       }),
     ).resolves.toEqual({ stock: 9 });
   });
+
+  it('caps the promotion discount at the order subtotal', async () => {
+    const userId = await createUser();
+    const productId = await createProduct(10);
+    const code = `TV150-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 7)
+      .toUpperCase()}`;
+    promotionCodes.push(code);
+    await prisma.promotion.create({
+      data: {
+        code,
+        percent: 150,
+        expiresAt: new Date(Date.now() + 60_000),
+        usageLeft: 1,
+      },
+    });
+
+    const order = await service.createOrder(
+      userId,
+      [{ productId, qty: 1, size: 'S' }],
+      code,
+    );
+    orderIds.push(order.id);
+
+    expect(order).toMatchObject({ total: 0, discount: 35_000 });
+  });
 });

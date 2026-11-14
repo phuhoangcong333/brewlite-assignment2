@@ -7,6 +7,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { getToken } from "@/lib/auth";
 import { useCart, useHydrated } from "@/lib/cart";
 import { formatVND } from "@/lib/pricing";
+import { createUuidV4 } from "@/lib/uuid";
 import { ApiError, createOrder, createPayment, type PaymentInput } from "@/lib/orders-api";
 import { ProtectedRoute } from "@/lib/auth-context";
 import { useQuote } from "@/lib/use-quote";
@@ -152,7 +153,7 @@ export default function CheckoutPage() {
       const order = await ensureOrder();
       const id = order.id;
       setStep("paying");
-      if (!idemKey.current) idemKey.current = crypto.randomUUID();
+      if (!idemKey.current) idemKey.current = createUuidV4();
 
       const input: PaymentInput =
         method === "CARD"

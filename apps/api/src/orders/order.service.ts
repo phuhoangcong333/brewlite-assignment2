@@ -19,6 +19,7 @@ import {
 } from '../inventory/inventory.plan';
 import { planCancel } from './order-cancel.plan';
 import { assertTransition, OrderStatus } from './order-state';
+import { computeDiscount } from '../promotions/promotion-rules';
 
 const MAX_CREATE_ATTEMPTS = 3;
 const SIZE_PRICE: Record<Size, number> = {
@@ -410,7 +411,14 @@ export class OrderService {
               );
             }
 
-            discount = Math.floor((subtotal * promotion.percent) / 100);
+            discount = computeDiscount(
+              {
+                discountType: 'PERCENT',
+                discountValue: promotion.percent,
+                maxDiscountAmount: null,
+              },
+              subtotal,
+            );
             appliedPromoCode = promotion.code;
             const consumed = await transaction.promotion.updateMany({
               where: {
