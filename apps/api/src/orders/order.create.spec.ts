@@ -1,17 +1,18 @@
+import {
+  attachIngredient,
+  ingredientQuantity,
+} from '../../test/helpers/ingredient-fixtures';
 import { PrismaService } from '../prisma/prisma.service';
 import { describeDb } from '../../test/helpers/describe-db';
-import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
 import { OrderService } from './order.service';
 
 describeDb('OrderService.createOrder with PostgreSQL', () => {
   const prisma = new PrismaService();
-  const service = new OrderService(
-    prisma,
-    new PrismaInventoryRepository(prisma),
-  );
+  const service = new OrderService(prisma);
   const orderIds: number[] = [];
   const userIds: number[] = [];
   const productIds: number[] = [];
+  const ingredientIds: number[] = [];
   const promotionCodes: string[] = [];
 
   async function createUser(): Promise<number> {
@@ -36,6 +37,7 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
       select: { id: true },
     });
     productIds.push(product.id);
+    await attachIngredient(prisma, product.id, stock, ingredientIds);
     return product.id;
   }
 
@@ -55,6 +57,10 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+      await prisma.ingredient.deleteMany({
+        where: { id: { in: ingredientIds } },
+      });
+      ingredientIds.length = 0;
     }
     if (promotionCodes.length > 0) {
       await prisma.promotion.deleteMany({
@@ -87,12 +93,7 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
       total: 90_000,
       discount: 0,
     });
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 8, version: 1 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(8);
     await expect(
       prisma.orderItem.findMany({
         where: { orderId: order.id },
@@ -111,24 +112,15 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
   it('rolls back reserved stock if creating the order fails', async () => {
     const productId = await createProduct(10);
     let missingUserId = 2_147_483_647;
-    while (
-      await prisma.user.findUnique({ where: { id: missingUserId } })
-    ) {
+    while (await prisma.user.findUnique({ where: { id: missingUserId } })) {
       missingUserId -= 1;
     }
 
     await expect(
-      service.createOrder(missingUserId, [
-        { productId, qty: 2, size: 'S' },
-      ]),
+      service.createOrder(missingUserId, [{ productId, qty: 2, size: 'S' }]),
     ).rejects.toThrow();
 
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 10, version: 0 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(10);
     await expect(
       prisma.order.count({ where: { userId: missingUserId } }),
     ).resolves.toBe(0);
@@ -145,12 +137,7 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     orderIds.push(...orders.map(({ id }) => id));
 
     expect(orders).toHaveLength(2);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 48, version: 2 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(48);
   });
 
   it('applies a promotion and consumes its usage inside the order transaction', async () => {
@@ -189,17 +176,8 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     ).resolves.toMatchObject({ usageLeft: 0 });
 
     await expect(
-      service.createOrder(
-        userId,
-        [{ productId, qty: 1, size: 'S' }],
-        code,
-      ),
-    ).rejects.toThrow(RangeError);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true },
-      }),
-    ).resolves.toEqual({ stock: 9 });
+      service.createOrder(userId, [{ productId, qty: 1, size: 'S' }], code),
+    ).rejects.toThrow('invalid or expired');
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(9);
   });
 });
