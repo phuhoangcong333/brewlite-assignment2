@@ -39,13 +39,14 @@ enum UserRole {
 }
 
 model Product {
-  id         Int         @id @default(autoincrement())
-  name       String
-  price      Int
-  imageUrl   String?
-  stock      Int         @default(0)
-  version    Int         @default(0)
-  orderItems OrderItem[]
+  id          Int          @id @default(autoincrement())
+  name        String
+  price       Int
+  imageUrl    String?
+  stock       Int          @default(0)
+  version     Int          @default(0)
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[]
 }
 
 model User {
@@ -123,4 +124,24 @@ model Promotion {
   expiresAt DateTime
   usageLeft Int
   orders    Order[]
+}
+
+model Ingredient {
+  id            Int          @id @default(autoincrement())
+  name          String       @unique
+  unit          String       @default("g")
+  stockQuantity Int          @default(0)
+  version       Int          @default(0)
+  recipeItems   RecipeItem[]
+}
+
+model RecipeItem {
+  id             Int        @id @default(autoincrement())
+  productId      Int
+  ingredientId   Int
+  amountRequired Int
+  product        Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, ingredientId])
 }

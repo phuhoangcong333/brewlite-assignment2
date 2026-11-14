@@ -11,6 +11,24 @@ export class PrismaPromotionRepository extends PromotionRepository {
   }
 
   async findByCode(code: string): Promise<Promotion | null> {
-    return (this.prisma as any).promotion.findUnique({ where: { code } });
+    const promotion = await this.prisma.promotion.findUnique({
+      where: { code },
+    });
+    if (!promotion) return null;
+
+    return {
+      id: promotion.id,
+      code: promotion.code,
+      description: null,
+      discountType: 'PERCENT',
+      discountValue: promotion.percent,
+      maxDiscountAmount: null,
+      minOrderValue: 0,
+      startsAt: new Date(0),
+      expiresAt: promotion.expiresAt,
+      usageLimit: 1,
+      usedCount: promotion.usageLeft > 0 ? 0 : 1,
+      isActive: true,
+    };
   }
 }
