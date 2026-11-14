@@ -39,13 +39,15 @@ enum UserRole {
 }
 
 model Product {
-  id         Int         @id @default(autoincrement())
-  name       String
-  price      Int
-  imageUrl   String?
-  stock      Int         @default(0)
-  version    Int         @default(0)
-  orderItems OrderItem[]
+  id          Int          @id @default(autoincrement())
+  name        String
+  price       Int
+  category    String       @default("COFFEE")
+  imageUrl    String?
+  stock       Int          @default(0)
+  version     Int          @default(0)
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[]
 }
 
 model User {
@@ -56,6 +58,7 @@ model User {
   loyaltyPoints Int      @default(0)
   createdAt     DateTime @default(now())
   orders        Order[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Order {
@@ -70,9 +73,22 @@ model Order {
   promotion Promotion?  @relation(fields: [promoCode], references: [code], onDelete: Restrict)
   items     OrderItem[]
   payments  Payment[]
+  loyaltyTransaction LoyaltyTransaction?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+}
+
+model LoyaltyTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  orderId   Int      @unique
+  points    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model OrderItem {
@@ -109,4 +125,25 @@ model Promotion {
   expiresAt DateTime
   usageLeft Int
   orders    Order[]
+}
+
+model Ingredient {
+  id            Int          @id @default(autoincrement())
+  name          String       @unique
+  unit          String       @default("g")
+  stockQuantity Int          @default(0)
+  version       Int          @default(0)
+  recipeItems   RecipeItem[]
+}
+
+model RecipeItem {
+  id             Int        @id @default(autoincrement())
+  productId      Int
+  ingredientId   Int
+  size           Size       @default(M)
+  amountRequired Int
+  product        Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, ingredientId, size])
 }

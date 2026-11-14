@@ -1,8 +1,9 @@
 # Kiến trúc hệ thống BrewLite
 
-> **Người tổng hợp:** TV7. **Phiên bản:** bản nháp 2, 10/11/2026. **Task:** 3.1.
+> **Người tổng hợp:** TV7. **Phiên bản:** 1.0, 13/11/2026. **Task:** 3.1 – TV7.
 >
-> Mỗi mục "Phần của TVx" do chủ đoạn viết hoặc do TV7 tổng hợp từ ADR của bạn đó. Đoạn nào TV7 tổng hợp có ghi chú `[TV7 tổng hợp từ ADR, TVx xác nhận]`; chủ đoạn đọc và sửa trực tiếp trong PR. Đoạn của TV5 TV7 viết từ ADR 007 của TV5 và sequence diagram checkout.
+> Tài liệu này tổng hợp các ADR và đối chiếu với mã nguồn trong repository tại thời điểm bàn giao.
+> Các nội dung chưa triển khai được đánh dấu **Mục tiêu** hoặc **Chưa triển khai**.
 
 ## 1. Giới thiệu
 
@@ -14,9 +15,9 @@ BrewLite là hệ thống đặt đồ uống trực tuyến. Khách xem menu, c
 
 Hệ thống theo kiến trúc **phân lớp, ba tầng**: giao diện (Next.js/PWA), dịch vụ (NestJS theo module) và dữ liệu (PostgreSQL qua Prisma). Backend là một **modular monolith**: một ứng dụng NestJS duy nhất, mỗi luồng nghiệp vụ là một module riêng.
 
-Xem sơ đồ: `architecture-diagram.svg` (mã nguồn `architecture-diagram.puml`).
+Xem [mã nguồn sơ đồ kiến trúc](../diagrams/architecture-diagram.puml).
 
-![Sơ đồ kiến trúc](../diagrams/architecture-diagram.drawio.svg)
+> **Lưu ý:** repository hiện lưu sơ đồ kiến trúc tổng thể ở định dạng PlantUML (`.puml`), chưa có bản render SVG tương ứng. Các sơ đồ chi tiết có bản SVG đi kèm được liên kết ở mục 8.
 
 | Tầng | Công nghệ | Trách nhiệm |
 |---|---|---|
@@ -27,7 +28,14 @@ Xem sơ đồ: `architecture-diagram.svg` (mã nguồn `architecture-diagram.pum
 
 **Một request đi qua hệ thống như thế nào:** trình duyệt gọi API kèm header `Authorization: Bearer <JWT>` → `JwtAuthGuard` kiểm tra token (và `RolesGuard` kiểm tra vai trò) → `ValidationPipe` kiểm tra dữ liệu → controller → service → Prisma → PostgreSQL. Mọi lỗi đi qua `ExceptionFilter` chung; mọi dòng log của request mang cùng một `requestId`.
 
-### 2.1. Các module backend
+### 2.1. Ranh giới giữa hiện trạng và mục tiêu
+
+- **Hiện trạng đã có trong mã nguồn:** monorepo; frontend Next.js; backend NestJS modular monolith; PostgreSQL qua Prisma; xác thực JWT; tính giá ở server; transaction và optimistic locking cho tồn kho; state machine đơn hàng; thanh toán mock có idempotency key; kiểm tra input và exception filter.
+- **Đã triển khai sau đối chiếu:** PWA manifest/service worker và loyalty transaction khi `READY → COMPLETED`.
+- **Mục tiêu kiến trúc chưa hoàn tất:** UUIDv4 validation và replay lỗi thanh toán 422; reverse proxy/HTTPS, RDS private network và CD deploy/rollback.
+- Mô hình trong sơ đồ lớp mô tả thiết kế đích khi chưa khớp schema Prisma. Phần “Điểm còn tồn đọng” là danh sách việc cần làm, không phải hành vi hiện tại.
+
+### 2.2. Các module backend
 
 | Module (`apps/api/src/modules/...`) | Chủ | Endpoint | Ghi chú |
 |---|---|---|---|
@@ -41,11 +49,11 @@ Xem sơ đồ: `architecture-diagram.svg` (mã nguồn `architecture-diagram.pum
 
 Hợp đồng chi tiết từng endpoint nằm ở `docs/api-contract.md`.
 
-### 2.2. Mô hình dữ liệu
+### 2.3. Mô hình dữ liệu
 
-**Đối chiếu trạng thái:** `docs/diagrams/class-diagram.puml` là mô hình đích. `apps/api/prisma/schema.prisma` hiện chưa có `Category`, `ProductSize`, `Topping` và `LoyaltyTransaction` như diagram; vì vậy quan hệ `Order 1 — 0..1 LoyaltyTransaction` và migration tích điểm chưa được triển khai.
+**Đối chiếu trạng thái:** `docs/diagrams/class-diagram.puml` vẫn là mô hình đích cho `Category`, `ProductSize` và `Topping`, các model này chưa có trong schema hiện tại. `LoyaltyTransaction` đã được bổ sung vào schema và migration, với quan hệ `Order 1 — 0..1 LoyaltyTransaction`.
 
-Mô hình dữ liệu (class diagram bản 3, `class-diagram.svg`) gồm: `User`, `Category`, `Product`, `ProductSize`, `Topping`, `Promotion`, `Order`, `OrderItem`, `Payment`, `LoyaltyTransaction` và các enum `Role`, `DiscountType`, `OrderStatus`, `PaymentStatus`, `PaymentMethod`. Các quan hệ chính: User 1 — 0..\* Order; Order 1 — 1..\* OrderItem; Order 1 — 0..\* Payment (thanh toán thất bại rồi thử lại tạo Payment mới); Order 1 — 0..1 LoyaltyTransaction; Promotion 0..1 — 0..\* Order.
+Mô hình dữ liệu (class diagram bản 3, `class-diagram.puml`) gồm: `User`, `Category`, `Product`, `ProductSize`, `Topping`, `Promotion`, `Order`, `OrderItem`, `Payment`, `LoyaltyTransaction` và các enum `Role`, `DiscountType`, `OrderStatus`, `PaymentStatus`, `PaymentMethod`. Các quan hệ chính: User 1 — 0..\* Order; Order 1 — 1..\* OrderItem; Order 1 — 0..\* Payment (thanh toán thất bại rồi thử lại tạo Payment mới); Order 1 — 0..1 LoyaltyTransaction; Promotion 0..1 — 0..\* Order.
 
 ## 3. Phần của từng thành viên
 
@@ -53,12 +61,12 @@ Mô hình dữ liệu (class diagram bản 3, `class-diagram.svg`) gồm: `User`
 
 > [TV7 tổng hợp từ ADR 006, TV2 xác nhận]
 
-Frontend dùng **Next.js kết hợp React và TypeScript**, thiết kế **mobile-first** (ưu tiên màn hình điện thoại rồi mở rộng cho tablet và desktop) và định hướng **PWA** bằng Web App Manifest và Service Worker để khách có thể cài đặt từ trình duyệt. Ưu tiên Server Components cho nội dung xử lý được ở phía server và Client Components cho phần cần tương tác. Frontend chỉ giao tiếp với backend qua REST API.
+Frontend dùng **Next.js kết hợp React và TypeScript**, thiết kế **mobile-first** (ưu tiên màn hình điện thoại rồi mở rộng cho tablet và desktop) và hỗ trợ **PWA** bằng Web App Manifest và Service Worker để khách có thể cài đặt từ trình duyệt. Ưu tiên Server Components cho nội dung xử lý được ở phía server và Client Components cho phần cần tương tác. Frontend chỉ giao tiếp với backend qua REST API.
 
 Các ràng buộc rút ra khi kết hợp với các quyết định khác:
 - JWT lưu ở localStorage (ADR 009) nên Server Components không đọc được token; các trang cần đăng nhập (checkout, lịch sử, theo dõi đơn, trang nhân viên) là Client Components và gọi API ở phía trình duyệt.
 - Server Components không đọc được JWT trong localStorage; các trang cần đăng nhập phải chạy phần gọi API ở Client Component.
-- Khi bổ sung Service Worker, không được cache response API có header `Authorization`; hiện chưa có Service Worker để kiểm tra quy tắc này.
+- Service Worker hiện chỉ cache các response GET cùng origin và bỏ qua request có header `Authorization` hoặc đường dẫn `/api/`.
 - Giỏ hàng lưu ở localStorage (ADR 003); giá luôn lấy từ server.
 
 ### 3.2. Triển khai (TV1)
@@ -110,7 +118,7 @@ Luồng ở backend:
 
 Luồng theo dõi đơn dùng **State Machine** ở tầng nghiệp vụ NestJS để kiểm soát vòng đời đơn: `PENDING`, `PAYMENT_FAILED`, `PAID`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`. Luồng chính là `PENDING → PAID → PREPARING → READY → COMPLETED`. Thanh toán lỗi chuyển đơn sang `PAYMENT_FAILED`; khi khách thử lại, đơn về `PENDING` trước khi xử lý kết quả mới. Việc hủy do TV4 thực hiện từ `PENDING` hoặc `PAYMENT_FAILED`; **không cho `PAID → CANCELLED`**. Nhân viên chỉ thao tác `PAID → PREPARING → READY → COMPLETED`. Chuyển trạng thái sai trả `409 Conflict`.
 
-Việc đổi trạng thái kiểm tra chuyển hợp lệ rồi cập nhật có điều kiện trong **Prisma transaction** (chỉ đổi nếu trạng thái hiện tại vẫn khớp). Code hiện đã có state machine, transaction và polling; bảng chuyển đổi không cho `PAID → CANCELLED`. Tuy nhiên code thanh toán hiện còn tăng `User.loyaltyPoints` khi thanh toán thành công, trong khi `LoyaltyTransaction` chưa có trong `schema.prisma` và chưa có migration. Thiết kế đúng là chỉ tạo `LoyaltyTransaction` và tăng điểm khi `READY → COMPLETED`, cùng transaction, với unique `orderId`; đây là hạng mục chưa triển khai. Giao diện theo dõi gọi lại `GET /orders/:id` mỗi **5 đến 10 giây** (polling, không dùng WebSocket).
+Việc đổi trạng thái kiểm tra chuyển hợp lệ rồi cập nhật có điều kiện trong **Prisma transaction** (chỉ đổi nếu trạng thái hiện tại vẫn khớp). Code hiện đã có state machine, transaction và polling; bảng chuyển đổi không cho `PAID → CANCELLED`. Khi `READY → COMPLETED`, transaction tạo một `LoyaltyTransaction` duy nhất theo `orderId` và tăng `User.loyaltyPoints`; thanh toán chỉ cập nhật trạng thái, không cộng điểm. Giao diện theo dõi gọi lại `GET /orders/:id` mỗi **5 đến 10 giây** (polling, không dùng WebSocket).
 
 ### 3.7. Xác thực và nền tảng chung (TV7)
 
@@ -141,7 +149,7 @@ Chi tiết từng bước: sequence diagram checkout (Task 2.2) và activity dia
 | Monorepo (001) | Một nơi quản lý, dùng chung Docker Compose và CI, thuận tiện chấm bài | Phải cẩn thận đường dẫn build để không build nhầm ứng dụng |
 | AWS EC2 + RDS + Docker (002) | Môi trường local và production đồng nhất, dữ liệu bền vững | Cấu hình Security Group, IAM, biến môi trường và HTTPS cần bằng chứng triển khai; RDS không được public |
 | GitHub Actions CI/CD (005) | Phát hiện lỗi build sớm trước khi merge | CI đã mô tả; CD deploy, smoke test và rollback còn cần hoàn thiện |
-| Next.js + PWA (006) | Responsive, nhiều chiến lược render, có hướng mở rộng thành PWA | Next.js/mobile-first đã có; Manifest và Service Worker chưa thấy trong `apps/web`, offline chưa được triển khai |
+| Next.js + PWA (006) | Responsive, nhiều chiến lược render, có hướng mở rộng thành PWA | Manifest và Service Worker đã có; chiến lược offline hiện chỉ ở mức cache cùng origin và không cache API có xác thực |
 | Giá tính ở server (003) | Không sửa được giá từ client; giá và mã luôn mới nhất | Mỗi lần giỏ đổi phải gọi API; xử lý mất mạng; giá có thể đổi giữa báo giá và đặt đơn |
 | Trừ kho có điều kiện trong transaction (004) | Không âm kho, đọc không khóa nên nhanh | Request đến sau món cuối bị 409 |
 | Idempotency thanh toán (007) | Bấm nhiều lần hay gửi lại không trừ tiền hai lần; dùng sẵn PostgreSQL, không cần Redis; UNIQUE chống trùng bản ghi | Bảng `Payment` tăng dần; khách thử lại phải sinh key mới; hai request cùng key đồng thời có thể cùng gọi cổng (chỉ một bản ghi được lưu) |
@@ -154,29 +162,29 @@ Chi tiết từng bước: sequence diagram checkout (Task 2.2) và activity dia
 
 | Số | Tên | Người | Trạng thái |
 |---|---|---|---|
-| 001 | Monorepo | TV1 | Accepted |
-| 002 | Nền tảng triển khai AWS và Docker | TV1 | Accepted |
-| 003 | Giá tính ở server | TV3 | Đề xuất |
-| 004 | Tồn kho: optimistic locking và transaction | TV4 | Accepted |
-| 005 | CI/CD với GitHub Actions | TV1 | Accepted |
-| 006 | Next.js và PWA cho frontend | TV2 | Đề xuất |
-| 007 | Idempotency thanh toán | TV5 | Đề xuất |
-| 008 | State machine đơn hàng | TV6 | Đề xuất |
-| 009 | JWT: lưu ở localStorage, gửi bằng header Bearer | TV7 | Đề xuất |
-| 010 | Validate, lỗi, log và cấu hình | TV7 | Đề xuất |
+| 001 | [Monorepo](./adr/001-monorepo-structure.md) | TV1 | Accepted |
+| 002 | [Nền tảng triển khai AWS và Docker](./adr/002-deployment-platform-and-docker.md) | TV1 | Accepted |
+| 003 | [Giá tính ở server](./adr/003-gia-tinh-o-server.md) | TV3 | Đề xuất |
+| 004 | [Tồn kho: optimistic locking và transaction](./adr/00x-optimistic-locking-ton-kho.md) | TV4 | Accepted |
+| 005 | [CI/CD với GitHub Actions](./adr/003-cicd-pipeline.md) | TV1 | Accepted |
+| 006 | [Next.js và PWA cho frontend](./adr/00x-pwa-nextjs-mobile-first.md) | TV2 | Đề xuất |
+| 007 | [Idempotency thanh toán](./adr/00x-idempotency.md) | TV5 | Đề xuất |
+| 008 | [State machine đơn hàng](./adr/00x-order-state-machine-tv6.md) | TV6 | Đề xuất |
+| 009 | [JWT: localStorage và header Bearer](./adr/00x-jwt-luu-token.md) | TV7 | Đề xuất |
+| 010 | [Validate, lỗi, log và cấu hình](./adr/00x-validate-logging-cau-hinh.md) | TV7 | Đề xuất |
 
-Thư mục thực tế: `docs/architecture/adr/`; các file `00x-*.md` vẫn dùng số tạm và cần đổi tên khi nhóm chốt số chính thức.
+Các file ADR được giữ nguyên tên hiện có để không làm hỏng liên kết lịch sử; số ADR chính thức được quản lý trong bảng tổng hợp trên.
 
 ## 7. Điểm còn tồn đọng
 
 1. **TV5:** Code đã xử lý P2002/P2034 và key khác đơn; cần bổ sung UUIDv4 validation và ánh xạ replay thất bại thành HTTP 422 ở controller/filter. Hiện frontend tạo UUID bằng `crypto.randomUUID()`.
 2. **TV1:** Cần hoàn thiện HTTPS qua reverse proxy, RDS private chỉ nhận kết nối từ EC2, CD deploy/migration/smoke test `/health`/rollback và ghi bằng chứng.
 3. **TV4:** Đã xác nhận optimistic locking bằng `Product.version`, điều kiện stock và retry; cần giữ thuật ngữ này nhất quán trong ADR/sơ đồ.
-4. **TV2:** ADR PWA đã bổ sung ràng buộc JWT localStorage và quy tắc Service Worker; cần tạo Manifest/Service Worker nếu vẫn nhận phạm vi PWA.
+4. **TV2:** Manifest và Service Worker đã được bổ sung; cần kiểm thử offline trên các trình duyệt mục tiêu nếu mở rộng phạm vi PWA.
 5. **TV2, TV4:** SRS phải bỏ `PAID → CANCELLED`; state machine code và class diagram đã cấm chuyển đổi này.
-6. **TV6:** Đường dẫn đúng là `docs/architecture/adr/`; `LoyaltyTransaction` và migration chưa có trong schema/code, còn cộng điểm đang nằm sai thời điểm trong payment service.
+6. **TV6:** `LoyaltyTransaction` và migration đã có; điểm được cộng trong transaction `READY → COMPLETED`, không còn cộng trong payment service.
 7. **TV7:** API contract cần ghi 422 và đánh dấu mismatch hiện tại; class diagram đang là mô hình đích, chưa khớp schema Prisma hiện tại.
 
 ## 8. Tài liệu liên quan
 
-`docs/api-contract.md`, `docs/srs.md`, `class-diagram.svg`, `activity-xac-thuc.svg`, sequence diagram checkout (Task 2.2), `docs/architecture/adr/*.md`, `docs/diagrams/`.
+[`docs/api-contract.md`](../api-contract.md), [`docs/srs.md`](../srs.md), [`class-diagram.puml`](../diagrams/class-diagram.puml), [`class-diagram.drawio.svg`](../diagrams/class-diagram.drawio.svg), [`activity-xac-thuc.puml`](../diagrams/activity-xac-thuc.puml), [`sequence-checkout.puml`](../diagrams/sequence-checkout.puml), [`sequence-checkout.svg`](../diagrams/sequence-checkout.svg), [`docs/architecture/adr/`](./adr/), [`docs/diagrams/`](../diagrams/).

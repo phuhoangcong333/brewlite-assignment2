@@ -3,57 +3,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { cartCount, useCart, useHydrated } from "@/lib/cart";
-import { getCurrentUser, getToken } from "@/lib/orders-api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const hydrated = useHydrated();
   const count = useCart((s) => cartCount(s.items));
-  const [isStaff, setIsStaff] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const refreshRole = () => {
-      if (!getToken()) {
-        setIsStaff(false);
-        setIsAuthenticated(false);
-        return;
-      }
-
-      void getCurrentUser()
-        .then((user) => {
-          if (active) {
-            setIsStaff(user.role === "STAFF");
-            setIsAuthenticated(true);
-          }
-        })
-        .catch(() => {
-          if (active) {
-            setIsStaff(false);
-            setIsAuthenticated(false);
-          }
-        });
-    };
-
-    refreshRole();
-    window.addEventListener("auth-changed", refreshRole);
-    window.addEventListener("storage", refreshRole);
-    return () => {
-      active = false;
-      window.removeEventListener("auth-changed", refreshRole);
-      window.removeEventListener("storage", refreshRole);
-    };
-  }, []);
+  const { user, logout } = useAuth();
+  const isStaff = user?.role === "STAFF";
+  const isAuthenticated = user !== null;
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    window.dispatchEvent(new Event("auth-changed"));
-    setIsAuthenticated(false);
-    setIsStaff(false);
+    logout();
     router.replace("/login");
   };
 
@@ -71,10 +34,12 @@ export default function Header() {
       }}
     >
       <div
+        className="site-header__inner"
         style={{
           maxWidth: "1150px",
           margin: "0 auto",
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "14px 24px",
@@ -96,29 +61,48 @@ export default function Header() {
 
         {!hideNavigation && (
           <div
+            className="site-header__nav"
             style={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "center",
               gap: "12px",
               whiteSpace: "nowrap",
             }}
           >
             {isStaff && (
-              <Link
-                href="/staff/orders"
-                style={{
-                  padding: "8px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: "#4b5563",
-                  textDecoration: "none",
-                  boxSizing: "border-box",
-                }}
-              >
-                Nhân viên
-              </Link>
+              <>
+                <Link
+                  href="/staff/orders"
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#4b5563",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Đơn hàng
+                </Link>
+                <Link
+                  href="/staff/inventory"
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#4b5563",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Kho nguyên liệu
+                </Link>
+              </>
             )}
 
             <Link

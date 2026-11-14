@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { JwtGuard } from './jwt.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { StaffGuard } from './staff.guard';
+import { RolesGuard } from './roles.guard';
 import { getJwtSecret } from './jwt.config';
 import { UsersModule } from '../users/users.module';
 
@@ -19,7 +20,14 @@ import { UsersModule } from '../users/users.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtGuard, JwtAuthGuard, StaffGuard],
-  exports: [AuthService, JwtGuard, JwtAuthGuard, JwtModule, StaffGuard],
+  providers: [AuthService, JwtGuard, JwtAuthGuard, StaffGuard, RolesGuard],
+  exports: [
+    AuthService,
+    JwtGuard,
+    JwtAuthGuard,
+    JwtModule,
+    StaffGuard,
+    RolesGuard,
+  ],
 })
 export class AuthModule {}

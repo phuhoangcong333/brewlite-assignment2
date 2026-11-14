@@ -60,6 +60,18 @@ Các API `GET /orders/staff` và `PATCH /orders/:id/status` yêu cầu JWT cùng
 `STAFF`. Tài khoản khách hàng nhận HTTP 403. Trang nhân viên nằm ở
 `http://localhost:3000/staff/orders` khi frontend đang chạy.
 
+`JwtAuthGuard` xác thực token Bearer và nạp `request.user` gồm `id`, `email`,
+và `role`. Để giới hạn role, đặt hai guard theo thứ tự:
+
+```ts
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('STAFF')
+```
+
+`GET /health` kiểm tra kết nối PostgreSQL và trả `200` khi database hoạt động,
+hoặc `503` khi database không sẵn sàng. Các lỗi API đều có dạng JSON thống nhất
+gồm `statusCode`, `message`, `path` và `timestamp`.
+
 Mở Prisma Studio:
 
 ```powershell
@@ -129,6 +141,7 @@ JWT guard xác thực user và đặt vào request:
 | Method | Endpoint | Auth | Chức năng |
 | --- | --- | --- | --- |
 | GET | `/` | Không | Kiểm tra backend đang chạy |
+| GET | `/health` | Không | Kiểm tra API và database |
 | GET | `/products` | Không | Danh sách sản phẩm |
 | GET | `/products/:id` | Không | Chi tiết sản phẩm |
 | POST | `/auth/register` | Không | Đăng ký tài khoản |

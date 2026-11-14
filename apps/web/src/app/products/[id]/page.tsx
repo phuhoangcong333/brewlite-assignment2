@@ -29,7 +29,7 @@ export default function ProductDetailPage() {
 
   const toggleTopping = (id: string) =>
     setToppings((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
 
   if (loading) return <p className="p-4">Đang tải...</p>;
@@ -37,7 +37,8 @@ export default function ProductDetailPage() {
   if (!product) return <p className="p-4">Không tìm thấy sản phẩm.</p>;
 
   const unitPrice = calcUnitPrice(product.price, size, toppings);
-  const canAdd = product.stock > 0 && qty <= product.stock;
+  const availableQuantity = product.availableQuantityBySize[size];
+  const canAdd = availableQuantity > 0 && qty <= availableQuantity;
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -60,8 +61,16 @@ export default function ProductDetailPage() {
       </Link>
       <h1 className="mt-2 text-2xl font-bold">{product.name}</h1>
       <p className="text-amber-700">Giá gốc: {formatVND(product.price)}</p>
-      <p className={product.stock > 0 ? "mt-1 text-sm text-green-700" : "mt-1 text-sm text-red-600"}>
-        {product.stock > 0 ? `Còn lại trong kho: ${product.stock}` : "Hết hàng"}
+      <p
+        className={
+          availableQuantity > 0
+            ? "mt-1 text-sm text-green-700"
+            : "mt-1 text-sm text-red-600"
+        }
+      >
+        {availableQuantity > 0
+          ? `Có thể pha: ${availableQuantity} ly (Size ${size})`
+          : `Hết hàng (Size ${size})`}
       </p>
 
       <div className="mt-3 flex h-64 items-center justify-center rounded bg-amber-100 text-6xl">
@@ -83,7 +92,15 @@ export default function ProductDetailPage() {
           {(["S", "M", "L"] as Size[]).map((s) => (
             <button
               key={s}
-              onClick={() => setSize(s)}
+              onClick={() => {
+                setSize(s);
+                setQty((current) =>
+                  Math.max(
+                    1,
+                    Math.min(current, product.availableQuantityBySize[s]),
+                  ),
+                );
+              }}
               className={`rounded border px-4 py-2 ${
                 size === s ? "bg-amber-600 text-white" : ""
               }`}
@@ -121,9 +138,9 @@ export default function ProductDetailPage() {
         </button>
         <span>{qty}</span>
         <button
-          onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+          onClick={() => setQty((q) => Math.min(availableQuantity, q + 1))}
           className="rounded border px-3"
-          disabled={qty >= product.stock}
+          disabled={qty >= availableQuantity}
         >
           +
         </button>
@@ -134,7 +151,9 @@ export default function ProductDetailPage() {
         disabled={!canAdd}
         className="mt-6 w-full rounded bg-amber-600 py-3 text-white disabled:cursor-not-allowed disabled:bg-gray-400"
       >
-        {product.stock > 0 ? `Thêm vào giỏ - ${formatVND(unitPrice * qty)}` : "Hết hàng"}
+        {availableQuantity > 0
+          ? `Thêm vào giỏ - ${formatVND(unitPrice * qty)}`
+          : "Hết hàng"}
       </button>
     </main>
   );

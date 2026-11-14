@@ -5,5 +5,5 @@ export type Product = {
   name: string;
   price: number;
   imageUrl: string | null;
-  stock: number;
+  availableQuantityBySize: Record<Size, number>;
 };

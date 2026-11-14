@@ -1,27 +1,39 @@
 import type { Product } from "./types";
 import { MOCK_PRODUCTS } from "./products.mock";
+import { apiRequest, ApiError, USE_MOCK_DATA } from "./api-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const USE_MOCK = false;
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function getProducts(): Promise<Product[]> {
-  if (USE_MOCK) {
+export async function getProducts(category?: string): Promise<Product[]> {
+  if (USE_MOCK_DATA) {
     await delay(500);
+    if (category && category !== "ALL") {
+      return MOCK_PRODUCTS.filter(
+        (p) => (p as Product & { category?: string }).category === category,
+      );
+    }
     return MOCK_PRODUCTS;
   }
-  const res = await fetch(`${API_URL}/products`);
-  if (!res.ok) throw new Error("Không tải được menu");
-  return res.json();
+
+  const path =
+    category && category !== "ALL"
+      ? `/products?category=${encodeURIComponent(category)}`
+      : "/products";
+
+  return apiRequest<Product[]>(path);
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     await delay(300);
     return MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
   }
-  const res = await fetch(`${API_URL}/products/${id}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Không tải được sản phẩm");
-  return res.json();
+  try {
+    return await apiRequest<Product>(`/products/${id}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
