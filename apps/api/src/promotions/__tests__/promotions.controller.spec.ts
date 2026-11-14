@@ -41,7 +41,7 @@ describe('POST /promotions/validate (tích hợp, ValidationPipe thật)', () =>
     });
   });
 
-  it('bỏ qua trường giá giả do client gửi (NFR-02)', async () => {
+  it('(chỉ pipe của controller) bỏ qua trường giá giả; thực tế theo main.ts bị 400, xem promotions.http-config.spec.ts', async () => {
     const res = await post({ items: [item({ unitPrice: 1, price: 1, lineTotal: 1, total: 1 })], total: 1 });
     expect(res.status).toBe(200);
     expect(res.body.items[0].unitPrice).toBe(50000);
