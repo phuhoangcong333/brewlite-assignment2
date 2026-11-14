@@ -5,10 +5,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { describeDb } from '../../test/helpers/describe-db';
 import { OrderService } from './order.service';
+import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
 
 describeDb('OrderService.createOrder with PostgreSQL', () => {
   const prisma = new PrismaService();
-  const service = new OrderService(prisma);
+  const service = new OrderService(
+    prisma,
+    new PrismaInventoryRepository(prisma),
+  );
   const orderIds: number[] = [];
   const userIds: number[] = [];
   const productIds: number[] = [];

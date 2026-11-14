@@ -39,47 +39,14 @@ enum UserRole {
 }
 
 model Product {
-  id         Int         @id @default(autoincrement())
-  name       String
-  price      Int
-  imageUrl   String?
-  stock      Int         @default(0)
-  version    Int         @default(0)
-  orderItems OrderItem[]
-  recipe     Recipe[]
-}
-
-model Ingredient {
-  id           Int               @id @default(autoincrement())
-  name         String            @unique
-  unit         String
-  quantity     Decimal           @default(0) @db.Decimal(14, 3)
-  recipes      Recipe[]
-  reservations OrderIngredient[]
-}
-
-// One recipe per product; quantities use the ingredient's unit per cup.
-model Recipe {
-  productId    Int
-  ingredientId Int
-  quantity     Decimal    @db.Decimal(14, 3)
-  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
-
-  @@id([productId, ingredientId])
-  @@index([ingredientId])
-}
-
-// Snapshot of actual consumption, independent of subsequent recipe edits.
-model OrderIngredient {
-  orderId      Int
-  ingredientId Int
-  quantity     Decimal    @db.Decimal(14, 3)
-  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
-
-  @@id([orderId, ingredientId])
-  @@index([ingredientId])
+  id          Int          @id @default(autoincrement())
+  name        String
+  price       Int
+  imageUrl    String?
+  stock       Int          @default(0)
+  version     Int          @default(0)
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[]
 }
 
 model User {
@@ -94,19 +61,20 @@ model User {
 }
 
 model Order {
-  id                 Int                 @id @default(autoincrement())
-  userId             Int
-  status             OrderStatus         @default(PENDING)
-  total              Int
-  discount           Int                 @default(0)
-  promoCode          String?
-  createdAt          DateTime            @default(now())
-  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  promotion          Promotion?          @relation(fields: [promoCode], references: [code], onDelete: Restrict)
-  items              OrderItem[]
-  payments           Payment[]
-  loyaltyTransaction LoyaltyTransaction?
-  ingredients        OrderIngredient[]
+  id                      Int                 @id @default(autoincrement())
+  userId                  Int
+  status                  OrderStatus         @default(PENDING)
+  total                   Int
+  discount                Int                 @default(0)
+  promoCode               String?
+  createdAt               DateTime            @default(now())
+  user                    User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  promotion               Promotion?          @relation(fields: [promoCode], references: [code], onDelete: Restrict)
+  items                   OrderItem[]
+  payments                Payment[]
+  loyaltyTransaction      LoyaltyTransaction?
+  usesIngredientInventory Boolean?
+  ingredients             OrderIngredient[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -158,4 +126,37 @@ model Promotion {
   expiresAt DateTime
   usageLeft Int
   orders    Order[]
+}
+
+model Ingredient {
+  id            Int               @id @default(autoincrement())
+  name          String            @unique
+  unit          String            @default("g")
+  stockQuantity Int               @default(0)
+  version       Int               @default(0)
+  recipeItems   RecipeItem[]
+  reservations  OrderIngredient[]
+}
+
+// Exact consumption at order creation; recipe edits cannot change refunds.
+model OrderIngredient {
+  orderId      Int
+  ingredientId Int
+  quantity     Int
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([orderId, ingredientId])
+  @@index([ingredientId])
+}
+
+model RecipeItem {
+  id             Int        @id @default(autoincrement())
+  productId      Int
+  ingredientId   Int
+  amountRequired Int
+  product        Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, ingredientId])
 }

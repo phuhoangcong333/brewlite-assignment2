@@ -5,7 +5,6 @@ import {
   ArrayUnique,
   IsArray,
   IsInt,
-  IsNumber,
   Max,
   Min,
   ValidateNested,
@@ -14,14 +13,16 @@ import {
 class RecipeIngredientDto {
   @IsInt()
   @Min(1)
+  @Max(2_147_483_647)
   ingredientId!: number;
 
-  @IsNumber({ maxDecimalPlaces: 3, allowNaN: false, allowInfinity: false })
-  @Min(0.001)
-  @Max(1_000_000_000)
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_647)
   quantity!: number;
 }
 
+// Compatibility for PATCH /products/:id/recipe; canonical TV4 DTO uses items/amountRequired.
 export class UpdateRecipeDto {
   @IsArray()
   @ArrayMinSize(1)

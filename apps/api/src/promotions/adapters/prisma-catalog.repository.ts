@@ -1,13 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogRepository } from '../repositories';
 import { CatalogProduct, CatalogTopping } from '../promotion.types';
-// Chỉnh đường dẫn import PrismaService cho khớp repo.
 import { PrismaService } from '../../prisma/prisma.service';
+import { computeAvailableQuantity } from '../../Product/product.service';
 
-/**
- * ĐIỀU CHỈNH THEO schema.prisma CỦA NHÓM: tên model và tên trường dưới đây là giả định
- * (Product, Size, Topping với `price`, `stock`). Sửa lại cho khớp TV1/TV2.
- */
+const SIZES: CatalogProduct['sizes'] = [
+  { id: 1, extraPrice: 0 },
+  { id: 2, extraPrice: 5_000 },
+  { id: 3, extraPrice: 10_000 },
+];
+
+const TOPPINGS: CatalogTopping[] = [
+  { id: 1, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
+  { id: 2, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
+];
+
 @Injectable()
 export class PrismaCatalogRepository extends CatalogRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -15,22 +22,26 @@ export class PrismaCatalogRepository extends CatalogRepository {
   }
 
   async findProducts(ids: number[]): Promise<CatalogProduct[]> {
-    const rows = await (this.prisma as any).product.findMany({
+    const rows = await this.prisma.product.findMany({
       where: { id: { in: ids } },
-      include: { sizes: true },
+      include: {
+        recipeItems: {
+          include: { ingredient: true },
+        },
+      },
     });
-    return rows.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      imageUrl: p.imageUrl ?? null,
-      basePrice: p.price,
-      stock: p.stock,
-      sizes: p.sizes.map((s: any) => ({ id: s.id, extraPrice: s.extraPrice ?? 0 })),
+
+    return rows.map((product) => ({
+      id: product.id,
+      name: product.name,
+      imageUrl: product.imageUrl,
+      basePrice: product.price,
+      stock: computeAvailableQuantity(product.recipeItems, product.stock),
+      sizes: SIZES,
     }));
   }
 
   async findToppings(ids: number[]): Promise<CatalogTopping[]> {
-    const rows = await (this.prisma as any).topping.findMany({ where: { id: { in: ids } } });
-    return rows.map((t: any) => ({ id: t.id, price: t.price, stock: t.stock }));
+    return TOPPINGS.filter((topping) => ids.includes(topping.id));
   }
 }

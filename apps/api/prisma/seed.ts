@@ -14,6 +14,61 @@ const products = [
   { name: 'Matcha latte', price: 50_000, imageUrl: '/image/Picture8.png' },
 ];
 
+const ingredients = [
+  { name: 'Cà phê hạt', unit: 'g', stockQuantity: 2_000 },
+  { name: 'Sữa đặc', unit: 'ml', stockQuantity: 2_500 },
+  { name: 'Sữa tươi', unit: 'ml', stockQuantity: 4_000 },
+  { name: 'Đường', unit: 'g', stockQuantity: 2_000 },
+  { name: 'Trà đen', unit: 'g', stockQuantity: 1_500 },
+  { name: 'Đào ngâm', unit: 'g', stockQuantity: 1_200 },
+  { name: 'Vải ngâm', unit: 'g', stockQuantity: 1_200 },
+  { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
+];
+
+const productRecipes: Record<
+  string,
+  Array<{ ingredientName: string; amountRequired: number }>
+> = {
+  'Cà phê sữa': [
+    { ingredientName: 'Cà phê hạt', amountRequired: 25 },
+    { ingredientName: 'Sữa đặc', amountRequired: 40 },
+  ],
+  Americano: [
+    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
+    { ingredientName: 'Đường', amountRequired: 10 },
+  ],
+  Cappuccino: [
+    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
+    { ingredientName: 'Sữa tươi', amountRequired: 120 },
+    { ingredientName: 'Đường', amountRequired: 10 },
+  ],
+  'Trà đào': [
+    { ingredientName: 'Trà đen', amountRequired: 15 },
+    { ingredientName: 'Đào ngâm', amountRequired: 50 },
+    { ingredientName: 'Đường', amountRequired: 20 },
+  ],
+  Latte: [
+    { ingredientName: 'Cà phê hạt', amountRequired: 20 },
+    { ingredientName: 'Sữa tươi', amountRequired: 150 },
+    { ingredientName: 'Đường', amountRequired: 10 },
+  ],
+  'Bạc xỉu': [
+    { ingredientName: 'Cà phê hạt', amountRequired: 15 },
+    { ingredientName: 'Sữa đặc', amountRequired: 50 },
+    { ingredientName: 'Sữa tươi', amountRequired: 60 },
+  ],
+  'Trà vải': [
+    { ingredientName: 'Trà đen', amountRequired: 15 },
+    { ingredientName: 'Vải ngâm', amountRequired: 50 },
+    { ingredientName: 'Đường', amountRequired: 20 },
+  ],
+  'Matcha latte': [
+    { ingredientName: 'Bột Matcha', amountRequired: 15 },
+    { ingredientName: 'Sữa tươi', amountRequired: 150 },
+    { ingredientName: 'Đường', amountRequired: 15 },
+  ],
+};
+
 const promotions = [
   {
     code: 'GIAM10',
@@ -28,57 +83,6 @@ const promotions = [
     usageLeft: 5,
   },
 ];
-
-const ingredients = [
-  { name: 'Cà phê', unit: 'g', quantity: 2_000 },
-  { name: 'Sữa tươi', unit: 'ml', quantity: 20_000 },
-  { name: 'Sữa đặc', unit: 'ml', quantity: 5_000 },
-  { name: 'Trà', unit: 'g', quantity: 1_000 },
-  { name: 'Siro đào', unit: 'ml', quantity: 3_000 },
-  { name: 'Siro vải', unit: 'ml', quantity: 3_000 },
-  { name: 'Matcha', unit: 'g', quantity: 500 },
-  { name: 'Nước', unit: 'ml', quantity: 50_000 },
-];
-
-// Standard per-cup recipes, shared by all sizes until size recipes are specified.
-const recipes: Record<string, Array<[string, number]>> = {
-  'Cà phê sữa': [
-    ['Cà phê', 20],
-    ['Sữa đặc', 30],
-    ['Nước', 50],
-  ],
-  Americano: [
-    ['Cà phê', 20],
-    ['Nước', 150],
-  ],
-  Cappuccino: [
-    ['Cà phê', 20],
-    ['Sữa tươi', 120],
-  ],
-  'Trà đào': [
-    ['Trà', 10],
-    ['Siro đào', 30],
-    ['Nước', 150],
-  ],
-  Latte: [
-    ['Cà phê', 20],
-    ['Sữa tươi', 150],
-  ],
-  'Bạc xỉu': [
-    ['Cà phê', 10],
-    ['Sữa tươi', 100],
-    ['Sữa đặc', 30],
-  ],
-  'Trà vải': [
-    ['Trà', 10],
-    ['Siro vải', 30],
-    ['Nước', 150],
-  ],
-  'Matcha latte': [
-    ['Matcha', 5],
-    ['Sữa tươi', 150],
-  ],
-};
 
 const user = [
   {
@@ -119,29 +123,48 @@ async function seed(): Promise<void> {
       });
     }
 
-    const ingredientIds = new Map<string, number>();
-    for (const ingredient of ingredients) {
-      const row = await transaction.ingredient.upsert({
-        where: { name: ingredient.name },
-        create: ingredient,
+    // 1. Khởi tạo danh sách nguyên liệu mẫu (Ingredient)
+    const ingredientMap = new Map<string, number>();
+    for (const ing of ingredients) {
+      const savedIngredient = await transaction.ingredient.upsert({
+        where: { name: ing.name },
+        create: ing,
         update: {},
       });
-      ingredientIds.set(row.name, row.id);
+      ingredientMap.set(ing.name, savedIngredient.id);
     }
-    const catalog = await transaction.product.findMany({
-      where: { name: { in: Object.keys(recipes) } },
-      include: { recipe: true },
+
+    // 2. Gán công thức định lượng (RecipeItem) cho 8 món trong bảng Product
+    const allProducts = await transaction.product.findMany({
+      where: { name: { in: products.map(({ name }) => name) } },
+      select: { id: true, name: true, recipeItems: { select: { id: true } } },
     });
-    for (const product of catalog) {
-      // Rerunning seed must preserve staff edits and actual inventory levels.
-      if (product.recipe.length > 0) continue;
-      await transaction.recipe.createMany({
-        data: recipes[product.name].map(([name, quantity]) => ({
-          productId: product.id,
-          ingredientId: ingredientIds.get(name)!,
-          quantity,
-        })),
-      });
+
+    for (const product of allProducts) {
+      // Preserve recipes edited by staff when Docker reruns seed on restart.
+      if (product.recipeItems.length > 0) continue;
+      const recipeList = productRecipes[product.name] ?? [];
+      for (const item of recipeList) {
+        const ingredientId = ingredientMap.get(item.ingredientName);
+        if (!ingredientId) continue;
+
+        await transaction.recipeItem.upsert({
+          where: {
+            productId_ingredientId: {
+              productId: product.id,
+              ingredientId,
+            },
+          },
+          create: {
+            productId: product.id,
+            ingredientId,
+            amountRequired: item.amountRequired,
+          },
+          update: {
+            amountRequired: item.amountRequired,
+          },
+        });
+      }
     }
 
     for (const promotion of promotions) {

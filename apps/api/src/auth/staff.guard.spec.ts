@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StaffGuard } from './staff.guard';
 
 describe('StaffGuard', () => {
-  function contextWith(user?: { sub: number }) {
+  function contextWith(user?: { id?: number; sub?: number }) {
     return {
       switchToHttp: () => ({ getRequest: () => ({ user }) }),
     } as unknown as ExecutionContext;
@@ -41,15 +41,18 @@ describe('StaffGuard', () => {
     },
   );
 
-  it('allows a user whose current database role is STAFF', async () => {
-    const findUnique = jest.fn().mockResolvedValue({ role: 'STAFF' });
-    const prisma = {
-      user: { findUnique },
-    } as unknown as PrismaService;
-    const guard = new StaffGuard(prisma);
+  it.each([{ id: 17 }, { sub: 17 }])(
+    'allows current database STAFF using JWT identity %p',
+    async (identity) => {
+      const findUnique = jest.fn().mockResolvedValue({ role: 'STAFF' });
+      const prisma = {
+        user: { findUnique },
+      } as unknown as PrismaService;
+      const guard = new StaffGuard(prisma);
 
-    await expect(
-      guard.canActivate(contextWith({ sub: 17 })),
-    ).resolves.toBe(true);
-  });
+      await expect(guard.canActivate(contextWith(identity))).resolves.toBe(
+        true,
+      );
+    },
+  );
 });

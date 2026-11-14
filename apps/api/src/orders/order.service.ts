@@ -10,6 +10,14 @@ import {
   InvalidTransitionException,
   OrderTransitionConflictException,
 } from '../common/errors';
+import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
+import {
+  InventorySnapshot,
+  InventoryUpdate,
+  InventoryWant,
+  planReserve,
+} from '../inventory/inventory.plan';
+import { planCancel } from './order-cancel.plan';
 import { assertTransition, OrderStatus } from './order-state';
 
 const MAX_CREATE_ATTEMPTS = 3;
@@ -21,9 +29,7 @@ const SIZE_PRICE: Record<Size, number> = {
 const TOPPING_PRICE = 5_000;
 const VALID_TOPPINGS = new Set(['Trân châu', 'Kem']);
 
-export interface CreateOrderItemInput {
-  productId: number;
-  qty: number;
+export interface CreateOrderItemInput extends InventoryWant {
   size: Size;
   toppings?: string[];
 }
@@ -57,6 +63,16 @@ function validateCreateOrderInput(
       }
     }
   }
+}
+
+function toInventorySnapshots(
+  products: readonly { id: number; stock: number; version: number }[],
+): InventorySnapshot[] {
+  return products.map(({ id, stock, version }) => ({
+    productId: id,
+    stock,
+    version,
+  }));
 }
 
 function buildOrderItems(
@@ -103,7 +119,11 @@ function calculateOrderTotal(
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly inventoryRepository: PrismaInventoryRepository,
+  ) {}
+
   async getOrdersForUser(userId: number) {
     return this.prisma.order.findMany({
       where: { userId },
@@ -188,49 +208,139 @@ export class OrderService {
           async (transaction) => {
             const products = await transaction.product.findMany({
               where: { id: { in: productIds } },
-              select: { id: true, price: true, recipe: true },
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                stock: true,
+                version: true,
+                recipeItems: {
+                  select: {
+                    ingredientId: true,
+                    amountRequired: true,
+                    ingredient: {
+                      select: {
+                        id: true,
+                        name: true,
+                        unit: true,
+                        stockQuantity: true,
+                        version: true,
+                      },
+                    },
+                  },
+                },
+              },
             });
-            const recipes = new Map(
-              products.map((product) => [product.id, product.recipe]),
+
+            const hasRecipeItems = products.some(
+              (p) => p.recipeItems && p.recipeItems.length > 0,
             );
-            const requirements = new Map<number, Prisma.Decimal>();
-            for (const item of items) {
-              const recipe = recipes.get(item.productId);
-              if (!recipe)
+
+            const consumption: Array<{
+              ingredientId: number;
+              quantity: number;
+            }> = [];
+
+            if (hasRecipeItems) {
+              if (products.length !== productIds.length) {
                 throw new BadRequestException(
-                  `Product ${item.productId} was not found`,
-                );
-              if (recipe.length === 0)
-                throw new BadRequestException(
-                  `Product ${item.productId} has no recipe`,
-                );
-              for (const entry of recipe) {
-                const required = entry.quantity.mul(item.qty);
-                requirements.set(
-                  entry.ingredientId,
-                  (
-                    requirements.get(entry.ingredientId) ??
-                    new Prisma.Decimal(0)
-                  ).add(required),
+                  'Không tìm thấy sản phẩm trong hệ thống',
                 );
               }
-            }
-            // Stable lock order avoids deadlocks; the predicate prevents negative stock.
-            const consumption = [...requirements]
-              .sort(([a], [b]) => a - b)
-              .map(([ingredientId, quantity]) => ({ ingredientId, quantity }));
-            for (const entry of consumption) {
-              const applied = await transaction.ingredient.updateMany({
-                where: {
-                  id: entry.ingredientId,
-                  quantity: { gte: entry.quantity },
-                },
-                data: { quantity: { decrement: entry.quantity } },
-              });
-              if (applied.count !== 1) {
-                throw new BadRequestException(
-                  `Insufficient ingredient ${entry.ingredientId}`,
+
+              const productMap = new Map(products.map((p) => [p.id, p]));
+              const requiredIngredients = new Map<
+                number,
+                {
+                  name: string;
+                  unit: string;
+                  stockQuantity: number;
+                  version: number;
+                  totalRequired: number;
+                }
+              >();
+
+              for (const item of items) {
+                if (!Number.isSafeInteger(item.qty) || item.qty <= 0) {
+                  throw new BadRequestException(
+                    `Số lượng đặt cho sản phẩm ${item.productId} phải lớn hơn 0`,
+                  );
+                }
+
+                const product = productMap.get(item.productId)!;
+                if (!product.recipeItems || product.recipeItems.length === 0) {
+                  throw new BadRequestException(
+                    `Món "${product.name}" chưa có công thức nguyên liệu`,
+                  );
+                }
+
+                for (const recipe of product.recipeItems) {
+                  const needed = recipe.amountRequired * item.qty;
+                  const existing = requiredIngredients.get(recipe.ingredientId);
+                  if (existing) {
+                    existing.totalRequired += needed;
+                  } else {
+                    requiredIngredients.set(recipe.ingredientId, {
+                      name: recipe.ingredient.name,
+                      unit: recipe.ingredient.unit,
+                      stockQuantity: recipe.ingredient.stockQuantity,
+                      version: recipe.ingredient.version,
+                      totalRequired: needed,
+                    });
+                  }
+                }
+              }
+
+              // Kiểm tra đủ nguyên liệu (trả về lỗi 400 nếu thiếu nguyên liệu)
+              for (const [, info] of requiredIngredients.entries()) {
+                if (
+                  !Number.isSafeInteger(info.totalRequired) ||
+                  info.stockQuantity < info.totalRequired
+                ) {
+                  throw new BadRequestException(
+                    `Không đủ nguyên liệu "${info.name}" (cần ${info.totalRequired}${info.unit}, còn ${info.stockQuantity}${info.unit})`,
+                  );
+                }
+              }
+
+              // Trừ trực tiếp vào bảng Ingredient kèm Optimistic Locking
+              for (const [ingredientId, info] of [...requiredIngredients].sort(
+                ([a], [b]) => a - b,
+              )) {
+                const updated = await transaction.ingredient.updateMany({
+                  where: {
+                    id: ingredientId,
+                    version: info.version,
+                    stockQuantity: { gte: info.totalRequired },
+                  },
+                  data: {
+                    stockQuantity: { decrement: info.totalRequired },
+                    version: { increment: 1 },
+                  },
+                });
+
+                if (updated.count !== 1) {
+                  throw new RetryOrderTransactionError();
+                }
+                consumption.push({
+                  ingredientId,
+                  quantity: info.totalRequired,
+                });
+              }
+            } else {
+              // Giữ nguyên luồng chuẩn khi sản phẩm không gắn RecipeItem (tương thích bộ test hiện có)
+              const updates = planReserve(
+                items,
+                toInventorySnapshots(products),
+              );
+
+              const applied =
+                await this.inventoryRepository.applyUpdatesInTransaction(
+                  transaction,
+                  updates,
                 );
+              if (!applied) {
+                throw new RetryOrderTransactionError();
               }
             }
 
@@ -284,6 +394,7 @@ export class OrderService {
                 discount,
                 promoCode: appliedPromoCode,
                 items: { create: orderItems },
+                usesIngredientInventory: hasRecipeItems,
                 ingredients: { create: consumption },
               },
               select: { id: true, status: true, total: true, discount: true },
@@ -345,6 +456,8 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
+          items: { select: { productId: true, qty: true } },
+          usesIngredientInventory: true,
           ingredients: { select: { ingredientId: true, quantity: true } },
         },
       });
@@ -355,6 +468,49 @@ export class OrderService {
 
       const from = order.status as OrderStatus;
       assertTransition(from, to);
+
+      let releaseUpdates: InventoryUpdate[] = [];
+      const ingredientReleases = new Map<number, number>();
+      if (to === 'CANCELLED') {
+        if (order.usesIngredientInventory === true) {
+          for (const entry of order.ingredients)
+            ingredientReleases.set(entry.ingredientId, entry.quantity);
+        } else {
+          const products = await transaction.product.findMany({
+            where: {
+              id: {
+                in: [...new Set(order.items.map((item) => item.productId))],
+              },
+            },
+            select: { id: true, stock: true, version: true, recipeItems: true },
+          });
+          // Only pre-snapshot TV4 orders (NULL) use the old recipe-based refund.
+          // New legacy product-stock orders remain product-stock even if staff later adds a recipe.
+          if (
+            order.usesIngredientInventory === null &&
+            products.some((product) => product.recipeItems.length > 0)
+          ) {
+            const recipes = new Map(
+              products.map((product) => [product.id, product.recipeItems]),
+            );
+            for (const item of order.items) {
+              for (const recipe of recipes.get(item.productId) ?? []) {
+                ingredientReleases.set(
+                  recipe.ingredientId,
+                  (ingredientReleases.get(recipe.ingredientId) ?? 0) +
+                    recipe.amountRequired * item.qty,
+                );
+              }
+            }
+          } else {
+            releaseUpdates = planCancel(
+              from,
+              order.items,
+              toInventorySnapshots(products),
+            );
+          }
+        }
+      }
 
       const changed = await transaction.order.updateMany({
         where: { id: orderId, status: from },
@@ -380,15 +536,30 @@ export class OrderService {
         });
       }
 
-      if (to === 'CANCELLED') {
-        for (const entry of order.ingredients.sort(
-          (a, b) => a.ingredientId - b.ingredientId,
+      if (ingredientReleases.size > 0) {
+        for (const [ingredientId, quantity] of [...ingredientReleases].sort(
+          ([a], [b]) => a - b,
         )) {
-          await transaction.ingredient.update({
-            where: { id: entry.ingredientId },
-            data: { quantity: { increment: entry.quantity } },
+          const restored = await transaction.ingredient.updateMany({
+            where: {
+              id: ingredientId,
+              stockQuantity: { lte: 2_147_483_647 - quantity },
+            },
+            data: {
+              stockQuantity: { increment: quantity },
+              version: { increment: 1 },
+            },
           });
+          if (restored.count !== 1) throw new InventoryConcurrencyException();
         }
+      } else if (
+        releaseUpdates.length > 0 &&
+        !(await this.inventoryRepository.applyUpdatesInTransaction(
+          transaction,
+          releaseUpdates,
+        ))
+      ) {
+        throw new InventoryConcurrencyException();
       }
     });
   }

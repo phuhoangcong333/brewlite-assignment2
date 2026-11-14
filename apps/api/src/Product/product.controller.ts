@@ -11,7 +11,7 @@ import { ProductService } from './product.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { UpdateRecipeDto } from '../ingredients/dto/update-recipe.dto';
+import { UpdateRecipeDto } from '../inventory/dto/update-recipe.dto';
 
 @Controller('products')
 export class ProductController {

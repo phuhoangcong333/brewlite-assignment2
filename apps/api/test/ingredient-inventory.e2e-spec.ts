@@ -31,9 +31,8 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
   const restock = () => `/ingredients/${milkId}/restock`;
 
   async function quantity(id: number) {
-    return (
-      await prisma.ingredient.findUniqueOrThrow({ where: { id } })
-    ).quantity.toNumber();
+    return (await prisma.ingredient.findUniqueOrThrow({ where: { id } }))
+      .stockQuantity;
   }
 
   async function createProduct(withRecipe = true) {
@@ -44,10 +43,10 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         stock: 999,
         ...(withRecipe
           ? {
-              recipe: {
+              recipeItems: {
                 create: [
-                  { ingredientId: milkId, quantity: 30 },
-                  { ingredientId: coffeeId, quantity: 10 },
+                  { ingredientId: milkId, amountRequired: 30 },
+                  { ingredientId: coffeeId, amountRequired: 10 },
                 ],
               },
             }
@@ -99,7 +98,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         data: {
           name: `${name}-${suffix}-${Math.random()}`,
           unit,
-          quantity: stock,
+          stockQuantity: stock,
         },
       });
       ingredientIds.push(row.id);
@@ -142,7 +141,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     expect(detail.body).toMatchObject({ availableQuantity: 3, stock: 3 });
     await prisma.ingredient.update({
       where: { id: coffeeId },
-      data: { quantity: 9 },
+      data: { stockQuantity: 9 },
     });
     const empty = await request(app.getHttpServer())
       .get(`/products/${productId}`)
@@ -150,13 +149,25 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     expect(empty.body.availableQuantity).toBe(0);
   });
 
-  it('treats products without a recipe as unavailable and rejects orders with 400', async () => {
+  it('retains TV4 legacy product-stock behavior without a recipe', async () => {
     const id = await createProduct(false);
     const detail = await request(app.getHttpServer())
       .get(`/products/${id}`)
       .expect(200);
-    expect(detail.body.availableQuantity).toBe(0);
-    await order([{ productId: id, qty: 1, size: 'S' }]).expect(400);
+    expect(detail.body.availableQuantity).toBe(999);
+    const response = await order([{ productId: id, qty: 1, size: 'S' }]).expect(
+      201,
+    );
+    expect(
+      (
+        await prisma.order.findUniqueOrThrow({
+          where: { id: response.body.id },
+        })
+      ).usesIngredientInventory,
+    ).toBe(false);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id } })).stock,
+    ).toBe(998);
     expect(await quantity(milkId)).toBe(100);
   });
 
@@ -171,9 +182,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     });
     expect(consumed).toHaveLength(2);
     expect(
-      consumed
-        .find((entry) => entry.ingredientId === milkId)
-        ?.quantity.toNumber(),
+      consumed.find((entry) => entry.ingredientId === milkId)?.quantity,
     ).toBe(60);
     expect(
       (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
@@ -205,10 +214,10 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
   it('rolls back earlier ingredient deductions when a later ingredient is insufficient', async () => {
     await prisma.ingredient.update({
       where: { id: coffeeId },
-      data: { quantity: 0 },
+      data: { stockQuantity: 0 },
     });
     const response = await order().expect(400);
-    expect(response.body.message).toContain('Insufficient ingredient');
+    expect(response.body.message).toContain('nguyên liệu');
     expect(await quantity(milkId)).toBe(100);
     expect(await prisma.order.count({ where: { userId: customerId } })).toBe(0);
     expect(
@@ -233,7 +242,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     const other = await createProduct();
     await prisma.ingredient.update({
       where: { id: milkId },
-      data: { quantity: 30 },
+      data: { stockQuantity: 30 },
     });
     const results = await Promise.all([
       order(),
@@ -247,15 +256,15 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     expect(await prisma.order.count({ where: { userId: customerId } })).toBe(1);
   });
 
-  it('preserves decimal precision when dividing and deducting quantities', async () => {
+  it('uses TV4 whole ingredient units when dividing and deducting quantities', async () => {
     await request(app.getHttpServer())
       .patch(recipe())
       .set(auth())
-      .send({ ingredients: [{ ingredientId: milkId, quantity: 0.1 }] })
+      .send({ ingredients: [{ ingredientId: milkId, quantity: 10 }] })
       .expect(200);
     await prisma.ingredient.update({
       where: { id: milkId },
-      data: { quantity: 0.3 },
+      data: { stockQuantity: 30 },
     });
     const product = await request(app.getHttpServer())
       .get(`/products/${productId}`)
@@ -316,11 +325,11 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         request(app.getHttpServer())
           .patch(restock())
           .set(auth())
-          .send({ quantity: 10.125 })
+          .send({ quantity: 20 })
           .expect(200),
       ),
     );
-    expect(await quantity(milkId)).toBe(120.25);
+    expect(await quantity(milkId)).toBe(140);
     const product = await request(app.getHttpServer())
       .get(`/products/${productId}`)
       .expect(200);
@@ -359,7 +368,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         .set(auth())
         .send({ ingredients })
         .expect(400);
-      expect(await prisma.recipe.count({ where: { productId } })).toBe(2);
+      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
     },
   );
 
@@ -369,7 +378,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
       .set(auth())
       .send({ ingredients: [{ ingredientId: 2_147_483_647, quantity: 1 }] })
       .expect(400);
-    expect(await prisma.recipe.count({ where: { productId } })).toBe(2);
+    expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
   });
 
   it('replaces recipes and restores the original consumption exactly once on cancellation', async () => {
@@ -412,5 +421,182 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
       .set(auth())
       .send({ ingredients: [{ ingredientId: milkId, quantity: 1 }] })
       .expect(404);
+  });
+
+  it.each(['create', 'putRecipe', 'patchRecipe'] as const)(
+    'TV4 %s endpoint requires JWT and STAFF',
+    async (operation) => {
+      const send = (token?: string) => {
+        const url =
+          operation === 'create'
+            ? '/ingredients'
+            : `/ingredients/recipes/${productId}`;
+        const req =
+          operation === 'create'
+            ? request(app.getHttpServer()).post(url)
+            : operation === 'putRecipe'
+              ? request(app.getHttpServer()).put(url)
+              : request(app.getHttpServer()).patch(url);
+        if (token) req.set(auth(token));
+        return req.send(
+          operation === 'create'
+            ? { name: `api-created-${suffix}`, unit: 'g', stockQuantity: 10 }
+            : { items: [{ ingredientId: milkId, amountRequired: 25 }] },
+        );
+      };
+      await send().expect(401);
+      await send(customerToken).expect(403);
+      const response = await send(staffToken).expect(
+        operation === 'create' ? 201 : 200,
+      );
+      if (operation === 'create') ingredientIds.push(response.body.id);
+      else {
+        expect(response.body.recipeItems).toHaveLength(1);
+        expect(response.body.recipeItems[0].amountRequired).toBe(25);
+      }
+    },
+  );
+
+  it.each([
+    { items: [] },
+    { items: [{ ingredientId: 1, amountRequired: 0 }] },
+    { items: [{ ingredientId: 1, amountRequired: 0.5 }] },
+    {
+      items: [
+        { ingredientId: 1, amountRequired: 1 },
+        { ingredientId: 1, amountRequired: 2 },
+      ],
+    },
+    { items: [{ ingredientId: 2_147_483_647, amountRequired: 1 }] },
+  ])(
+    'TV4 recipe rejects invalid body %p without losing the original recipe',
+    async (body) => {
+      await request(app.getHttpServer())
+        .put(`/ingredients/recipes/${productId}`)
+        .set(auth())
+        .send(body)
+        .expect(400);
+      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
+    },
+  );
+
+  it('does not lose simultaneous refunds for different orders sharing an ingredient', async () => {
+    const first = await order().expect(201);
+    const second = await order().expect(201);
+    await Promise.all(
+      [first.body.id, second.body.id].map((id: number) =>
+        request(app.getHttpServer())
+          .delete(`/orders/${id}`)
+          .set(auth(customerToken))
+          .expect(204),
+      ),
+    );
+    expect(await quantity(milkId)).toBe(100);
+    expect(await quantity(coffeeId)).toBe(45);
+  });
+
+  it('restores new ingredient orders from snapshots even if their recipes were removed', async () => {
+    const response = await order().expect(201);
+    await prisma.recipeItem.deleteMany({ where: { productId } });
+    await request(app.getHttpServer())
+      .delete(`/orders/${response.body.id}`)
+      .set(auth(customerToken))
+      .expect(204);
+    expect(await quantity(milkId)).toBe(100);
+    expect(await quantity(coffeeId)).toBe(45);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
+        .stock,
+    ).toBe(999);
+  });
+
+  it('restores legacy product-stock orders to product stock after staff adds a recipe', async () => {
+    const legacyId = await createProduct(false);
+    const response = await order([
+      { productId: legacyId, qty: 1, size: 'S' },
+    ]).expect(201);
+    await request(app.getHttpServer())
+      .put(`/ingredients/recipes/${legacyId}`)
+      .set(auth())
+      .send({ items: [{ ingredientId: milkId, amountRequired: 5 }] })
+      .expect(200);
+    await request(app.getHttpServer())
+      .delete(`/orders/${response.body.id}`)
+      .set(auth(customerToken))
+      .expect(204);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: legacyId } }))
+        .stock,
+    ).toBe(999);
+    expect(await quantity(milkId)).toBe(100);
+  });
+
+  it('keeps the old TV4 refund contract for orders created before the snapshot migration', async () => {
+    await prisma.ingredient.update({
+      where: { id: milkId },
+      data: { stockQuantity: { decrement: 30 } },
+    });
+    await prisma.ingredient.update({
+      where: { id: coffeeId },
+      data: { stockQuantity: { decrement: 10 } },
+    });
+    const old = await prisma.order.create({
+      data: {
+        userId: customerId,
+        total: 10_000,
+        items: { create: { productId, qty: 1, size: 'S', lineTotal: 10_000 } },
+      },
+    });
+    expect(old.usesIngredientInventory).toBeNull();
+    await request(app.getHttpServer())
+      .delete(`/orders/${old.id}`)
+      .set(auth(customerToken))
+      .expect(204);
+    expect(await quantity(milkId)).toBe(100);
+    expect(await quantity(coffeeId)).toBe(45);
+  });
+
+  it('prevents Int32 overflow when two restocks compete for the last capacity', async () => {
+    await prisma.ingredient.update({
+      where: { id: milkId },
+      data: { stockQuantity: 2_147_483_646 },
+    });
+    const responses = await Promise.all(
+      [1, 2].map(() =>
+        request(app.getHttpServer())
+          .patch(restock())
+          .set(auth())
+          .send({ amount: 1 }),
+      ),
+    );
+    expect(
+      responses.map((response) => response.status).sort((a, b) => a - b),
+    ).toEqual([200, 400]);
+    expect(await quantity(milkId)).toBe(2_147_483_647);
+  });
+
+  it('rejects duplicate ingredient names and ambiguous restock aliases', async () => {
+    const body = {
+      name: `duplicate-api-${suffix}`,
+      unit: 'g',
+      stockQuantity: 0,
+    };
+    const created = await request(app.getHttpServer())
+      .post('/ingredients')
+      .set(auth())
+      .send(body)
+      .expect(201);
+    ingredientIds.push(created.body.id);
+    await request(app.getHttpServer())
+      .post('/ingredients')
+      .set(auth())
+      .send(body)
+      .expect(409);
+    await request(app.getHttpServer())
+      .patch(restock())
+      .set(auth())
+      .send({ amount: 1, quantity: 2 })
+      .expect(400);
+    expect(await quantity(milkId)).toBe(100);
   });
 });

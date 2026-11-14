@@ -7,10 +7,14 @@ import { describeDb } from '../../test/helpers/describe-db';
 import { InvalidTransitionException } from '../common/errors';
 import { OrderService } from './order.service';
 import { OrderStatus } from './order-state';
+import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
 
 describeDb('OrderService with PostgreSQL', () => {
   const prisma = new PrismaService();
-  const service = new OrderService(prisma);
+  const service = new OrderService(
+    prisma,
+    new PrismaInventoryRepository(prisma),
+  );
   const orderIds: number[] = [];
   const userIds: number[] = [];
   const productIds: number[] = [];

@@ -10,8 +10,8 @@ export async function attachIngredient(
     data: {
       name: `fixture-${productId}-${Date.now()}-${Math.random()}`,
       unit: 'g',
-      quantity,
-      recipes: { create: { productId, quantity: 1 } },
+      stockQuantity: quantity,
+      recipeItems: { create: { productId, amountRequired: 1 } },
     },
   });
   createdIds.push(ingredient.id);
@@ -22,9 +22,9 @@ export async function ingredientQuantity(
   prisma: PrismaClient,
   productId: number,
 ) {
-  const recipe = await prisma.recipe.findFirstOrThrow({
+  const recipe = await prisma.recipeItem.findFirstOrThrow({
     where: { productId },
     include: { ingredient: true },
   });
-  return recipe.ingredient.quantity.toNumber();
+  return recipe.ingredient.stockQuantity;
 }
