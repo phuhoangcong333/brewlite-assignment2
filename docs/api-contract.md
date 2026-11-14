@@ -336,10 +336,16 @@ Cách tính giảm giá: loại `PERCENT` = làm tròn xuống (`subtotal × gi�
 
 | Mã | Khi nào |
 |---|---|
-| 400 | `items` rỗng hoặc quá 20 phần tử; `quantity` ngoài khoảng 1 đến 10; thiếu `productId` hoặc `sizeId`; sai kiểu dữ liệu |
+| 400 | `items` rỗng hoặc quá 20 phần tử; `quantity` ngoài khoảng 1 đến 10; thiếu `productId` hoặc `sizeId`; sai kiểu dữ liệu; có trường ngoài danh sách ở bảng trên (ví dụ `price`, `unitPrice`, `name`) |
 | 500 | Lỗi máy chủ không lường trước |
 
 Mã khuyến mãi không hợp lệ và sản phẩm không còn bán **không phải lỗi HTTP**: endpoint vẫn trả 200 và báo qua `promotion.valid`, `promotion.reason` và `items[].status`, để giao diện có báo giá hiển thị kèm lý do. Endpoint không cần JWT nên không trả 401 hoặc 403. Lỗi 400 và 500 theo định dạng thống nhất ở mục 2.1.
+
+**Trạng thái đối chiếu code** (kiểm thử trên server `47.129.180.144:3001`, ngày 15/11/2026):
+
+- Trường ngoài danh sách của request **bị từ chối 400**, không bị bỏ qua (do `ValidationPipe` toàn cục trong `main.ts` bật `forbidNonWhitelisted`). Ví dụ `message`: `items.0.property price should not exist`.
+- Body lỗi 400 thực tế gồm `statusCode`, `message` (mảng chuỗi), `path`, `timestamp`. Chưa có `error`, `requestId` và header `X-Request-Id` như mục 2.1 (cần TV7 xác nhận).
+- Bảng `Promotion` hiện chỉ có `code`, `percent`, `expiresAt`, `usageLeft`, nên chỉ có loại `PERCENT`. Các lý do `PROMO_NOT_STARTED`, `PROMO_MIN_ORDER_NOT_MET` và loại `FIXED_AMOUNT`, giảm tối đa chưa thể xảy ra với dữ liệu hiện tại; quy tắc đã được kiểm bằng unit test (`promotion-rules.spec.ts`).
 
 ### 4.4. `POST /auth/register` (TV7)
 
