@@ -1,0 +1,493 @@
+{
+    "info": {
+        "name": "TV5 - Payments & Idempotency (Issue #20)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3001"
+        },
+        {
+            "key": "customerEmail",
+            "value": "admin@gmail.com"
+        },
+        {
+            "key": "customerPassword",
+            "value": "123456"
+        },
+        {
+            "key": "productId",
+            "value": "1"
+        },
+        {
+            "key": "access_token",
+            "value": ""
+        },
+        {
+            "key": "orderId",
+            "value": ""
+        },
+        {
+            "key": "orderId2",
+            "value": ""
+        },
+        {
+            "key": "idemKeyWallet",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Login lấy access_token",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.access_token).to.be.a(\"string\");",
+                            "pm.collectionVariables.set(\"access_token\", data.access_token);"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/auth/login",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "auth",
+                        "login"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "2. Tạo đơn hàng #1 (PENDING)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.status).to.eql(\"PENDING\");",
+                            "pm.collectionVariables.set(\"orderId\", String(data.id));"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"items\": [{\"productId\": {{productId}}, \"qty\": 1, \"size\": \"M\", \"toppings\": []}]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/orders",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "orders"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "3. Thanh toán Ví (WALLET) thành công",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.collectionVariables.set(\"idemKeyWallet\", \"tv5-wallet-\" + Date.now());"
+                        ]
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.payment_status).to.eql(\"PAID\");",
+                            "pm.expect(data.order_status).to.eql(\"PAID\");",
+                            "pm.expect(data.replayed).to.eql(false);"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Idempotency-Key",
+                        "value": "{{idemKeyWallet}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"orderId\": {{orderId}},\n  \"method\": \"WALLET\",\n  \"walletId\": \"WALLET-1234\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/payments",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "payments"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "4. Gửi trùng Idempotency-Key (replayed = true)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.payment_status).to.eql(\"PAID\");",
+                            "pm.expect(data.replayed).to.eql(true);"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Idempotency-Key",
+                        "value": "{{idemKeyWallet}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"orderId\": {{orderId}},\n  \"method\": \"WALLET\",\n  \"walletId\": \"WALLET-1234\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/payments",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "payments"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "5. Tạo đơn hàng #2 (PENDING)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.status).to.eql(\"PENDING\");",
+                            "pm.collectionVariables.set(\"orderId2\", String(data.id));"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"items\": [{\"productId\": {{productId}}, \"qty\": 1, \"size\": \"M\", \"toppings\": []}]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/orders",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "orders"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "6. Kiểm tra lệch số tiền (HTTP 400)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Idempotency-Key",
+                        "value": "tv5-wrong-amount-{{$timestamp}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"orderId\": {{orderId2}},\n  \"amount\": 999999,\n  \"method\": \"WALLET\",\n  \"walletId\": \"WALLET-1234\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/payments",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "payments"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "7. Thanh toán Thẻ thất bại - đuôi 0000 (PAYMENT_FAILED)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.payment_status).to.eql(\"PAYMENT_FAILED\");",
+                            "pm.expect(data.order_status).to.eql(\"PAYMENT_FAILED\");"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Idempotency-Key",
+                        "value": "tv5-card-fail-{{$timestamp}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"orderId\": {{orderId2}},\n  \"method\": \"CARD\",\n  \"cardNumber\": \"4111111111110000\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/payments",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "payments"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "8. Thử lại thanh toán Thẻ hợp lệ (PAID)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                            "const data = pm.response.json();",
+                            "pm.expect(data.payment_status).to.eql(\"PAID\");",
+                            "pm.expect(data.order_status).to.eql(\"PAID\");",
+                            "pm.expect(data.replayed).to.eql(false);"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{access_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Idempotency-Key",
+                        "value": "tv5-card-ok-{{$timestamp}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"orderId\": {{orderId2}},\n  \"method\": \"CARD\",\n  \"cardNumber\": \"4111111111111111\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/payments",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "payments"
+                    ]
+                }
+            }
+        }
+    ]
+}
