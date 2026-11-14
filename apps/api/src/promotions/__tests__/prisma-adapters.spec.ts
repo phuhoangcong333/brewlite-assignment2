@@ -13,10 +13,12 @@ describe('PrismaCatalogRepository', () => {
         stock: 50,
         recipeItems: [
           {
+            size: 'M',
             amountRequired: 20,
             ingredient: { stockQuantity: 45 },
           },
           {
+            size: 'M',
             amountRequired: 10,
             ingredient: { stockQuantity: 10 },
           },
@@ -34,11 +36,10 @@ describe('PrismaCatalogRepository', () => {
         name: 'Cà phê sữa',
         imageUrl: null,
         basePrice: 35_000,
-        stock: 1,
         sizes: [
-          { id: 1, extraPrice: 0 },
-          { id: 2, extraPrice: 5_000 },
-          { id: 3, extraPrice: 10_000 },
+          { id: 1, extraPrice: 0, stock: 0 },
+          { id: 2, extraPrice: 5_000, stock: 1 },
+          { id: 3, extraPrice: 10_000, stock: 0 },
         ],
       },
     ]);
@@ -46,6 +47,34 @@ describe('PrismaCatalogRepository', () => {
       where: { id: { in: [1] } },
       include: { recipeItems: { include: { ingredient: true } } },
     });
+  });
+
+  it('uses product stock as a per-size fallback when no recipe exists', async () => {
+    const prisma = {
+      product: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 1,
+            name: 'Americano',
+            imageUrl: null,
+            price: 40_000,
+            stock: 7,
+            recipeItems: [],
+          },
+        ]),
+      },
+    } as unknown as PrismaService;
+    const repository = new PrismaCatalogRepository(prisma);
+
+    await expect(repository.findProducts([1])).resolves.toMatchObject([
+      {
+        sizes: [
+          { id: 1, stock: 7 },
+          { id: 2, stock: 7 },
+          { id: 3, stock: 7 },
+        ],
+      },
+    ]);
   });
 
   it('returns the supported toppings without querying a nonexistent table', async () => {

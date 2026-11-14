@@ -2,7 +2,7 @@ name: TV6 state, loyalty and browser E2E
 
 on:
   pull_request:
-    branches: [dev, main, fix/tv6-state-loyalty-21]
+    branches: [dev, main, feat/TV6, fix/tv6-state-loyalty-21]
   workflow_dispatch:
 
 jobs:
@@ -42,9 +42,13 @@ jobs:
         working-directory: apps/api
       - run: npm test -- --runInBand
         working-directory: apps/api
+      - run: npm run lint
+        working-directory: apps/api
       - run: npm run test:e2e -- --runInBand
         working-directory: apps/api
       - run: npm test -- --maxWorkers=1 --minWorkers=1
+        working-directory: apps/web
+      - run: npm run lint
         working-directory: apps/web
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web

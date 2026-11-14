@@ -3,11 +3,30 @@ import { CatalogRepository, PromotionRepository } from '../repositories';
 
 export const PRODUCTS: CatalogProduct[] = [
   {
-    id: 1, name: 'Trà sữa trân châu', imageUrl: '/images/tra-sua.jpg', basePrice: 45000, stock: 20,
-    sizes: [{ id: 1, extraPrice: 0 }, { id: 2, extraPrice: 6000 }],
+    id: 1,
+    name: 'Trà sữa trân châu',
+    imageUrl: '/images/tra-sua.jpg',
+    basePrice: 45000,
+    sizes: [
+      { id: 1, extraPrice: 0, stock: 20 },
+      { id: 2, extraPrice: 6000, stock: 20 },
+      { id: 3, extraPrice: 10000, stock: 2 },
+    ],
   },
-  { id: 2, name: 'Hồng trà', imageUrl: null, basePrice: 30000, stock: 5, sizes: [{ id: 1, extraPrice: 0 }] },
-  { id: 3, name: 'Cà phê sữa', imageUrl: '/images/ca-phe-sua.jpg', basePrice: 35000, stock: 0, sizes: [{ id: 1, extraPrice: 0 }] },
+  {
+    id: 2,
+    name: 'Hồng trà',
+    imageUrl: null,
+    basePrice: 30000,
+    sizes: [{ id: 1, extraPrice: 0, stock: 5 }],
+  },
+  {
+    id: 3,
+    name: 'Cà phê sữa',
+    imageUrl: '/images/ca-phe-sua.jpg',
+    basePrice: 35000,
+    sizes: [{ id: 1, extraPrice: 0, stock: 0 }],
+  },
 ];
 
 export const TOPPINGS: CatalogTopping[] = [

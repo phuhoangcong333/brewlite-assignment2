@@ -103,4 +103,12 @@ export class OrdersController {
       getUserId(req),
     );
   }
+
+  @Delete('staff/:id')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async cancelOrderForStaff(@Param('id', OrderIdPipe) id: number) {
+    await this.orderService.transitionOrderForStaff(id, 'CANCELLED');
+  }
 }

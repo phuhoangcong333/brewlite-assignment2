@@ -69,9 +69,17 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
 | `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Đã điền |
 | `GET /orders` | TV6 | Có | Chỉ lịch sử của tài khoản hiện tại | Lịch sử đơn | Đã kiểm thử |
-| `GET /orders/staff` | TV6 | Có | Chỉ STAFF | Hàng đợi PAID/PREPARING/READY | Đã kiểm thử |
+| `GET /orders/staff` | TV6 | Có | Chỉ STAFF | Hàng đợi PENDING/PAID/PREPARING/READY | Đã kiểm thử |
 | `GET /orders/:id` | TV6 | Có | Chỉ chủ sở hữu đơn, kể cả tài khoản STAFF | Theo dõi đơn | Đã kiểm thử |
-| `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Khung |
+| `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Đã kiểm thử |
+| `DELETE /orders/:id` | TV6 | Có | Chủ sở hữu | Hủy PENDING/PAYMENT_FAILED và hoàn kho | Đã kiểm thử |
+| `DELETE /orders/staff/:id` | TV6 | Có | Chỉ `STAFF` | Hủy PENDING/PREPARING và hoàn kho | Đã kiểm thử |
+
+### Hủy đơn STAFF — bổ sung TV6 ngày 15/11/2026
+
+`DELETE /orders/staff/:id` không có body, yêu cầu Bearer JWT và role STAFF hiện tại trong database. Thành công trả **204**, hoàn đúng lượng Ingredient đã trừ theo snapshot, chỉ thực hiện một lần trong transaction. Chỉ cho phép PENDING hoặc PREPARING. Không hoàn tiền, không sửa Payment và không cộng điểm thưởng.
+
+Lỗi: **400** ID không phải số nguyên dương Int32; **401** thiếu/sai JWT; **403** không phải STAFF; **404** không có đơn; **409** trạng thái không cho hủy, cạnh tranh cập nhật hoặc hoàn kho vượt giới hạn. `PATCH /orders/:id/status` với `{ "status": "CANCELLED" }` gọi cùng nghiệp vụ. Khách hàng tiếp tục dùng `DELETE /orders/:id`, chỉ đơn mình và PENDING/PAYMENT_FAILED.
 
 ## 4. Chi tiết từng endpoint
 
@@ -705,7 +713,7 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
   - `PREPARING` → `READY`
   - `READY` → `COMPLETED`
 - Không được bỏ qua bước hoặc cập nhật đơn đã hoàn thành/hủy.
-- Thanh toán và hủy đơn được xử lý bởi nghiệp vụ tương ứng, không thông qua endpoint này.
+- STAFF có thể gửi `CANCELLED` từ `PENDING` hoặc `PREPARING`; cùng nghiệp vụ với `DELETE /orders/staff/:id`. Hoàn nguyên liệu đúng một lần trong transaction. Không hoàn tiền hoặc sửa Payment. Thanh toán vẫn do Payment service quản lý.
 - Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống ghi nhận `LoyaltyTransaction`.
 - Điểm thưởng: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả sau giảm giá; nếu bằng 0 thì không tạo giao dịch điểm.
 - Mỗi đơn hàng chỉ được cộng điểm một lần.

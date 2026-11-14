@@ -45,6 +45,19 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     return product.id;
   }
 
+  async function createIngredient(stockQuantity: number): Promise<number> {
+    const ingredient = await prisma.ingredient.create({
+      data: {
+        name: `order-create-ingredient-${Date.now()}-${Math.random()}`,
+        unit: 'g',
+        stockQuantity,
+      },
+      select: { id: true },
+    });
+    ingredientIds.push(ingredient.id);
+    return ingredient.id;
+  }
+
   beforeAll(async () => {
     await prisma.$connect();
   });
@@ -61,6 +74,8 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+    }
+    if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
         where: { id: { in: ingredientIds } },
       });
@@ -110,6 +125,51 @@ describeDb('OrderService.createOrder with PostgreSQL', () => {
         lineTotal: 90_000,
         toppings: ['Trân châu'],
       },
+    ]);
+  });
+
+  it('reserves the ingredients for each ordered size', async () => {
+    const userId = await createUser();
+    const productId = await createProduct(50);
+    const ingredientId = await createIngredient(1_000);
+    await prisma.recipeItem.createMany({
+      data: [
+        { productId, ingredientId, size: 'S', amountRequired: 10 },
+        { productId, ingredientId, size: 'M', amountRequired: 20 },
+        { productId, ingredientId, size: 'L', amountRequired: 30 },
+      ],
+    });
+
+    const order = await service.createOrder(userId, [
+      { productId, qty: 2, size: 'S' },
+      { productId, qty: 1, size: 'M' },
+      { productId, qty: 1, size: 'L' },
+    ]);
+    orderIds.push(order.id);
+
+    expect(order.total).toBe(155_000);
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: ingredientId },
+        select: { stockQuantity: true, version: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 930, version: 1 });
+    await expect(
+      prisma.product.findUniqueOrThrow({
+        where: { id: productId },
+        select: { stock: true },
+      }),
+    ).resolves.toEqual({ stock: 50 });
+    await expect(
+      prisma.orderItem.findMany({
+        where: { orderId: order.id },
+        select: { size: true, qty: true },
+        orderBy: { id: 'asc' },
+      }),
+    ).resolves.toEqual([
+      { size: 'S', qty: 2 },
+      { size: 'M', qty: 1 },
+      { size: 'L', qty: 1 },
     ]);
   });
 

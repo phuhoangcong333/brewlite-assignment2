@@ -310,3 +310,17 @@ export async function cancelOrder(orderId: number): Promise<void> {
     method: "DELETE",
   });
 }
+
+export async function cancelStaffOrder(orderId: number): Promise<void> {
+  if (USE_MOCK) {
+    const user = await getCurrentUser();
+    if (user.role !== "STAFF")
+      throw new ApiError(403, "Chỉ nhân viên được hủy đơn");
+    const order = readMock().find((o) => o.id === orderId);
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+    if (!["PENDING", "PREPARING"].includes(order.status))
+      throw new ApiError(409, "Không thể hủy đơn ở trạng thái này");
+    return updateOrderStatus(orderId, "CANCELLED");
+  }
+  await request<void>(`/orders/staff/${orderId}`, { method: "DELETE" });
+}

@@ -4,14 +4,14 @@ Schema chuẩn là phần TV4 đã merge vào dev: `Ingredient.stockQuantity` (I
 
 ## Tính tồn và đặt/hủy đơn
 
-- `availableQuantity = min(floor(stockQuantity / amountRequired))` cho các nguyên liệu trong công thức. `stock` trong response sản phẩm là alias để tương thích frontend.
+- `availableQuantityBySize[size] = min(floor(stockQuantity / amountRequired))` theo công thức đúng size S/M/L. Thiếu công thức một size thì size đó là 0. `availableQuantity` là min của ba size để tương thích; giao diện mới dùng số lượng riêng từng size. `stock` trong response sản phẩm là alias để tương thích frontend.
 - Các món legacy không có RecipeItem tiếp tục dùng Product.stock theo hợp đồng TV4. Món có công thức luôn trừ nguyên liệu; đơn trộn món có/không có công thức bị từ chối theo hợp đồng hiện tại.
 - Cộng tổng nhu cầu khi nhiều dòng/món dùng chung nguyên liệu, kiểm tra đủ kho, trừ Ingredient và tạo đơn/snapshot trong cùng transaction Serializable. Thiếu nguyên liệu trả 400; lỗi bất kỳ rollback toàn bộ. Xung đột ghi được retry tối đa 3 lần.
 - Đơn mới ghi `usesIngredientInventory = true/false`. Món dùng nguyên liệu lưu chính xác lượng đã trừ trong OrderIngredient; hủy đơn dùng snapshot, kể cả khi công thức đổi hoặc bị xóa.
 - Hoàn nguyên liệu bằng atomic increment; hai đơn khác nhau có thể hoàn cùng nguyên liệu mà không mất cập nhật. Hủy cùng đơn chỉ thành công một lần nhờ kiểm tra trạng thái trong transaction.
 - Đơn TV4 trước migration có marker NULL và tiếp tục theo hợp đồng hoàn kho cũ. Không có dữ liệu lịch sử để dựng lại định lượng quá khứ cho các đơn này; snapshot chỉ bảo đảm hoàn đúng định lượng ban đầu cho đơn mới.
 - Kho/định lượng là số nguyên theo đơn vị g/ml của TV4. Dùng đơn vị nhỏ hơn nếu cần độ chia nhỏ; API không nhận số thập phân.
-- Size/topping vẫn tính phụ phí như hợp đồng hiện tại; công thức chuẩn theo món, chưa có định lượng riêng theo size/topping.
+- Size/topping vẫn tính phụ phí như hợp đồng hiện tại; công thức riêng theo size S/M/L; chưa có định lượng riêng cho topping.
 
 ## API và phân quyền
 
@@ -24,13 +24,13 @@ Các endpoint kho dùng JwtAuthGuard và StaffGuard, kiểm tra role hiện tạ
 | GET | /ingredients | STAFF | Không có |
 | POST | /ingredients | STAFF | `{ "name": "Sữa", "unit": "ml", "stockQuantity": 100 }` |
 | PATCH | /ingredients/:id/restock | STAFF | `{ "amount": 20 }` |
-| PUT/PATCH | /ingredients/recipes/:productId | STAFF | `{ "items": [{ "ingredientId": 1, "amountRequired": 30 }] }` |
+| PUT/PATCH | /ingredients/recipes/:productId | STAFF | `{ "items": [{ "ingredientId": 1, "size": "S", "amountRequired": 20 }, { "ingredientId": 1, "size": "M", "amountRequired": 25 }, { "ingredientId": 1, "size": "L", "amountRequired": 30 }] }` |
 | GET | /products/:id/recipe | STAFF | Alias đọc công thức |
 | PATCH | /products/:id/recipe | STAFF | Alias `{ "ingredients": [{ "ingredientId": 1, "quantity": 30 }] }` |
 
 Frontend kho TV4 tiếp tục dùng amount/items/amountRequired và nhận stockQuantity/recipeItems. Alias nhập kho `quantity` hoặc `stockQuantity` vẫn được hỗ trợ nhưng chỉ gửi một trong ba trường mỗi request.
 
-Sửa công thức dùng chung RecipesService cho cả hai bộ endpoint, thay thế nguyên tử toàn bộ danh sách. Nguyên liệu phải tồn tại, không trùng ID, có ít nhất một dòng và định lượng nguyên dương. Body sai trả 400, tài nguyên không tồn tại trả 404. Trùng tên nguyên liệu trả 409. Nhập kho kiểm tra giới hạn Int32 bằng predicate ngay trong atomic update để không tràn số khi nhập đồng thời.
+Sửa công thức dùng chung RecipesService cho cả hai bộ endpoint, thay thế nguyên tử toàn bộ danh sách. Nguyên liệu phải tồn tại, không trùng (size, ingredientId), có đủ ba size S/M/L và định lượng nguyên dương. Alias cũ không truyền size sẽ mở rộng toàn bộ nguyên liệu cho cả ba size; nếu truyền size phải truyền đầy đủ cho mọi dòng. Body sai trả 400, tài nguyên không tồn tại trả 404. Trùng tên nguyên liệu trả 409. Nhập kho kiểm tra giới hạn Int32 bằng predicate ngay trong atomic update để không tràn số khi nhập đồng thời.
 
 ## Migration và seed
 
@@ -44,7 +44,7 @@ Sửa công thức dùng chung RecipesService cho cả hai bộ endpoint, thay t
 Từ apps/api trên PowerShell:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql://brewlite:brewlite123@localhost:5433/brewlite_inventory_merge_tests?schema=public'
+$env:DATABASE_URL = 'postgresql://brewlite:brewlite123@localhost:5433/brewlite_final_acceptance_tests?schema=public'
 npx.cmd prisma generate
 npx.cmd prisma migrate deploy
 npm.cmd run db:seed

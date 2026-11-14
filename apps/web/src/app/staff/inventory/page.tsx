@@ -15,11 +15,15 @@ import {
   type RecipeItemInput,
 } from "@/lib/inventory-api";
 import { ApiError as AuthApiError, getCurrentUser } from "@/lib/orders-api";
+import type { Size } from "@/lib/types";
 
 type RecipeDraftItem = {
   ingredientId: number | null;
   amountRequired: string;
 };
+
+type RecipeDrafts = Record<Size, RecipeDraftItem[]>;
+const RECIPE_SIZES: Size[] = ["S", "M", "L"];
 
 function getApiStatus(error: unknown): number | undefined {
   if (
@@ -33,11 +37,15 @@ function getApiStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-function toRecipeDraft(product: InventoryProduct): RecipeDraftItem[] {
-  return product.recipeItems.map((item) => ({
-    ingredientId: item.ingredientId,
-    amountRequired: String(item.amountRequired),
-  }));
+function toRecipeDraft(product: InventoryProduct): RecipeDrafts {
+  const drafts: RecipeDrafts = { S: [], M: [], L: [] };
+  for (const item of product.recipeItems) {
+    drafts[item.size].push({
+      ingredientId: item.ingredientId,
+      amountRequired: String(item.amountRequired),
+    });
+  }
+  return drafts;
 }
 
 export default function StaffInventoryPage() {
@@ -45,7 +53,7 @@ export default function StaffInventoryPage() {
   const [ingredients, setIngredients] = useState<InventoryIngredient[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [recipeDrafts, setRecipeDrafts] = useState<
-    Record<number, RecipeDraftItem[]>
+    Record<number, RecipeDrafts>
   >({});
   const [restockAmounts, setRestockAmounts] = useState<Record<number, string>>(
     {},
@@ -69,9 +77,7 @@ export default function StaffInventoryPage() {
         setAccessDenied(true);
         return;
       }
-      setError(
-        requestError instanceof Error ? requestError.message : fallback,
-      );
+      setError(requestError instanceof Error ? requestError.message : fallback);
     },
     [router],
   );
@@ -132,11 +138,17 @@ export default function StaffInventoryPage() {
       })
       .catch((requestError: unknown) => {
         if (!active) return;
-        if (requestError instanceof AuthApiError && requestError.status === 401) {
+        if (
+          requestError instanceof AuthApiError &&
+          requestError.status === 401
+        ) {
           router.replace("/login?next=/staff/inventory");
           return;
         }
-        if (requestError instanceof AuthApiError && requestError.status === 403) {
+        if (
+          requestError instanceof AuthApiError &&
+          requestError.status === 403
+        ) {
           setAccessDenied(true);
           return;
         }
@@ -186,7 +198,9 @@ export default function StaffInventoryPage() {
 
     try {
       setProducts(await getInventoryProducts());
-      setNotice(`Đã nhập thêm ${amount} ${ingredient.unit} ${ingredient.name}.`);
+      setNotice(
+        `Đã nhập thêm ${amount} ${ingredient.unit} ${ingredient.name}.`,
+      );
     } catch (requestError) {
       const message =
         requestError instanceof Error
@@ -196,7 +210,10 @@ export default function StaffInventoryPage() {
         requestError,
         `Đã nhập kho thành công nhưng không thể làm mới số lượng món: ${message}`,
       );
-      if (getApiStatus(requestError) !== 401 && getApiStatus(requestError) !== 403) {
+      if (
+        getApiStatus(requestError) !== 401 &&
+        getApiStatus(requestError) !== 403
+      ) {
         setError(
           `Đã nhập kho thành công nhưng không thể làm mới số lượng món: ${message}`,
         );
@@ -208,19 +225,23 @@ export default function StaffInventoryPage() {
 
   function updateRecipeDraft(
     productId: number,
+    size: Size,
     index: number,
     update: Partial<RecipeDraftItem>,
   ) {
     setRecipeDrafts((current) => ({
       ...current,
-      [productId]: current[productId].map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...update } : item,
-      ),
+      [productId]: {
+        ...current[productId],
+        [size]: current[productId][size].map((item, itemIndex) =>
+          itemIndex === index ? { ...item, ...update } : item,
+        ),
+      },
     }));
   }
 
-  function addRecipeIngredient(productId: number) {
-    const draft = recipeDrafts[productId] ?? [];
+  function addRecipeIngredient(productId: number, size: Size) {
+    const draft = recipeDrafts[productId]?.[size] ?? [];
     const usedIngredientIds = new Set(
       draft
         .map((item) => item.ingredientId)
@@ -233,19 +254,29 @@ export default function StaffInventoryPage() {
 
     setRecipeDrafts((current) => ({
       ...current,
-      [productId]: [
-        ...(current[productId] ?? []),
-        { ingredientId: nextIngredient.id, amountRequired: "1" },
-      ],
+      [productId]: {
+        ...current[productId],
+        [size]: [
+          ...(current[productId]?.[size] ?? []),
+          { ingredientId: nextIngredient.id, amountRequired: "1" },
+        ],
+      },
     }));
   }
 
-  function removeRecipeIngredient(productId: number, index: number) {
+  function removeRecipeIngredient(
+    productId: number,
+    size: Size,
+    index: number,
+  ) {
     setRecipeDrafts((current) => ({
       ...current,
-      [productId]: current[productId].filter(
-        (_, itemIndex) => itemIndex !== index,
-      ),
+      [productId]: {
+        ...current[productId],
+        [size]: current[productId][size].filter(
+          (_, itemIndex) => itemIndex !== index,
+        ),
+      },
     }));
   }
 
@@ -254,29 +285,43 @@ export default function StaffInventoryPage() {
     product: InventoryProduct,
   ) {
     event.preventDefault();
-    const draft = recipeDrafts[product.id] ?? [];
     const items: RecipeItemInput[] = [];
 
-    for (const item of draft) {
-      const amountRequired = Number(item.amountRequired);
-      if (
-        item.ingredientId === null ||
-        !Number.isSafeInteger(amountRequired) ||
-        amountRequired <= 0
-      ) {
-        setError("Mỗi nguyên liệu cần có định lượng là số nguyên dương.");
+    for (const size of RECIPE_SIZES) {
+      const draft = recipeDrafts[product.id]?.[size] ?? [];
+      if (draft.length === 0) {
+        setError(`Công thức size ${size} cần có ít nhất một nguyên liệu.`);
         return;
       }
-      items.push({ ingredientId: item.ingredientId, amountRequired });
-    }
 
-    if (items.length === 0) {
-      setError("Công thức cần có ít nhất một nguyên liệu.");
-      return;
-    }
-    if (new Set(items.map((item) => item.ingredientId)).size !== items.length) {
-      setError("Mỗi nguyên liệu chỉ được xuất hiện một lần trong công thức.");
-      return;
+      const sizeItems: RecipeItemInput[] = [];
+      for (const item of draft) {
+        const amountRequired = Number(item.amountRequired);
+        if (
+          item.ingredientId === null ||
+          !Number.isSafeInteger(amountRequired) ||
+          amountRequired <= 0
+        ) {
+          setError("Mỗi nguyên liệu cần có định lượng là số nguyên dương.");
+          return;
+        }
+        sizeItems.push({
+          size,
+          ingredientId: item.ingredientId,
+          amountRequired,
+        });
+      }
+
+      if (
+        new Set(sizeItems.map((item) => item.ingredientId)).size !==
+        sizeItems.length
+      ) {
+        setError(
+          `Mỗi nguyên liệu chỉ được xuất hiện một lần trong size ${size}.`,
+        );
+        return;
+      }
+      items.push(...sizeItems);
     }
 
     setSavingProductId(product.id);
@@ -311,7 +356,10 @@ export default function StaffInventoryPage() {
         requestError,
         `Đã lưu công thức nhưng không thể làm mới số lượng món: ${message}`,
       );
-      if (getApiStatus(requestError) !== 401 && getApiStatus(requestError) !== 403) {
+      if (
+        getApiStatus(requestError) !== 401 &&
+        getApiStatus(requestError) !== 403
+      ) {
         setError(
           `Đã lưu công thức nhưng không thể làm mới số lượng món: ${message}`,
         );
@@ -409,7 +457,9 @@ export default function StaffInventoryPage() {
                       </div>
                       <form
                         className="flex flex-wrap items-end gap-2"
-                        onSubmit={(event) => void handleRestock(event, ingredient)}
+                        onSubmit={(event) =>
+                          void handleRestock(event, ingredient)
+                        }
                       >
                         <label className="text-sm text-gray-700">
                           Nhập thêm ({ingredient.unit})
@@ -454,7 +504,8 @@ export default function StaffInventoryPage() {
               ) : (
                 <div className="grid gap-5">
                   {products.map((product) => {
-                    const draft = recipeDrafts[product.id] ?? [];
+                    const drafts =
+                      recipeDrafts[product.id] ?? toRecipeDraft(product);
                     const isSaving = savingProductId === product.id;
 
                     return (
@@ -464,32 +515,16 @@ export default function StaffInventoryPage() {
                       >
                         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <h3 className="text-lg font-bold">{product.name}</h3>
-                            <p className="mt-1 text-sm text-gray-600">
-                              Có thể pha:{" "}
-                              <strong>{product.availableQuantity} ly</strong>
-                            </p>
+                            <h3 className="text-lg font-bold">
+                              {product.name}
+                            </h3>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => addRecipeIngredient(product.id)}
-                            disabled={
-                              busy || draft.length >= ingredients.length
-                            }
-                            className="rounded-lg border border-amber-600 px-3 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Thêm nguyên liệu
-                          </button>
                         </div>
 
-                        {draft.length === 0 && (
-                          <p className="mb-3 text-sm text-gray-500">
-                            Món chưa có công thức. Thêm nguyên liệu để bắt đầu.
-                          </p>
-                        )}
                         {ingredients.length === 0 && (
                           <p className="mb-3 text-sm text-amber-800">
-                            Cần có nguyên liệu trong kho trước khi tạo công thức.
+                            Cần có nguyên liệu trong kho trước khi tạo công
+                            thức.
                           </p>
                         )}
 
@@ -498,86 +533,156 @@ export default function StaffInventoryPage() {
                             void handleSaveRecipe(event, product)
                           }
                         >
-                          <div className="grid gap-3">
-                            {draft.map((item, index) => {
-                              const selectedIngredient = ingredients.find(
-                                (ingredient) =>
-                                  ingredient.id === item.ingredientId,
-                              );
-                              const usedByOtherRows = new Set(
-                                draft
-                                  .filter((_, rowIndex) => rowIndex !== index)
-                                  .map((row) => row.ingredientId),
-                              );
-
+                          <div className="grid gap-5">
+                            {RECIPE_SIZES.map((size) => {
+                              const draft = drafts[size];
                               return (
-                                <div
-                                  key={`${product.id}-${index}`}
-                                  className="flex flex-wrap items-end gap-3"
+                                <section
+                                  key={`${product.id}-${size}`}
+                                  className="rounded-lg border border-gray-200 p-4"
                                 >
-                                  <label className="min-w-52 flex-1 text-sm text-gray-700">
-                                    Nguyên liệu
-                                    <select
-                                      aria-label={`Nguyên liệu ${index + 1} cho ${product.name}`}
-                                      required
-                                      value={item.ingredientId ?? ""}
-                                      onChange={(event) =>
-                                        updateRecipeDraft(product.id, index, {
-                                          ingredientId: Number(
-                                            event.target.value,
-                                          ),
-                                        })
+                                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                      <h4 className="font-semibold">
+                                        Size {size}
+                                      </h4>
+                                      <p className="text-sm text-gray-600">
+                                        Có thể pha:{" "}
+                                        <strong>
+                                          {
+                                            product.availableQuantityBySize[
+                                              size
+                                            ]
+                                          }{" "}
+                                          ly
+                                        </strong>
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addRecipeIngredient(product.id, size)
                                       }
-                                      className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2"
+                                      disabled={
+                                        busy ||
+                                        draft.length >= ingredients.length
+                                      }
+                                      className="rounded-lg border border-amber-600 px-3 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                      <option value="" disabled>
-                                        Chọn nguyên liệu
-                                      </option>
-                                      {ingredients
-                                        .filter(
+                                      Thêm nguyên liệu
+                                    </button>
+                                  </div>
+                                  {draft.length === 0 && (
+                                    <p className="mb-3 text-sm text-gray-500">
+                                      Chưa có công thức cho size {size}.
+                                    </p>
+                                  )}
+                                  <div className="grid gap-3">
+                                    {draft.map((item, index) => {
+                                      const selectedIngredient =
+                                        ingredients.find(
                                           (ingredient) =>
-                                            !usedByOtherRows.has(ingredient.id),
-                                        )
-                                        .map((ingredient) => (
-                                          <option
-                                            key={ingredient.id}
-                                            value={ingredient.id}
+                                            ingredient.id === item.ingredientId,
+                                        );
+                                      const usedByOtherRows = new Set(
+                                        draft
+                                          .filter(
+                                            (_, rowIndex) => rowIndex !== index,
+                                          )
+                                          .map((row) => row.ingredientId),
+                                      );
+
+                                      return (
+                                        <div
+                                          key={`${product.id}-${size}-${index}`}
+                                          className="flex flex-wrap items-end gap-3"
+                                        >
+                                          <label className="min-w-52 flex-1 text-sm text-gray-700">
+                                            Nguyên liệu
+                                            <select
+                                              aria-label={`Nguyên liệu size ${size} ${index + 1} cho ${product.name}`}
+                                              required
+                                              value={item.ingredientId ?? ""}
+                                              onChange={(event) =>
+                                                updateRecipeDraft(
+                                                  product.id,
+                                                  size,
+                                                  index,
+                                                  {
+                                                    ingredientId: Number(
+                                                      event.target.value,
+                                                    ),
+                                                  },
+                                                )
+                                              }
+                                              className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2"
+                                            >
+                                              <option value="" disabled>
+                                                Chọn nguyên liệu
+                                              </option>
+                                              {ingredients
+                                                .filter(
+                                                  (ingredient) =>
+                                                    !usedByOtherRows.has(
+                                                      ingredient.id,
+                                                    ),
+                                                )
+                                                .map((ingredient) => (
+                                                  <option
+                                                    key={ingredient.id}
+                                                    value={ingredient.id}
+                                                  >
+                                                    {ingredient.name}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          </label>
+                                          <label className="w-44 text-sm text-gray-700">
+                                            Định lượng (
+                                            {selectedIngredient?.unit ??
+                                              "đơn vị"}
+                                            )
+                                            <input
+                                              aria-label={`Định lượng size ${size} nguyên liệu ${index + 1} cho ${product.name}`}
+                                              type="number"
+                                              min="1"
+                                              step="1"
+                                              required
+                                              value={item.amountRequired}
+                                              onChange={(event) =>
+                                                updateRecipeDraft(
+                                                  product.id,
+                                                  size,
+                                                  index,
+                                                  {
+                                                    amountRequired:
+                                                      event.target.value,
+                                                  },
+                                                )
+                                              }
+                                              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2"
+                                            />
+                                          </label>
+                                          <button
+                                            type="button"
+                                            aria-label={`Xóa nguyên liệu size ${size} ${index + 1} khỏi ${product.name}`}
+                                            onClick={() =>
+                                              removeRecipeIngredient(
+                                                product.id,
+                                                size,
+                                                index,
+                                              )
+                                            }
+                                            disabled={busy}
+                                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-50"
                                           >
-                                            {ingredient.name}
-                                          </option>
-                                        ))}
-                                    </select>
-                                  </label>
-                                  <label className="w-44 text-sm text-gray-700">
-                                    Định lượng (
-                                    {selectedIngredient?.unit ?? "đơn vị"})
-                                    <input
-                                      aria-label={`Định lượng nguyên liệu ${index + 1} cho ${product.name}`}
-                                      type="number"
-                                      min="1"
-                                      step="1"
-                                      required
-                                      value={item.amountRequired}
-                                      onChange={(event) =>
-                                        updateRecipeDraft(product.id, index, {
-                                          amountRequired: event.target.value,
-                                        })
-                                      }
-                                      className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2"
-                                    />
-                                  </label>
-                                  <button
-                                    type="button"
-                                    aria-label={`Xóa nguyên liệu ${index + 1} khỏi ${product.name}`}
-                                    onClick={() =>
-                                      removeRecipeIngredient(product.id, index)
-                                    }
-                                    disabled={busy}
-                                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-50"
-                                  >
-                                    Xóa
-                                  </button>
-                                </div>
+                                            Xóa
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </section>
                               );
                             })}
                           </div>
@@ -585,7 +690,7 @@ export default function StaffInventoryPage() {
                           <div className="mt-5 flex justify-end">
                             <button
                               type="submit"
-                              disabled={busy || draft.length === 0}
+                              disabled={busy}
                               className="rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white disabled:cursor-wait disabled:opacity-60"
                             >
                               {isSaving ? "Đang lưu..." : "Lưu công thức"}

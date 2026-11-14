@@ -13,6 +13,8 @@ const staffTransitions = new Set([
   'PAID:PREPARING',
   'PREPARING:READY',
   'READY:COMPLETED',
+  'PENDING:CANCELLED',
+  'PREPARING:CANCELLED',
 ]);
 
 describeDb(
@@ -232,7 +234,7 @@ describeDb(
       expect(active.body.map((o: { id: number }) => o.id)).toContain(order.id);
     });
 
-    it('lists only PAID/PREPARING/READY orders for staff', async () => {
+    it('lists only PENDING/PAID/PREPARING/READY orders for staff', async () => {
       const orders = await Promise.all(
         statuses.map((status) => create(status)),
       );
@@ -246,7 +248,9 @@ describeDb(
           .sort((a: number, b: number) => a - b),
       ).toEqual(
         orders
-          .filter((o) => ['PAID', 'PREPARING', 'READY'].includes(o.status))
+          .filter((o) =>
+            ['PENDING', 'PAID', 'PREPARING', 'READY'].includes(o.status),
+          )
           .map((o) => o.id)
           .sort((a, b) => a - b),
       );
@@ -374,7 +378,11 @@ describeDb(
             name: `cancel-${status}-${suffix}`,
             price: 25_000,
             recipeItems: {
-              create: { ingredientId: ingredient.id, amountRequired: 20 },
+              create: {
+                ingredientId: ingredient.id,
+                size: 'S',
+                amountRequired: 20,
+              },
             },
           },
         });

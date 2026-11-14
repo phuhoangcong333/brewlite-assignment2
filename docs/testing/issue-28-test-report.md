@@ -7,7 +7,7 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 - [x] Giữ bảng 7 trạng thái và 8 chuyển đổi hợp lệ theo SRS §11.3.
 - [x] Kiểm tra toàn bộ 49 cặp trạng thái bằng unit test và toàn bộ 49 cặp qua PATCH STAFF.
 - [x] Kiểm tra trạng thái trước khi cập nhật; cập nhật có điều kiện trong transaction để một request thắng khi có cạnh tranh.
-- [x] Chỉ STAFF gọi PATCH; trạng thái thanh toán/hủy do service tương ứng quản lý.
+- [x] Chỉ STAFF gọi PATCH; trạng thái thanh toán do Payment service quản lý; STAFF hủy PENDING/PREPARING qua cùng nghiệp vụ hoàn kho.
 - [x] COMPLETED và CANCELLED không được chuyển tiếp; không cho PAID → CANCELLED.
 - [x] Hủy PENDING/PAYMENT_FAILED theo hợp đồng TV4, hoàn nguyên liệu đúng một lần; khách khác không hủy được.
 - [x] Xác minh model LoyaltyTransaction và unique orderId trong migration có sẵn, không tạo migration trùng.
@@ -20,7 +20,7 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 
 - [x] GET /orders lọc chủ sở hữu từ JWT, sắp xếp mới nhất trước; không tin userId do client tự gửi.
 - [x] GET /orders/:id trả chi tiết món, số lượng, giá, trạng thái và điểm thưởng; đơn không tồn tại/không thuộc tài khoản trả 404.
-- [x] GET /orders/staff chỉ STAFF, chỉ danh sách PAID/PREPARING/READY. GET /orders/me giữ tương thích.
+- [x] GET /orders/staff chỉ STAFF, chỉ danh sách PENDING/PAID/PREPARING/READY. GET /orders/me giữ tương thích.
 - [x] JWT thiếu/sai/hết hạn 401; CUSTOMER gọi STAFF API 403; token STAFF cũ bị từ chối khi role trong DB đã đổi.
 - [x] Kiểm tra PATCH hợp lệ/sai thứ tự, trạng thái cuối, body/ID sai và request đồng thời.
 - [x] ID âm/0/vượt Int32 được chặn 400 trước Prisma.
@@ -34,29 +34,31 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 ## Môi trường và bằng chứng
 
 - Windows, Node.js 24, Prisma 6.19, PostgreSQL 16 trong Docker, Next.js 16.3.8, Playwright Chromium.
-- Database riêng: `brewlite_tv6_tests` tại localhost:5433. Database ứng dụng và các container tại cổng 3000/3001 không bị reset/thay thế.
+- Database riêng: `brewlite_final_acceptance_tests` tại localhost:5433. Database ứng dụng và các container tại cổng 3000/3001 không bị reset/thay thế.
 - Playwright tự khởi động API `http://127.0.0.1:3101` và web `http://127.0.0.1:3100`, đóng server khi kết thúc.
 - Browser projects: Chromium desktop và Pixel 5 mobile emulation. Đây là Chromium giả lập thiết bị, không phải thiết bị Android thật hoặc WebKit/Safari.
 - Chỉ fixture setup dùng API/Prisma trực tiếp; các bước menu, tùy chọn, giỏ, thanh toán và chuyển tiến độ nhân viên được thao tác qua giao diện. Không route/mock response để làm test pass.
 
 | Nhóm kiểm tra | Kết quả chạy |
 | --- | --- |
-| Backend unit/integration, gồm PostgreSQL | 21 suites, 206 tests PASS |
-| HTTP E2E toàn bộ backend | 5 suites, 144 tests PASS |
-| Riêng state/points unit | 63 tests PASS (đã nằm trong 206) |
-| Riêng loyalty HTTP + DB | 15 tests PASS (đã nằm trong 144) |
-| Riêng status/history HTTP + DB | 73 tests PASS (đã nằm trong 144) |
-| Riêng tồn kho nguyên liệu tích hợp TV4 | 42 HTTP tests PASS (đã nằm trong 144) |
-| Frontend Vitest | 7 files, 49 tests PASS |
-| Playwright desktop | 5/5 PASS |
-| Playwright desktop + mobile | 10/10 PASS trên bản cuối, 0 failed/skipped/flaky, khoảng 1,6 phút |
+| Backend unit/integration, gồm PostgreSQL | 23 suites, 232 tests PASS |
+| HTTP E2E toàn bộ backend | 7 suites, 165 tests PASS |
+| Riêng state/points unit | 77 tests PASS (đã nằm trong 232) |
+| Riêng loyalty HTTP + DB | 15 tests PASS (đã nằm trong 165) |
+| Riêng status/history HTTP + DB | 73 tests PASS (đã nằm trong 165) |
+| Riêng tồn kho nguyên liệu tích hợp TV4 | 44 HTTP tests PASS (đã nằm trong 165) |
+| Frontend Vitest | 9 files, 57 tests PASS |
+| Playwright desktop | 7/7 PASS |
+| Playwright desktop + mobile | 14/14 PASS, 0 failed/skipped/flaky |
 | NestJS build | PASS |
 | Next.js production build | PASS |
 | Lint backend | Exit 0; 3 warning có sẵn ở promotions.service.ts/orders.controller.spec.ts |
 | Lint các file frontend thay đổi | PASS |
 | Lint toàn frontend | Exit 0; còn 1 warning img có sẵn ở trang lịch sử |
 
-Sau đồng bộ PR #59 với TV4: tổng cộng 409 test pass (206 + 144 + 49 + 10). Bản Issue #21/#28 trước khi tích hợp có 366 test pass. Các số riêng state/loyalty/status/inventory là tập con, không cộng lần nữa vào tổng test. Fixture được cleanup; các fixture từ lượt chạy bị ngắt trước đó cũng đã được dọn.
+Kết quả bản tích hợp cuối ngày 15/11/2026: **468 test pass (232 + 165 + 57 + 14)**. Các số riêng state/loyalty/status/inventory là tập con, không cộng lần nữa vào tổng test.
+
+Bổ sung 18 HTTP tests trong `staff-cancellation.e2e-spec.ts`: hủy PENDING/PREPARING, JWT/role bị hạ quyền, trạng thái cuối, ID sai, hủy trùng/đồng thời với khách hoặc READY, rollback khi hoàn kho tràn Int32, giữ nguyên Payment và không cộng điểm.
 
 ### Luồng Playwright
 
@@ -77,7 +79,7 @@ Lặp lại 5 luồng trên cho cả desktop và mobile. Playwright hiện kiể
 | Theo dõi dùng toàn bộ lịch sử và không polling | Dùng detail, polling 7 giây | Browser nhìn thấy cả 3 thay đổi STAFF mà không reload |
 | ID vượt Int32 có thể đi tới Prisma | OrderIdPipe | GET/PATCH/DELETE đều 400 với 5 dạng ID sai |
 | Regression test cũ dùng CUSTOMER để thao tác STAFF | Fixture STAFF thật | task10.e2e-spec.ts pass cùng toàn bộ HTTP E2E |
-| Vitest có thể thu nhầm Playwright spec | Chỉ thu src/**/*.test.{ts,tsx} | 49 test frontend pass |
+| Vitest có thể thu nhầm Playwright spec | Chỉ thu src/**/*.test.{ts,tsx} | 57 test frontend pass |
 | Lỗi tải lịch sử bị ẩn; effect của menu/lịch sử gây lỗi lint | Hiện alert và nút thử lại, trạng thái rỗng; tải async có cleanup khi rời trang | 3 component test mới và full frontend lint exit 0 |
 | Harness ban đầu trỏ nhầm dist/src/main.js | Đổi sang dist/main.js theo tsconfig.build | Server production khởi động được |
 | Selector đăng nhập phân biệt chữ hoa/thường, alert Next.js bị trùng | Selector theo tên hiển thị và vùng lỗi thực | Desktop 5/5 và mobile 5/5 pass |
@@ -115,7 +117,11 @@ npm.cmd run test:e2e:report
 
 Báo cáo HTML nằm tại `apps/web/playwright-report/index.html`; JSON tại `apps/web/test-results/results.json`. Khi fail có screenshot/trace để điều tra. Các artifact không commit vì chứa phiên đăng nhập test tạm thời; CI lưu bằng upload-artifact. Không phải video demo Issue #55.
 
+Hai case mới chạy cả desktop/mobile: STAFF hủy PENDING và PREPARING bằng nút đỏ, từ chối/xác nhận dialog, đối chiếu kho và Payment thật.
+
 ## Danh sách từng file thay đổi
+
+Danh sách dưới đây là bản trước lần đồng bộ mới nhất. **Danh sách đầy đủ theo đúng ba nhóm bàn giao nằm tại [tv6-final-handoff.md](tv6-final-handoff.md)**.
 
 Danh sách 27 file đóng góp riêng cho Issue #21/#28 trước khi đồng bộ kho, dựa trên dev `360f9fe`. Các file bổ sung từ PR #59 được liệt kê riêng tại `docs/testing/pr59-tv4-integration.md`:
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Size } from '@prisma/client';
 
 export async function attachIngredient(
   prisma: PrismaClient,
@@ -11,7 +11,13 @@ export async function attachIngredient(
       name: `fixture-${productId}-${Date.now()}-${Math.random()}`,
       unit: 'g',
       stockQuantity: quantity,
-      recipeItems: { create: { productId, amountRequired: 1 } },
+      recipeItems: {
+        create: Object.values(Size).map((size) => ({
+          productId,
+          size,
+          amountRequired: 1,
+        })),
+      },
     },
   });
   createdIds.push(ingredient.id);

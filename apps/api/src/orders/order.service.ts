@@ -18,7 +18,12 @@ import {
   planReserve,
 } from '../inventory/inventory.plan';
 import { planCancel } from './order-cancel.plan';
-import { assertTransition, OrderStatus } from './order-state';
+import {
+  assertCanCancelOrder,
+  assertTransition,
+  CancellationActor,
+  OrderStatus,
+} from './order-state';
 import { calculateLoyaltyPoints } from './loyalty-points';
 
 const MAX_CREATE_ATTEMPTS = 3;
@@ -141,7 +146,7 @@ export class OrderService {
 
   async getOrdersForStaff() {
     return this.prisma.order.findMany({
-      where: { status: { in: ['PAID', 'PREPARING', 'READY'] } },
+      where: { status: { in: ['PENDING', 'PAID', 'PREPARING', 'READY'] } },
       orderBy: { createdAt: 'asc' },
       include: {
         items: {
@@ -194,11 +199,11 @@ export class OrderService {
       throw new NotFoundException(`Order ${orderId} was not found`);
     }
 
-    if (!['PREPARING', 'READY', 'COMPLETED'].includes(to)) {
+    if (!['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'].includes(to)) {
       throw new InvalidTransitionException(order.status, to);
     }
 
-    await this.transitionOrder(orderId, to);
+    await this.transitionOrder(orderId, to, undefined, 'STAFF');
   }
 
   async createOrder(
@@ -230,6 +235,7 @@ export class OrderService {
                 recipeItems: {
                   select: {
                     ingredientId: true,
+                    size: true,
                     amountRequired: true,
                     ingredient: {
                       select: {
@@ -287,7 +293,14 @@ export class OrderService {
                   );
                 }
 
-                for (const recipe of product.recipeItems) {
+                const sizeRecipes = product.recipeItems.filter(
+                  (recipe) => recipe.size === item.size,
+                );
+                if (sizeRecipes.length === 0)
+                  throw new BadRequestException(
+                    `Món "${product.name}" chưa có công thức cho size ${item.size}`,
+                  );
+                for (const recipe of sizeRecipes) {
                   const needed = recipe.amountRequired * item.qty;
                   const existing = requiredIngredients.get(recipe.ingredientId);
                   if (existing) {
@@ -458,6 +471,7 @@ export class OrderService {
     orderId: number,
     to: OrderStatus,
     userId?: number,
+    actor: CancellationActor = 'CUSTOMER',
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findFirst({
@@ -469,7 +483,7 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
-          items: { select: { productId: true, qty: true } },
+          items: { select: { productId: true, size: true, qty: true } },
           usesIngredientInventory: true,
           ingredients: { select: { ingredientId: true, quantity: true } },
         },
@@ -480,7 +494,8 @@ export class OrderService {
       }
 
       const from = order.status as OrderStatus;
-      assertTransition(from, to);
+      if (to === 'CANCELLED') assertCanCancelOrder(from, actor);
+      else assertTransition(from, to);
 
       let releaseUpdates: InventoryUpdate[] = [];
       const ingredientReleases = new Map<number, number>();
@@ -507,7 +522,9 @@ export class OrderService {
               products.map((product) => [product.id, product.recipeItems]),
             );
             for (const item of order.items) {
-              for (const recipe of recipes.get(item.productId) ?? []) {
+              for (const recipe of (recipes.get(item.productId) ?? []).filter(
+                (recipe) => recipe.size === item.size,
+              )) {
                 ingredientReleases.set(
                   recipe.ingredientId,
                   (ingredientReleases.get(recipe.ingredientId) ?? 0) +
@@ -520,6 +537,7 @@ export class OrderService {
               from,
               order.items,
               toInventorySnapshots(products),
+              actor,
             );
           }
         }

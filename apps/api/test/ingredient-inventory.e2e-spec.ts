@@ -1,3 +1,4 @@
+import { Size } from '@prisma/client';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -21,6 +22,9 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
   const ingredientIds: number[] = [];
   const suffix = `${Date.now()}-${Math.random()}`;
 
+  const sizes = Object.values(Size);
+  const sizedRecipe = (ingredientId: number, amountRequired: number) =>
+    sizes.map((size) => ({ ingredientId, amountRequired, size }));
   const auth = (token = staffToken) => ({ Authorization: `Bearer ${token}` });
   const order = (items = [{ productId, qty: 1, size: 'S' }]) =>
     request(app.getHttpServer())
@@ -45,8 +49,8 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
           ? {
               recipeItems: {
                 create: [
-                  { ingredientId: milkId, amountRequired: 30 },
-                  { ingredientId: coffeeId, amountRequired: 10 },
+                  ...sizedRecipe(milkId, 30),
+                  ...sizedRecipe(coffeeId, 10),
                 ],
               },
             }
@@ -368,7 +372,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         .set(auth())
         .send({ ingredients })
         .expect(400);
-      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
+      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(6);
     },
   );
 
@@ -378,7 +382,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
       .set(auth())
       .send({ ingredients: [{ ingredientId: 2_147_483_647, quantity: 1 }] })
       .expect(400);
-    expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
+    expect(await prisma.recipeItem.count({ where: { productId } })).toBe(6);
   });
 
   it('replaces recipes and restores the original consumption exactly once on cancellation', async () => {
@@ -441,7 +445,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         return req.send(
           operation === 'create'
             ? { name: `api-created-${suffix}`, unit: 'g', stockQuantity: 10 }
-            : { items: [{ ingredientId: milkId, amountRequired: 25 }] },
+            : { items: sizedRecipe(milkId, 25) },
         );
       };
       await send().expect(401);
@@ -451,7 +455,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
       );
       if (operation === 'create') ingredientIds.push(response.body.id);
       else {
-        expect(response.body.recipeItems).toHaveLength(1);
+        expect(response.body.recipeItems).toHaveLength(3);
         expect(response.body.recipeItems[0].amountRequired).toBe(25);
       }
     },
@@ -459,15 +463,23 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
 
   it.each([
     { items: [] },
-    { items: [{ ingredientId: 1, amountRequired: 0 }] },
-    { items: [{ ingredientId: 1, amountRequired: 0.5 }] },
+    { items: [{ ingredientId: 1, size: 'S', amountRequired: 0 }] },
+    { items: [{ ingredientId: 1, size: 'S', amountRequired: 0.5 }] },
     {
       items: [
-        { ingredientId: 1, amountRequired: 1 },
-        { ingredientId: 1, amountRequired: 2 },
+        { ingredientId: 1, size: 'S', amountRequired: 1 },
+        { ingredientId: 1, size: 'S', amountRequired: 2 },
       ],
     },
-    { items: [{ ingredientId: 2_147_483_647, amountRequired: 1 }] },
+    {
+      items: ['S', 'M', 'L'].map((size) => ({
+        ingredientId: 2_147_483_647,
+        size,
+        amountRequired: 1,
+      })),
+    },
+    { items: [{ ingredientId: 1, size: 'M', amountRequired: 1 }] },
+    { items: [{ ingredientId: 1, amountRequired: 1 }] },
   ])(
     'TV4 recipe rejects invalid body %p without losing the original recipe',
     async (body) => {
@@ -476,7 +488,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
         .set(auth())
         .send(body)
         .expect(400);
-      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(2);
+      expect(await prisma.recipeItem.count({ where: { productId } })).toBe(6);
     },
   );
 
@@ -518,7 +530,7 @@ describeDb('Ingredient inventory HTTP + PostgreSQL', () => {
     await request(app.getHttpServer())
       .put(`/ingredients/recipes/${legacyId}`)
       .set(auth())
-      .send({ items: [{ ingredientId: milkId, amountRequired: 5 }] })
+      .send({ items: sizedRecipe(milkId, 5) })
       .expect(200);
     await request(app.getHttpServer())
       .delete(`/orders/${response.body.id}`)

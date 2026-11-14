@@ -7,6 +7,107 @@ import {
   webURL,
 } from "./fixtures";
 
+for (const stage of ["PENDING", "PREPARING"] as const) {
+  test(`staff red cancel button for ${stage} restores ingredients without a refund`, async ({
+    page,
+    browser,
+    data,
+    db,
+  }) => {
+    await checkoutFromMenu(page, data);
+    let orderId: number;
+    if (stage === "PENDING") {
+      await page.getByRole("radio", { name: /QR/ }).check();
+      const created = page.waitForResponse(
+        (r) =>
+          r.url() === `${apiURL}/orders` && r.request().method() === "POST",
+      );
+      await page
+        .getByRole("button", { name: "Tạo mã QR", exact: true })
+        .click();
+      orderId = (await (await created).json()).id;
+      await page.goto(`/orders/${orderId}`);
+    } else {
+      await page.getByRole("radio", { name: /Thẻ/ }).check();
+      await page
+        .getByPlaceholder("Nhập số thẻ (VD: 4111222233334444)")
+        .fill("4111222233334444");
+      await page
+        .getByRole("button", { name: "Xác nhận trả tiền", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/orders\/\d+$/);
+      orderId = Number(new URL(page.url()).pathname.split("/").pop());
+    }
+    expect(
+      (
+        await db.ingredient.findUniqueOrThrow({
+          where: { id: data.ingredientId },
+        })
+      ).stockQuantity,
+    ).toBe(160);
+    const payments = await db.payment.findMany({ where: { orderId } });
+    const staffContext = await browser.newContext({
+      baseURL: webURL,
+      viewport: page.viewportSize(),
+    });
+    try {
+      const staff = await staffContext.newPage();
+      await loginOnPage(staff, data.staff);
+      await staff.goto("/staff/orders");
+      const card = staff
+        .getByRole("article")
+        .filter({
+          has: staff.getByRole("heading", {
+            name: `Đơn hàng #${orderId}`,
+            exact: true,
+          }),
+        });
+      if (stage === "PREPARING") {
+        await expect(
+          card.getByRole("button", { name: "Hủy đơn", exact: true }),
+        ).toHaveCount(0);
+        await card
+          .getByRole("button", { name: "Bắt đầu pha chế", exact: true })
+          .click();
+        await expect(
+          card.getByRole("button", { name: "Đánh dấu sẵn sàng", exact: true }),
+        ).toBeEnabled();
+      }
+      const cancel = card.getByRole("button", { name: "Hủy đơn", exact: true });
+      await expect(cancel).toHaveCSS("background-color", "rgb(220, 38, 38)");
+      staff.once("dialog", (dialog) => dialog.dismiss());
+      await cancel.click();
+      expect(
+        (await db.order.findUniqueOrThrow({ where: { id: orderId } })).status,
+      ).toBe(stage);
+      staff.once("dialog", (dialog) => dialog.accept());
+      await cancel.click();
+      await expect(card).toHaveCount(0);
+      // The customer sees the change through actual polling, without reload.
+      await expect(
+        page.getByRole("heading", { name: "Đơn hàng đã hủy", exact: true }),
+      ).toBeVisible();
+      expect(
+        (
+          await db.ingredient.findUniqueOrThrow({
+            where: { id: data.ingredientId },
+          })
+        ).stockQuantity,
+      ).toBe(200);
+      expect(await db.payment.findMany({ where: { orderId } })).toEqual(
+        payments,
+      );
+      expect(await db.loyaltyTransaction.count({ where: { orderId } })).toBe(0);
+      expect(
+        (await db.user.findUniqueOrThrow({ where: { id: data.customer.id } }))
+          .loyaltyPoints,
+      ).toBe(0);
+    } finally {
+      await staffContext.close();
+    }
+  });
+}
+
 test("menu -> options -> cart -> payment -> live tracking -> completed loyalty", async ({
   page,
   browser,

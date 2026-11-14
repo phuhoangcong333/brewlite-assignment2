@@ -71,6 +71,79 @@ describeDb('OrderService with PostgreSQL', () => {
     return { orderId: order.id, productId: product.id };
   }
 
+  async function createRecipeBackedOrder(): Promise<{
+    orderId: number;
+    ingredientId: number;
+  }> {
+    const product = await prisma.product.create({
+      data: {
+        name: `order-cancel-recipe-${Date.now()}-${Math.random()}`,
+        price: 1000,
+        stock: 50,
+      },
+      select: { id: true },
+    });
+    productIds.push(product.id);
+
+    const ingredient = await prisma.ingredient.create({
+      data: {
+        name: `order-cancel-ingredient-${Date.now()}-${Math.random()}`,
+        unit: 'g',
+        stockQuantity: 940,
+      },
+      select: { id: true },
+    });
+    ingredientIds.push(ingredient.id);
+    await prisma.recipeItem.createMany({
+      data: [
+        {
+          productId: product.id,
+          ingredientId: ingredient.id,
+          size: 'S',
+          amountRequired: 10,
+        },
+        {
+          productId: product.id,
+          ingredientId: ingredient.id,
+          size: 'M',
+          amountRequired: 20,
+        },
+        {
+          productId: product.id,
+          ingredientId: ingredient.id,
+          size: 'L',
+          amountRequired: 30,
+        },
+      ],
+    });
+
+    const user = await prisma.user.create({
+      data: {
+        email: `order-cancel-recipe-${Date.now()}-${Math.random()}@example.test`,
+        passwordHash: 'test-password-hash',
+      },
+      select: { id: true },
+    });
+    userIds.push(user.id);
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        total: 2000,
+        items: {
+          create: {
+            productId: product.id,
+            size: 'L',
+            qty: 2,
+            lineTotal: 2000,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    orderIds.push(order.id);
+    return { orderId: order.id, ingredientId: ingredient.id };
+  }
+
   beforeAll(async () => {
     await prisma.$connect();
   });
@@ -87,6 +160,12 @@ describeDb('OrderService with PostgreSQL', () => {
     if (productIds.length > 0) {
       await prisma.product.deleteMany({ where: { id: { in: productIds } } });
       productIds.length = 0;
+      await prisma.ingredient.deleteMany({
+        where: { id: { in: ingredientIds } },
+      });
+      ingredientIds.length = 0;
+    }
+    if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
         where: { id: { in: ingredientIds } },
       });
@@ -246,6 +325,40 @@ describeDb('OrderService with PostgreSQL', () => {
     ).resolves.toEqual({ status: 'PENDING' });
   });
 
+  it.each(['PENDING', 'PREPARING'] as const)(
+    'staff cancels %s and restores the saved consumption only once',
+    async (status) => {
+      const { orderId, productId } = await createOrder(status);
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { usesIngredientInventory: true },
+      });
+      await service.transitionOrderForStaff(orderId, 'CANCELLED');
+      expect(await ingredientQuantity(prisma, productId)).toBe(50);
+      await expect(
+        service.transitionOrderForStaff(orderId, 'CANCELLED'),
+      ).rejects.toBeInstanceOf(InvalidTransitionException);
+      expect(await ingredientQuantity(prisma, productId)).toBe(50);
+      expect(
+        await prisma.loyaltyTransaction.count({ where: { orderId } }),
+      ).toBe(0);
+    },
+  );
+
+  it('staff cancellation still restores legacy product stock for a preparing order', async () => {
+    const { orderId, productId } = await createOrder('PREPARING');
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { usesIngredientInventory: false },
+    });
+    await service.transitionOrderForStaff(orderId, 'CANCELLED');
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
+        .stock,
+    ).toBe(50);
+    expect(await ingredientQuantity(prisma, productId)).toBe(49);
+  });
+
   it.each(['PENDING', 'PAYMENT_FAILED'] as const)(
     'restores inventory when cancelling from %s',
     async (status) => {
@@ -257,6 +370,19 @@ describeDb('OrderService with PostgreSQL', () => {
       await expect(ingredientQuantity(prisma, productId)).resolves.toBe(50);
     },
   );
+
+  it('restores ingredients using the size recipe when cancelling an order', async () => {
+    const { orderId, ingredientId } = await createRecipeBackedOrder();
+
+    await service.transitionOrder(orderId, 'CANCELLED');
+
+    await expect(
+      prisma.ingredient.findUniqueOrThrow({
+        where: { id: ingredientId },
+        select: { stockQuantity: true, version: true },
+      }),
+    ).resolves.toEqual({ stockQuantity: 1_000, version: 1 });
+  });
 
   it.each(['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const)(
     'rejects cancellation from %s without changing inventory',

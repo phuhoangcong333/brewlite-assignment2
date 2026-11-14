@@ -11,6 +11,7 @@ type AuthenticatedRequest = Request & {
   user?: {
     id?: number;
     sub?: number;
+    userId?: number;
   };
 };
 
@@ -20,7 +21,8 @@ export class StaffGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const userId = request.user?.id ?? request.user?.sub;
+    const userId =
+      request.user?.id ?? request.user?.sub ?? request.user?.userId;
     if (!userId) {
       throw new ForbiddenException('Chỉ nhân viên mới được phép truy cập');
     }

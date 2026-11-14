@@ -68,7 +68,13 @@ export const test = base.extend<{ db: PrismaClient; data: TestData }>({
             name: productName,
             price: 35_000,
             imageUrl: "/image/Picture1.png",
-            recipeItems: { create: { ingredientId, amountRequired: 20 } },
+            recipeItems: {
+              create: (["S", "M", "L"] as const).map((size) => ({
+                ingredientId: ingredientId!,
+                size,
+                amountRequired: 20,
+              })),
+            },
           },
         })
       ).id;
