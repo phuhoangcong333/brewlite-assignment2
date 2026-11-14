@@ -1,7 +1,3 @@
--- AlterTable
-ALTER TABLE "Product" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "description" TEXT;
-
 -- CreateTable
 CREATE TABLE "Ingredient" (
     "id" SERIAL NOT NULL,
@@ -9,8 +5,6 @@ CREATE TABLE "Ingredient" (
     "unit" TEXT NOT NULL DEFAULT 'g',
     "stockQuantity" INTEGER NOT NULL DEFAULT 0,
     "version" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Ingredient_pkey" PRIMARY KEY ("id")
 );
