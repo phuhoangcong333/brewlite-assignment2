@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PRODUCT_SIZE_OPTIONS } from '../common/catalog-options';
 
 export type AvailableQuantityBySize = Record<Size, number>;
 
@@ -92,6 +93,15 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm có id ${id}`);
     }
 
+    const toppings = await this.prisma.topping.findMany({
+      orderBy: { id: 'asc' },
+      include: {
+        ingredient: {
+          select: { stockQuantity: true },
+        },
+      },
+    });
+
     const availableQuantityBySize = computeAvailableQuantities(
       product.recipeItems,
       product.stock,
@@ -101,10 +111,22 @@ export class ProductService {
     );
 
     return {
-      ...product,
-      availableQuantity,
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
       availableQuantityBySize,
-      stock: availableQuantity,
+      sizes: PRODUCT_SIZE_OPTIONS,
+      toppings: toppings.map((topping) => ({
+        id: topping.id,
+        code: topping.code,
+        name: topping.name,
+        additionalPrice: topping.price,
+        isAvailable:
+          topping.amountRequired > 0 &&
+          topping.ingredient.stockQuantity >= topping.amountRequired,
+      })),
     };
   }
 }

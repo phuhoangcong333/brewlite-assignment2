@@ -32,6 +32,8 @@ const ingredients = [
   { name: 'Đào ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Vải ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
+  { name: "Trân châu", unit: "g", stockQuantity: 0 },
+  { name: "Kem", unit: "g", stockQuantity: 0 },
 ];
 
 type RecipeIngredient = {
@@ -147,6 +149,25 @@ const user = [
   },
 ];
 
+
+
+const toppingDefinitions = [
+  {
+    code: "TRAN_CHAU",
+    name: "Trân châu",
+    price: 5_000,
+    ingredientName: "Trân châu",
+    amountRequired: 50, 
+  },
+  {
+    code: "KEM",
+    name: "Kem",
+    price: 5_000,
+    ingredientName: "Kem",
+    amountRequired: 30, 
+  },
+];
+
 async function seed(): Promise<void> {
   const staffEmail = process.env.STAFF_EMAIL?.trim().toLowerCase();
   const staffPassword = process.env.STAFF_PASSWORD;
@@ -189,10 +210,41 @@ async function seed(): Promise<void> {
       const savedIngredient = await transaction.ingredient.upsert({
         where: { name: ing.name },
         create: ing,
-        update: {},
+        update: {
+          unit: ing.unit,
+        },
       });
       ingredientMap.set(ing.name, savedIngredient.id);
     }
+
+
+    for (const topping of toppingDefinitions) {
+    const ingredientId = ingredientMap.get(topping.ingredientName);
+
+    if (!ingredientId || topping.amountRequired <= 0) {
+      throw new Error(
+        `Chưa cấu hình hợp lệ cho topping ${topping.code}`,
+      );
+    }
+
+    await transaction.topping.upsert({
+      where: { code: topping.code },
+      create: {
+        code: topping.code,
+        name: topping.name,
+        price: topping.price,
+        ingredientId,
+        amountRequired: topping.amountRequired,
+      },
+      update: {
+        name: topping.name,
+        price: topping.price,
+        ingredientId,
+        amountRequired: topping.amountRequired,
+      },
+    });
+  }
+
 
     // 2. Gán công thức định lượng (RecipeItem) cho 8 món trong bảng Product
     const allProducts = await transaction.product.findMany({
