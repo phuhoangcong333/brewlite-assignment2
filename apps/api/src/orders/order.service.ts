@@ -1,19 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Size } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   InventoryConcurrencyException,
   InvalidTransitionException,
   OrderTransitionConflictException,
 } from '../common/errors';
-import { PrismaInventoryRepository } from '../inventory/prisma-inventory.repository';
-import {
-  InventorySnapshot,
-  InventoryUpdate,
-  InventoryWant,
-  planReserve,
-} from '../inventory/inventory.plan';
-import { planCancel } from './order-cancel.plan';
 import { assertTransition, OrderStatus } from './order-state';
 
 const MAX_CREATE_ATTEMPTS = 3;
@@ -25,7 +21,9 @@ const SIZE_PRICE: Record<Size, number> = {
 const TOPPING_PRICE = 5_000;
 const VALID_TOPPINGS = new Set(['Trân châu', 'Kem']);
 
-export interface CreateOrderItemInput extends InventoryWant {
+export interface CreateOrderItemInput {
+  productId: number;
+  qty: number;
   size: Size;
   toppings?: string[];
 }
@@ -44,22 +42,21 @@ function validateCreateOrderInput(
   }
 
   for (const item of items) {
+    if (
+      !Number.isSafeInteger(item.productId) ||
+      item.productId <= 0 ||
+      !Number.isSafeInteger(item.qty) ||
+      item.qty <= 0 ||
+      !Object.values(Size).includes(item.size)
+    ) {
+      throw new BadRequestException('Invalid product, quantity or size');
+    }
     for (const topping of item.toppings ?? []) {
       if (!VALID_TOPPINGS.has(topping)) {
         throw new RangeError(`Unsupported topping: ${topping}`);
       }
     }
   }
-}
-
-function toInventorySnapshots(
-  products: readonly { id: number; stock: number; version: number }[],
-): InventorySnapshot[] {
-  return products.map(({ id, stock, version }) => ({
-    productId: id,
-    stock,
-    version,
-  }));
 }
 
 function buildOrderItems(
@@ -106,10 +103,7 @@ function calculateOrderTotal(
 
 @Injectable()
 export class OrderService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly inventoryRepository: PrismaInventoryRepository,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
   async getOrdersForUser(userId: number) {
     return this.prisma.order.findMany({
       where: { userId },
@@ -190,76 +184,120 @@ export class OrderService {
 
     for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt += 1) {
       try {
-        return await this.prisma.$transaction(async (transaction) => {
-          const products = await transaction.product.findMany({
-            where: { id: { in: productIds } },
-            select: { id: true, price: true, stock: true, version: true },
-          });
-          const updates = planReserve(
-            items,
-            toInventorySnapshots(products),
-          );
-
-          const applied =
-            await this.inventoryRepository.applyUpdatesInTransaction(
-              transaction,
-              updates,
+        return await this.prisma.$transaction(
+          async (transaction) => {
+            const products = await transaction.product.findMany({
+              where: { id: { in: productIds } },
+              select: { id: true, price: true, recipe: true },
+            });
+            const recipes = new Map(
+              products.map((product) => [product.id, product.recipe]),
             );
-          if (!applied) {
-            throw new RetryOrderTransactionError();
-          }
-
-          const orderItems = buildOrderItems(products, items);
-          const subtotal = calculateOrderTotal(orderItems);
-          let discount = 0;
-          let appliedPromoCode: string | undefined;
-
-          if (promoCode) {
-            const promotion = await transaction.promotion.findUnique({
-              where: { code: promoCode.trim().toUpperCase() },
-              select: { code: true, percent: true, expiresAt: true, usageLeft: true },
-            });
-            const now = new Date();
-            if (
-              !promotion ||
-              promotion.usageLeft <= 0 ||
-              promotion.expiresAt <= now
-            ) {
-              throw new RangeError(`Promotion ${promoCode} is invalid or expired`);
+            const requirements = new Map<number, Prisma.Decimal>();
+            for (const item of items) {
+              const recipe = recipes.get(item.productId);
+              if (!recipe)
+                throw new BadRequestException(
+                  `Product ${item.productId} was not found`,
+                );
+              if (recipe.length === 0)
+                throw new BadRequestException(
+                  `Product ${item.productId} has no recipe`,
+                );
+              for (const entry of recipe) {
+                const required = entry.quantity.mul(item.qty);
+                requirements.set(
+                  entry.ingredientId,
+                  (
+                    requirements.get(entry.ingredientId) ??
+                    new Prisma.Decimal(0)
+                  ).add(required),
+                );
+              }
+            }
+            // Stable lock order avoids deadlocks; the predicate prevents negative stock.
+            const consumption = [...requirements]
+              .sort(([a], [b]) => a - b)
+              .map(([ingredientId, quantity]) => ({ ingredientId, quantity }));
+            for (const entry of consumption) {
+              const applied = await transaction.ingredient.updateMany({
+                where: {
+                  id: entry.ingredientId,
+                  quantity: { gte: entry.quantity },
+                },
+                data: { quantity: { decrement: entry.quantity } },
+              });
+              if (applied.count !== 1) {
+                throw new BadRequestException(
+                  `Insufficient ingredient ${entry.ingredientId}`,
+                );
+              }
             }
 
-            discount = Math.floor((subtotal * promotion.percent) / 100);
-            appliedPromoCode = promotion.code;
-            const consumed = await transaction.promotion.updateMany({
-              where: {
-                code: promotion.code,
-                usageLeft: { gt: 0 },
-                expiresAt: { gt: now },
+            const orderItems = buildOrderItems(products, items);
+            const subtotal = calculateOrderTotal(orderItems);
+            let discount = 0;
+            let appliedPromoCode: string | undefined;
+
+            if (promoCode) {
+              const promotion = await transaction.promotion.findUnique({
+                where: { code: promoCode.trim().toUpperCase() },
+                select: {
+                  code: true,
+                  percent: true,
+                  expiresAt: true,
+                  usageLeft: true,
+                },
+              });
+              const now = new Date();
+              if (
+                !promotion ||
+                promotion.usageLeft <= 0 ||
+                promotion.expiresAt <= now
+              ) {
+                throw new BadRequestException(
+                  `Promotion ${promoCode} is invalid or expired`,
+                );
+              }
+
+              discount = Math.floor((subtotal * promotion.percent) / 100);
+              appliedPromoCode = promotion.code;
+              const consumed = await transaction.promotion.updateMany({
+                where: {
+                  code: promotion.code,
+                  usageLeft: { gt: 0 },
+                  expiresAt: { gt: now },
+                },
+                data: { usageLeft: { decrement: 1 } },
+              });
+              if (consumed.count !== 1) {
+                throw new RetryOrderTransactionError();
+              }
+            }
+
+            const total = subtotal - discount;
+
+            const order = await transaction.order.create({
+              data: {
+                userId,
+                total,
+                discount,
+                promoCode: appliedPromoCode,
+                items: { create: orderItems },
+                ingredients: { create: consumption },
               },
-              data: { usageLeft: { decrement: 1 } },
+              select: { id: true, status: true, total: true, discount: true },
             });
-            if (consumed.count !== 1) {
-              throw new RetryOrderTransactionError();
-            }
-          }
 
-          const total = subtotal - discount;
-
-          const order = await transaction.order.create({
-            data: {
-              userId,
-              total,
-              discount,
-              promoCode: appliedPromoCode,
-              items: { create: orderItems },
-            },
-            select: { id: true, status: true, total: true, discount: true },
-          });
-
-          return order;
-        });
+            return order;
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
       } catch (error) {
-        if (!(error instanceof RetryOrderTransactionError)) {
+        if (
+          !(error instanceof RetryOrderTransactionError) &&
+          (error as { code?: string }).code !== 'P2034'
+        ) {
           throw error;
         }
       }
@@ -307,7 +345,7 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
-          items: { select: { productId: true, qty: true } },
+          ingredients: { select: { ingredientId: true, quantity: true } },
         },
       });
 
@@ -317,22 +355,6 @@ export class OrderService {
 
       const from = order.status as OrderStatus;
       assertTransition(from, to);
-
-      let releaseUpdates: InventoryUpdate[] = [];
-      if (to === 'CANCELLED') {
-        const productIds = [
-          ...new Set(order.items.map(({ productId }) => productId)),
-        ];
-        const products = await transaction.product.findMany({
-          where: { id: { in: productIds } },
-          select: { id: true, stock: true, version: true },
-        });
-        releaseUpdates = planCancel(
-          from,
-          order.items,
-          toInventorySnapshots(products),
-        );
-      }
 
       const changed = await transaction.order.updateMany({
         where: { id: orderId, status: from },
@@ -358,14 +380,15 @@ export class OrderService {
         });
       }
 
-      if (
-        releaseUpdates.length > 0 &&
-        !(await this.inventoryRepository.applyUpdatesInTransaction(
-          transaction,
-          releaseUpdates,
-        ))
-      ) {
-        throw new InventoryConcurrencyException();
+      if (to === 'CANCELLED') {
+        for (const entry of order.ingredients.sort(
+          (a, b) => a.ingredientId - b.ingredientId,
+        )) {
+          await transaction.ingredient.update({
+            where: { id: entry.ingredientId },
+            data: { quantity: { increment: entry.quantity } },
+          });
+        }
       }
     });
   }
