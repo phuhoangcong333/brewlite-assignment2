@@ -41,11 +41,12 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 
 | Nhóm kiểm tra | Kết quả chạy |
 | --- | --- |
-| Backend unit/integration, gồm PostgreSQL | 21 suites, 205 tests PASS |
-| HTTP E2E toàn bộ backend | 4 suites, 102 tests PASS |
-| Riêng state/points unit | 63 tests PASS (đã nằm trong 205) |
-| Riêng loyalty HTTP + DB | 15 tests PASS (đã nằm trong 102) |
-| Riêng status/history HTTP + DB | 73 tests PASS (đã nằm trong 102) |
+| Backend unit/integration, gồm PostgreSQL | 21 suites, 206 tests PASS |
+| HTTP E2E toàn bộ backend | 5 suites, 144 tests PASS |
+| Riêng state/points unit | 63 tests PASS (đã nằm trong 206) |
+| Riêng loyalty HTTP + DB | 15 tests PASS (đã nằm trong 144) |
+| Riêng status/history HTTP + DB | 73 tests PASS (đã nằm trong 144) |
+| Riêng tồn kho nguyên liệu tích hợp TV4 | 42 HTTP tests PASS (đã nằm trong 144) |
 | Frontend Vitest | 7 files, 49 tests PASS |
 | Playwright desktop | 5/5 PASS |
 | Playwright desktop + mobile | 10/10 PASS trên bản cuối, 0 failed/skipped/flaky, khoảng 1,6 phút |
@@ -55,7 +56,7 @@ Phạm vi chỉ gồm Issue #21 (state machine/loyalty) và Issue #28 (API lịc
 | Lint các file frontend thay đổi | PASS |
 | Lint toàn frontend | Exit 0; còn 1 warning img có sẵn ở trang lịch sử |
 
-Tổng cộng 366 test pass (205 + 102 + 49 + 10). Các số riêng state/loyalty/status là tập con, không cộng lần nữa vào tổng test. Fixture được cleanup; các fixture từ lượt chạy bị ngắt cũng đã được dọn và xác nhận không còn user/product/ingredient Playwright trong database test.
+Sau đồng bộ PR #59 với TV4: tổng cộng 409 test pass (206 + 144 + 49 + 10). Bản Issue #21/#28 trước khi tích hợp có 366 test pass. Các số riêng state/loyalty/status/inventory là tập con, không cộng lần nữa vào tổng test. Fixture được cleanup; các fixture từ lượt chạy bị ngắt trước đó cũng đã được dọn.
 
 ### Luồng Playwright
 
@@ -116,7 +117,7 @@ Báo cáo HTML nằm tại `apps/web/playwright-report/index.html`; JSON tại `
 
 ## Danh sách từng file thay đổi
 
-So với origin/dev tại commit `360f9fe`:
+Danh sách 27 file đóng góp riêng cho Issue #21/#28 trước khi đồng bộ kho, dựa trên dev `360f9fe`. Các file bổ sung từ PR #59 được liệt kê riêng tại `docs/testing/pr59-tv4-integration.md`:
 
 | File | Nội dung |
 | --- | --- |
@@ -148,12 +149,12 @@ So với origin/dev tại commit `360f9fe`:
 | docs/testing/issue-21-state-loyalty.md | State table, điểm thưởng, ma trận kiểm thử Issue #21 |
 | docs/testing/issue-28-test-report.md | Báo cáo, checklist, lỗi, lệnh chạy lại và file bàn giao |
 
-Không chỉnh schema/migration: LoyaltyTransaction và unique orderId đã có, được migrate và kiểm chứng lại trên PostgreSQL thật.
+Phần loyalty không tạo lại schema/migration: LoyaltyTransaction và unique orderId đã có, được kiểm chứng trên PostgreSQL thật. Migration snapshot nguyên liệu được kế thừa từ PR #59 sau khi đồng bộ; xem báo cáo tích hợp để biết chuỗi migration và hợp đồng TV4.
 
 ## Bàn giao review
 
-- Nhánh Issue #21: `fix/tv6-state-loyalty-21` (phần state/loyalty độc lập).
+- Nhánh Issue #21: `fix/tv6-state-loyalty-21`, dựa trên `feat/TV6` đã resolve PR #59 để diff chỉ còn phần state/loyalty.
 - Nhánh Issue #28: `test/tv6-orders-e2e-28`, dựa trên nhánh #21 để dùng đúng sửa lỗi điểm thưởng.
 - Thanh Nguyễn (`thanhnguyen27032k6-bit`): chạy lệnh Playwright ở trên và đối chiếu các bước menu/checkout/theo dõi, đặc biệt mobile và việc tự cập nhật trạng thái. Kết quả tự động trong báo cáo không được xem là xác nhận review của thành viên.
 - TV4: hợp đồng hủy/hoàn kho được gọi trong transaction; các test nguyên liệu và concurrent cancellation đã xác minh tích hợp với code trên dev.
-- Các PR tồn kho trước đó và PR #45 không bị ghi đè, merge hay đóng tự động.
+- PR #59 đã được resolve với dev TV4, ba nhánh đồng bộ bằng merge thông thường, không force-push. Thứ tự review/merge: #59 → #60 → #61; đổi base về dev sau khi PR cha được merge nếu cần. PR #45 không bị ghi đè, merge hay đóng tự động.
