@@ -139,47 +139,56 @@ Lỗi:
 ### 4.2. `GET /products/:id` (TV2)
 
 **Response 200:**
-```json
-{
-  "id": 1,
-  "name": "Trà sữa trân châu",
-  "description": "Trà sữa truyền thống",
-  "price": 30000,
-  "imageUrl": "/uploads/tra-sua.jpg",
-  "sizes": [
-    { "id": 1, "code": "S", "additionalPrice": 0 },
-    { "id": 2, "code": "M", "additionalPrice": 5000 },
-    { "id": 3, "code": "L", "additionalPrice": 10000 }
-  ],
-  "toppings": [
-    {
-      "id": 1,
-      "code": "TRAN_CHAU",
-      "name": "Trân châu",
-      "additionalPrice": 5000,
-      "isAvailable": true
-    },
-    {
-      "id": 2,
-      "code": "KEM",
-      "name": "Kem",
-      "additionalPrice": 5000,
-      "isAvailable": false
-    }
-  ]
-}
+```ts
+type ProductDetailResponse = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  availableQuantityBySize: Record<"S" | "M" | "L", number>;
+  sizes: {
+    id: number;
+    code: "S" | "M" | "L";
+    additionalPrice: number;
+  }[];
+  toppings: {
+    id: number;
+    code: "TRAN_CHAU" | "KEM";
+    name: string;
+    additionalPrice: number;
+    isAvailable: boolean;
+  }[];
+};
 ```
 
-**Lỗi:**
-|Mã	 |  Trường hợp
-|400	 |  ID không hợp lệ
-|404	 |  Không tìm thấy sản phẩm
-|500	 |  Lỗi hệ thống
+**Quy ước size:**
 
-**Quy ước:**
-- Size S: +0đ, M: +5.000đ, L: +10.000đ.
-- Mỗi topping: +5.000đ.
-- isAvailable = false: Topping hết hàng, không cho chọn.
+- ID 1, 2, 3 lần lượt ứng với S, M, L, theo ánh xạ đang dùng trong frontend và backend.
+
+- Phụ thu lần lượt là 0, 5.000, 10.000 VNĐ theo cấu hình hiện tại.
+
+- availableQuantityBySize chỉ phản ánh tồn kho của công thức nền theo size. Không tính topping tùy chọn vào số lượng này.
+
+**Quy ước topping:**
+
+- id là ID của bản ghi Topping trong database. code dùng TRAN_CHAU và KEM. Frontend gửi đúng ID nhận được từ GET /products/:id khi gọi API báo giá.
+
+- Giá hiện tại trong frontend và backend là 5.000 VNĐ mỗi topping.
+
+- isAvailable cho biết topping có đủ nguyên liệu cho ít nhất một serving hay không. Topping không khả dụng vẫn nằm trong response để frontend hiển thị nhưng không cho chọn.
+
+- Tồn kho topping được tính riêng từ nguyên liệu và amountRequired mỗi serving. Giá trị gram/ml thực tế chưa có trong code; không tự đặt giá trị.
+
+- Báo giá vẫn do backend xác nhận qua POST /promotions/validate.
+
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+| 400 | ID không hợp lệ. |
+| 404 | Không tìm thấy sản phẩm. |
+| 500 | Lỗi hệ thống. |
 
 ### 4.3. `POST /promotions/validate` (TV3)
 

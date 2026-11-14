@@ -161,6 +161,17 @@ export default function CartPage() {
                         <p style={{ margin: "0 0 4px 0", fontWeight: 600, fontSize: "15px" }}>{i.name}</p>
                         <p style={{ margin: "0 0 2px 0", fontSize: "13px", color: "#6b7280" }}>Size {i.size}</p>
                         <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af" }}>{toppingText}</p>
+                        {i.note && (
+                          <p
+                            style={{
+                              margin: "4px 0 0 0",
+                              fontSize: "12px",
+                              color: "#6b7280",
+                            }}
+                          >
+                            Ghi chú: {i.note}
+                          </p>
+                        )}
                       </div>
                     </div>
 

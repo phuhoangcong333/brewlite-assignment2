@@ -1,5 +1,5 @@
 import type { CartItem } from "./cart";
-import { calcUnitPrice } from "./pricing";
+import { unitPriceOf } from "./cart";
 import type { Size } from "./types";
 import { API_BASE_URL, USE_MOCK_DATA } from "./api-client";
 import { setToken } from "./auth";
@@ -152,7 +152,7 @@ export async function createOrder(
   if (USE_MOCK) {
     await delay(500);
     const subtotal = cart.reduce(
-      (s, i) => s + calcUnitPrice(i.basePrice, i.size as Size, i.toppings) * i.qty,
+      (s, i) => s + unitPriceOf(i) * i.qty,
       0
     );
     let discount = 0;
@@ -173,7 +173,7 @@ export async function createOrder(
         size: i.size as Size,
         qty: i.qty,
         toppings: i.toppings.map((t) => TOPPING_NAME[t] ?? t),
-        lineTotal: calcUnitPrice(i.basePrice, i.size as Size, i.toppings) * i.qty,
+        lineTotal: unitPriceOf(i) * i.qty,
       })),
     };
     writeMock([order, ...readMock()]);
