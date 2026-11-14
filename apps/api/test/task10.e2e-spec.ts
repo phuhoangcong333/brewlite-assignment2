@@ -23,6 +23,8 @@ describeDb('Task 10 HTTP integration', () => {
   let otherUserId: number;
   let token: string;
   let otherToken: string;
+  let staffToken: string;
+  let staffId: number;
 
   async function createProduct(stock: number): Promise<number> {
     const product = await prisma.product.create({
@@ -89,6 +91,21 @@ describeDb('Task 10 HTTP integration', () => {
       .send({ email: otherEmail, password })
       .expect(200);
     otherToken = otherLogin.body.access_token;
+    const staffEmail = `staff-${email}`;
+    staffId = (
+      await prisma.user.create({
+        data: {
+          email: staffEmail,
+          passwordHash: await bcrypt.hash(password, 4),
+          role: 'STAFF',
+        },
+      })
+    ).id;
+    const staffLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: staffEmail, password })
+      .expect(200);
+    staffToken = staffLogin.body.access_token;
   });
 
   afterAll(async () => {
@@ -101,6 +118,7 @@ describeDb('Task 10 HTTP integration', () => {
     });
     await prisma.user.delete({ where: { id: otherUserId } });
     await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.delete({ where: { id: staffId } });
     await app.close();
   });
 
@@ -147,10 +165,17 @@ describeDb('Task 10 HTTP integration', () => {
 
   it('C5: concurrent HTTP orders cannot oversell stock', async () => {
     const productId = await createProduct(1);
-    const responses = await Promise.all([createOrder(productId), createOrder(productId)]);
+    const responses = await Promise.all([
+      createOrder(productId),
+      createOrder(productId),
+    ]);
 
-    expect(responses.filter((response) => response.status === 201)).toHaveLength(1);
-    expect(responses.filter((response) => response.status === 409)).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 201),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 409),
+    ).toHaveLength(1);
     await expect(
       prisma.product.findUniqueOrThrow({
         where: { id: productId },
@@ -164,7 +189,11 @@ describeDb('Task 10 HTTP integration', () => {
     const order = await createOrder(productId);
     expect(order.status).toBe(201);
 
-    const body = { orderId: order.body.id, method: 'WALLET', walletId: 'WALLET-1234' };
+    const body = {
+      orderId: order.body.id,
+      method: 'WALLET',
+      walletId: 'WALLET-1234',
+    };
     const first = await request(app.getHttpServer())
       .post('/payments')
       .set('Authorization', `Bearer ${token}`)
@@ -189,7 +218,11 @@ describeDb('Task 10 HTTP integration', () => {
   it('C8a: a new payment key cannot pay an already PAID order', async () => {
     const productId = await createProduct(1);
     const order = await createOrder(productId);
-    const body = { orderId: order.body.id, method: 'WALLET', walletId: 'WALLET-1234' };
+    const body = {
+      orderId: order.body.id,
+      method: 'WALLET',
+      walletId: 'WALLET-1234',
+    };
 
     await request(app.getHttpServer())
       .post('/payments')
@@ -286,8 +319,12 @@ describeDb('Task 10 HTTP integration', () => {
         .set('Authorization', `Bearer ${token}`),
     ]);
 
-    expect(responses.filter((response) => response.status === 204)).toHaveLength(1);
-    expect(responses.filter((response) => response.status === 409)).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 204),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 409),
+    ).toHaveLength(1);
     await expect(
       prisma.product.findUniqueOrThrow({
         where: { id: productId },
@@ -315,7 +352,7 @@ describeDb('Task 10 HTTP integration', () => {
     for (const status of ['PREPARING', 'READY', 'COMPLETED']) {
       await request(app.getHttpServer())
         .patch(`/orders/${order.body.id}/status`)
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${staffToken}`)
         .send({ status })
         .expect(204);
     }
@@ -334,7 +371,7 @@ describeDb('Task 10 HTTP integration', () => {
 
     await request(app.getHttpServer())
       .patch(`/orders/${order.body.id}/status`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'READY' })
       .expect(409);
   });

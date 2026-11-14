@@ -8,7 +8,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Req,
@@ -22,6 +21,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { TransitionOrderDto } from './dto/transition-order.dto';
 import { OrderService } from './order.service';
+import { OrderIdPipe } from './dto/order-id.pipe';
+import { ApiBearerAuth, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -36,6 +37,8 @@ const getUserId = (request: AuthenticatedRequest): number =>
   request.user.id ?? request.user.sub!;
 
 @Controller('orders')
+@ApiTags('orders')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly orderService: OrderService) {}
@@ -57,15 +60,19 @@ export class OrdersController {
     return this.orderService.getOrdersForStaff();
   }
 
-  @Post()
-  createOrder(
+  @Get(':id')
+  getOrderDetail(
     @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateOrderDto,
+    @Param('id', OrderIdPipe) id: number,
   ) {
+    return this.orderService.getOrderForUser(id, getUserId(req));
+  }
+
+  @Post()
+  createOrder(@Req() req: AuthenticatedRequest, @Body() dto: CreateOrderDto) {
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('Danh sách sản phẩm không được để trống');
     }
-
 
     return dto.promoCode === undefined
       ? this.orderService.createOrder(getUserId(req), dto.items)
@@ -76,19 +83,19 @@ export class OrdersController {
   @UseGuards(RolesGuard)
   @Roles('STAFF')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Order status updated' })
   async transitionOrder(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', OrderIdPipe) id: number,
     @Body() dto: TransitionOrderDto,
   ) {
     await this.orderService.transitionOrderForStaff(id, dto.status);
-
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async cancelOrder(
     @Req() req: AuthenticatedRequest,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', OrderIdPipe) id: number,
   ) {
     await this.orderService.transitionOrderForUser(
       id,
