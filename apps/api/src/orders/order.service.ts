@@ -589,7 +589,10 @@ export class OrderService {
           (product) => product.recipeItems.length > 0,
         );
 
-        if (order.ingredients.length > 0) {
+        if (
+          order.usesIngredientInventory !== false &&
+          order.ingredients.length > 0
+        ) {
           for (const ingredient of order.ingredients) {
             ingredientReleases.set(ingredient.ingredientId, ingredient.quantity);
           }

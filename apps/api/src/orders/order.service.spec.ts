@@ -222,6 +222,10 @@ describeDb('OrderService with PostgreSQL', () => {
       await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
       orderIds.length = 0;
     }
+    if (toppingIds.length > 0) {
+      await prisma.topping.deleteMany({ where: { id: { in: toppingIds } } });
+      toppingIds.length = 0;
+    }
     if (userIds.length > 0) {
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
       userIds.length = 0;
@@ -233,10 +237,6 @@ describeDb('OrderService with PostgreSQL', () => {
         where: { id: { in: ingredientIds } },
       });
       ingredientIds.length = 0;
-    }
-    if (toppingIds.length > 0) {
-      await prisma.topping.deleteMany({ where: { id: { in: toppingIds } } });
-      toppingIds.length = 0;
     }
     if (ingredientIds.length > 0) {
       await prisma.ingredient.deleteMany({
