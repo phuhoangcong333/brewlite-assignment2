@@ -49,9 +49,9 @@ jobs:
         with:
           context: ./apps/web
           push: true
-         build-args: |
-                 NEXT_PUBLIC_API_URL=https://47.129.180.144.sslip.io/api
-                 NEXT_PUBLIC_USE_MOCK=false
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://47.129.180.144.sslip.io/api
+            NEXT_PUBLIC_USE_MOCK=false
           tags: |
             ${{ env.REGISTRY }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.WEB_IMAGE_NAME }}:latest
