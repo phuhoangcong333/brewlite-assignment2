@@ -124,12 +124,28 @@ export async function loginOnPage(page: Page, account: Account) {
   await page.getByPlaceholder("Nhập email của bạn").fill(account.email);
   await page.getByPlaceholder("Nhập mật khẩu").fill(account.password);
   await page.getByRole("button", { name: /đăng nhập/i }).click();
+
+  await expect
+    .poll(
+      () => page.evaluate(() => localStorage.getItem("access_token")),
+      { timeout: 15_000 },
+    )
+    .toBeTruthy();
 }
 
 export async function checkoutFromMenu(page: Page, data: TestData) {
   await loginOnPage(page, data.customer);
 
   await page.goto(`/products/${data.productId}`);
+
+  await page.getByRole("button", { name: /^L/ }).click();
+
+  await page.getByRole("button", { name: "+", exact: true }).click();
+
+  await page
+    .locator('input[type="checkbox"]:not(:disabled)')
+    .first()
+    .check();
 
   await page
     .getByRole("button", { name: /Thêm vào giỏ/i })
