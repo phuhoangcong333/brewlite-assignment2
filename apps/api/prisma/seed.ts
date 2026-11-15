@@ -32,7 +32,7 @@ const ingredients = [
   { name: 'Đào ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Vải ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
-  { name: "Trân châu", unit: "g", stockQuantity: 0 },
+  { name: "Trân châu", unit: "g", stockQuantity: 1_000 },
   { name: "Kem", unit: "g", stockQuantity: 0 },
 ];
 
