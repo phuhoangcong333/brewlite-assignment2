@@ -1,3 +1,7 @@
+import {
+  attachIngredient,
+  ingredientQuantity,
+} from './helpers/ingredient-fixtures';
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { Test } from '@nestjs/testing';
@@ -18,11 +22,14 @@ describeDb('Task 10 HTTP integration', () => {
   const otherEmail = `task10-e2e-other-${suffix}@example.test`;
   const password = 'task10-password';
   const productIds: number[] = [];
+  const ingredientIds: number[] = [];
   const promotionCodes: string[] = [];
   let userId: number;
   let otherUserId: number;
   let token: string;
   let otherToken: string;
+  let staffToken: string;
+  let staffId: number;
 
   async function createProduct(stock: number): Promise<number> {
     const product = await prisma.product.create({
@@ -34,6 +41,7 @@ describeDb('Task 10 HTTP integration', () => {
       select: { id: true },
     });
     productIds.push(product.id);
+    await attachIngredient(prisma, product.id, stock, ingredientIds);
     return product.id;
   }
 
@@ -89,6 +97,21 @@ describeDb('Task 10 HTTP integration', () => {
       .send({ email: otherEmail, password })
       .expect(200);
     otherToken = otherLogin.body.access_token;
+    const staffEmail = 'staff-' + email;
+    staffId = (
+      await prisma.user.create({
+        data: {
+          email: staffEmail,
+          passwordHash: await bcrypt.hash(password, 4),
+          role: 'STAFF',
+        },
+      })
+    ).id;
+    const staffLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: staffEmail, password })
+      .expect(200);
+    staffToken = staffLogin.body.access_token;
   });
 
   afterAll(async () => {
@@ -96,11 +119,15 @@ describeDb('Task 10 HTTP integration', () => {
     await prisma.order.deleteMany({ where: { userId } });
     await prisma.order.deleteMany({ where: { userId: otherUserId } });
     await prisma.product.deleteMany({ where: { id: { in: productIds } } });
+    await prisma.ingredient.deleteMany({
+      where: { id: { in: ingredientIds } },
+    });
     await prisma.promotion.deleteMany({
       where: { code: { in: promotionCodes } },
     });
     await prisma.user.delete({ where: { id: otherUserId } });
     await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.delete({ where: { id: staffId } });
     await app.close();
   });
 
@@ -147,16 +174,18 @@ describeDb('Task 10 HTTP integration', () => {
 
   it('C5: concurrent HTTP orders cannot oversell stock', async () => {
     const productId = await createProduct(1);
-    const responses = await Promise.all([createOrder(productId), createOrder(productId)]);
+    const responses = await Promise.all([
+      createOrder(productId),
+      createOrder(productId),
+    ]);
 
-    expect(responses.filter((response) => response.status === 201)).toHaveLength(1);
-    expect(responses.filter((response) => response.status === 409)).toHaveLength(1);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true },
-      }),
-    ).resolves.toEqual({ stock: 0 });
+    expect(
+      responses.filter((response) => response.status === 201),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 400),
+    ).toHaveLength(1);
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(0);
   });
 
   it('C9: repeated HTTP payment with one key replays one payment', async () => {
@@ -164,7 +193,11 @@ describeDb('Task 10 HTTP integration', () => {
     const order = await createOrder(productId);
     expect(order.status).toBe(201);
 
-    const body = { orderId: order.body.id, method: 'WALLET', walletId: 'WALLET-1234' };
+    const body = {
+      orderId: order.body.id,
+      method: 'WALLET',
+      walletId: 'WALLET-1234',
+    };
     const first = await request(app.getHttpServer())
       .post('/payments')
       .set('Authorization', `Bearer ${token}`)
@@ -189,7 +222,11 @@ describeDb('Task 10 HTTP integration', () => {
   it('C8a: a new payment key cannot pay an already PAID order', async () => {
     const productId = await createProduct(1);
     const order = await createOrder(productId);
-    const body = { orderId: order.body.id, method: 'WALLET', walletId: 'WALLET-1234' };
+    const body = {
+      orderId: order.body.id,
+      method: 'WALLET',
+      walletId: 'WALLET-1234',
+    };
 
     await request(app.getHttpServer())
       .post('/payments')
@@ -221,12 +258,7 @@ describeDb('Task 10 HTTP integration', () => {
         select: { status: true },
       }),
     ).resolves.toEqual({ status: 'CANCELLED' });
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: stockedProductId },
-        select: { stock: true },
-      }),
-    ).resolves.toEqual({ stock: 1 });
+    await expect(ingredientQuantity(prisma, stockedProductId)).resolves.toBe(1);
   });
 
   it('cancel: requires JWT', async () => {
@@ -266,12 +298,7 @@ describeDb('Task 10 HTTP integration', () => {
       .delete(`/orders/${order.body.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(409);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true },
-      }),
-    ).resolves.toEqual({ stock: 0 });
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(0);
   });
 
   it('cancel: concurrent cancellation releases stock only once', async () => {
@@ -286,14 +313,13 @@ describeDb('Task 10 HTTP integration', () => {
         .set('Authorization', `Bearer ${token}`),
     ]);
 
-    expect(responses.filter((response) => response.status === 204)).toHaveLength(1);
-    expect(responses.filter((response) => response.status === 409)).toHaveLength(1);
-    await expect(
-      prisma.product.findUniqueOrThrow({
-        where: { id: productId },
-        select: { stock: true, version: true },
-      }),
-    ).resolves.toEqual({ stock: 1, version: 2 });
+    expect(
+      responses.filter((response) => response.status === 204),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 409),
+    ).toHaveLength(1);
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(1);
   });
 
   it('C13: advances PAID orders through the barista lifecycle', async () => {
@@ -315,7 +341,7 @@ describeDb('Task 10 HTTP integration', () => {
     for (const status of ['PREPARING', 'READY', 'COMPLETED']) {
       await request(app.getHttpServer())
         .patch(`/orders/${order.body.id}/status`)
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${staffToken}`)
         .send({ status })
         .expect(204);
     }
@@ -334,7 +360,7 @@ describeDb('Task 10 HTTP integration', () => {
 
     await request(app.getHttpServer())
       .patch(`/orders/${order.body.id}/status`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'READY' })
       .expect(409);
   });

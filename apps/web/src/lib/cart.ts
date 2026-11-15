@@ -18,16 +18,38 @@ export type CartItem = {
   imageUrl: string | null;
   basePrice: number;
   size: Size;
+  sizeId?: number;
   toppings: string[];
   qty: number;
+  toppingIds?: string[];
+  clientUnitPrice?: number;
+  note?: string;
 };
 
 export type NewCartItem = Omit<CartItem, "key">;
 
 export type CartResult = { ok: true } | { ok: false; error: string };
 
-const makeKey = (i: NewCartItem) =>
-  `${i.productId}|${i.size}|${[...i.toppings].sort().join(",")}`;
+const TOPPING_ID_BY_NAME: Readonly<Record<string, string>> = {
+  "Trân châu": "pearl",
+  Kem: "cream",
+  "Kem / Kem cheese": "cream",
+};
+
+export function getToppingIds(
+  item: Pick<NewCartItem, "toppings" | "toppingIds">,
+): string[] {
+  return (
+    item.toppingIds ??
+    item.toppings.map((topping) => TOPPING_ID_BY_NAME[topping] ?? topping)
+  );
+}
+
+const makeKey = (i: NewCartItem) => {
+  const toppingKey = [...getToppingIds(i)].sort().join(",");
+
+  return `${i.productId}|${i.sizeId ?? i.size}|${toppingKey}|${i.note?.trim() ?? ""}`;
+};
 
 /* ---------- Hàm thuần (dễ test, không phụ thuộc store) ---------- */
 
@@ -89,6 +111,16 @@ function isNewCartItem(r: unknown): r is NewCartItem {
   );
 }
 
+function sanitizeToppingIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value
+    .map((id) =>
+      typeof id === "string" ? id : id === 1 ? "pearl" : id === 2 ? "cream" : undefined,
+    )
+    .filter((id): id is string => id !== undefined);
+  return ids.length > 0 ? [...new Set(ids)] : undefined;
+}
+
 /** Làm sạch dữ liệu đọc từ localStorage: bỏ dòng hỏng, gộp trùng, ép số lượng về giới hạn. */
 export function sanitizeItems(raw: unknown): CartItem[] {
   if (!Array.isArray(raw)) return [];
@@ -97,7 +129,11 @@ export function sanitizeItems(raw: unknown): CartItem[] {
   for (const r of raw) {
     if (out.length >= MAX_LINES) break;
     if (!isNewCartItem(r)) continue;
-    const key = makeKey(r);
+    const item = {
+      ...r,
+      toppingIds: sanitizeToppingIds((r as Record<string, unknown>).toppingIds),
+    };
+    const key = makeKey(item);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
@@ -107,7 +143,15 @@ export function sanitizeItems(raw: unknown): CartItem[] {
       imageUrl: r.imageUrl,
       basePrice: r.basePrice,
       size: r.size,
+      sizeId: Number.isInteger(r.sizeId) ? r.sizeId : undefined,
       toppings: [...r.toppings],
+      toppingIds: item.toppingIds,
+      clientUnitPrice:
+        typeof r.clientUnitPrice === "number" &&
+        Number.isFinite(r.clientUnitPrice)
+          ? r.clientUnitPrice
+          : undefined,
+      note: typeof r.note === "string" ? r.note : undefined,
       qty: Math.min(r.qty, MAX_QTY_PER_LINE),
     });
   }
@@ -157,7 +201,7 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "brewlite-cart",
-      version: 1,
+      version: 3,
       partialize: (s) => ({ items: s.items, promotionCode: s.promotionCode }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as { items?: unknown; promotionCode?: unknown };
@@ -172,10 +216,15 @@ export const useCart = create<CartState>()(
 );
 
 /* Giá ước tính chỉ dùng khi có catalog; giá khách hàng thấy lấy từ báo giá server. */
-export const unitPriceOf = (
+export function unitPriceOf(
   i: CartItem,
   toppings: readonly { id: string; price: number }[] = [],
-) => calcUnitPrice(i.basePrice, i.size, i.toppings, toppings);
+) {
+  if (toppings.length === 0 && i.clientUnitPrice !== undefined) {
+    return i.clientUnitPrice;
+  }
+  return calcUnitPrice(i.basePrice, i.size, getToppingIds(i), toppings);
+}
 export const lineTotalOf = (
   i: CartItem,
   toppings: readonly { id: string; price: number }[] = [],

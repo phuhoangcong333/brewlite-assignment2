@@ -5,13 +5,11 @@ DROP INDEX "RecipeItem_productId_ingredientId_key";
 
 INSERT INTO "RecipeItem" ("productId", "ingredientId", "size", "amountRequired")
 SELECT "productId", "ingredientId", 'S', "amountRequired"
-FROM "RecipeItem"
-WHERE "size" = 'M';
+FROM "RecipeItem" WHERE "size" = 'M';
 
 INSERT INTO "RecipeItem" ("productId", "ingredientId", "size", "amountRequired")
 SELECT "productId", "ingredientId", 'L', "amountRequired"
-FROM "RecipeItem"
-WHERE "size" = 'M';
+FROM "RecipeItem" WHERE "size" = 'M';
 
 CREATE UNIQUE INDEX "RecipeItem_productId_ingredientId_size_key"
 ON "RecipeItem"("productId", "ingredientId", "size");

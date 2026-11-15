@@ -29,21 +29,34 @@ const item = (over: Partial<NewCartItem> = {}): NewCartItem => ({
 
 const lines = (n: number): CartItem[] => {
   let items: CartItem[] = [];
-  for (let p = 1; p <= n; p++) items = addItem(items, item({ productId: p })).items;
+
+  for (let productId = 1; productId <= n; productId++) {
+    items = addItem(items, item({ productId })).items;
+  }
+
   return items;
 };
 
 describe("addItem", () => {
   it("thêm dòng mới kèm key", () => {
     const { items, error } = addItem([], item());
+
     expect(error).toBeNull();
     expect(items).toHaveLength(1);
-    expect(items[0].key).toBe("1|M|");
+    expect(items[0].key).toBe("1|M||");
   });
 
   it("gộp cùng món, size, topping dù khác thứ tự topping", () => {
-    let items = addItem([], item({ toppings: ["pearl", "cream"] })).items;
-    items = addItem(items, item({ toppings: ["cream", "pearl"] })).items;
+    let items = addItem(
+      [],
+      item({ toppings: ["pearl", "cream"] }),
+    ).items;
+
+    items = addItem(
+      items,
+      item({ toppings: ["cream", "pearl"] }),
+    ).items;
+
     expect(items).toHaveLength(1);
     expect(items[0].qty).toBe(2);
   });
@@ -51,20 +64,30 @@ describe("addItem", () => {
   it("khác size thì thành dòng riêng", () => {
     let items = addItem([], item({ size: "M" })).items;
     items = addItem(items, item({ size: "L" })).items;
+
+    expect(items).toHaveLength(2);
+  });
+
+  it("ghi chú khác nhau là hai dòng riêng", () => {
+    let items = addItem([], item({ note: "Ít đá" })).items;
+    items = addItem(items, item({ note: "Ít ngọt" })).items;
+
     expect(items).toHaveLength(2);
   });
 
   it("từ chối khi gộp vượt giới hạn số lượng mỗi dòng", () => {
     const start = addItem([], item({ qty: MAX_QTY_PER_LINE })).items;
     const { items, error } = addItem(start, item());
+
     expect(error).toMatch(/tối đa/);
     expect(items).toBe(start);
   });
 
   it("từ chối dòng thứ 21", () => {
     const full = lines(MAX_LINES);
-    expect(full).toHaveLength(MAX_LINES);
     const { items, error } = addItem(full, item({ productId: 999 }));
+
+    expect(full).toHaveLength(MAX_LINES);
     expect(error).toMatch(/tối đa/);
     expect(items).toBe(full);
   });
@@ -72,7 +95,9 @@ describe("addItem", () => {
   it("từ chối số lượng không hợp lệ", () => {
     expect(addItem([], item({ qty: 0 })).error).not.toBeNull();
     expect(addItem([], item({ qty: 1.5 })).error).not.toBeNull();
-    expect(addItem([], item({ qty: MAX_QTY_PER_LINE + 1 })).error).not.toBeNull();
+    expect(
+      addItem([], item({ qty: MAX_QTY_PER_LINE + 1 })).error,
+    ).not.toBeNull();
   });
 });
 
@@ -113,7 +138,12 @@ describe("tính tiền ước tính", () => {
 
   it("tạm tính và tổng số ly", () => {
     let items = addItem([], item({ size: "S", qty: 2 })).items;
-    items = addItem(items, item({ productId: 2, basePrice: 30000, size: "S", qty: 1 })).items;
+
+    items = addItem(
+      items,
+      item({ productId: 2, basePrice: 30000, size: "S", qty: 1 }),
+    ).items;
+
     expect(cartSubtotal(items)).toBe(45000 * 2 + 30000);
     expect(cartCount(items)).toBe(3);
   });
@@ -127,6 +157,7 @@ describe("sanitizeItems", () => {
 
   it("bỏ dòng hỏng, giữ dòng đúng", () => {
     const good = { ...item(), key: "x" };
+
     const out = sanitizeItems([
       good,
       { ...good, productId: "abc" },
@@ -135,8 +166,21 @@ describe("sanitizeItems", () => {
       null,
       "rác",
     ]);
+
     expect(out).toHaveLength(1);
-    expect(out[0].key).toBe("1|M|");
+    expect(out[0].key).toBe("1|M||");
+  });
+
+  it("chuyển topping ID số đã lưu sang ID chuỗi", () => {
+    const oldItem = {
+      ...item({ toppings: ["Trân châu"] }),
+      toppingIds: [1],
+    };
+
+    expect(sanitizeItems([oldItem])[0]).toMatchObject({
+      key: "1|M|pearl|",
+      toppingIds: ["pearl"],
+    });
   });
 
   it("gộp dòng trùng và ép số lượng về giới hạn", () => {
@@ -144,6 +188,7 @@ describe("sanitizeItems", () => {
       { ...item({ qty: 50 }), key: "a" },
       { ...item({ qty: 1 }), key: "b" },
     ]);
+
     expect(out).toHaveLength(1);
     expect(out[0].qty).toBe(MAX_QTY_PER_LINE);
   });
@@ -153,6 +198,7 @@ describe("sanitizePromotionCode", () => {
   it("viết hoa và bỏ khoảng trắng", () => {
     expect(sanitizePromotionCode("  brew 2026 ")).toBe("BREW2026");
   });
+
   it("rỗng hoặc sai kiểu thì null", () => {
     expect(sanitizePromotionCode("   ")).toBeNull();
     expect(sanitizePromotionCode(123)).toBeNull();
@@ -162,19 +208,27 @@ describe("sanitizePromotionCode", () => {
 describe("store useCart", () => {
   beforeEach(() => {
     localStorage.clear();
-    useCart.setState({ items: [], promotionCode: null, promoNotice: null });
+    useCart.setState({
+      items: [],
+      promotionCode: null,
+      promoNotice: null,
+    });
   });
 
   it("add trả về lỗi khi vượt giới hạn và không đổi giỏ", () => {
     useCart.getState().add(item({ qty: MAX_QTY_PER_LINE }));
+
     const result = useCart.getState().add(item());
+
     expect(result.ok).toBe(false);
     expect(useCart.getState().items[0].qty).toBe(MAX_QTY_PER_LINE);
   });
 
   it("setPromotionCode chuẩn hóa mã và xóa thông báo cũ", () => {
     useCart.setState({ promoNotice: "cũ" });
+
     useCart.getState().setPromotionCode(" brew2026 ");
+
     expect(useCart.getState().promotionCode).toBe("BREW2026");
     expect(useCart.getState().promoNotice).toBeNull();
   });
@@ -182,6 +236,7 @@ describe("store useCart", () => {
   it("rejectPromotion gỡ mã và giữ lý do", () => {
     useCart.getState().setPromotionCode("SAI");
     useCart.getState().rejectPromotion("Mã đã hết hạn.");
+
     expect(useCart.getState().promotionCode).toBeNull();
     expect(useCart.getState().promoNotice).toBe("Mã đã hết hạn.");
   });
@@ -189,7 +244,9 @@ describe("store useCart", () => {
   it("clear xóa cả giỏ lẫn mã", () => {
     useCart.getState().add(item());
     useCart.getState().setPromotionCode("ABC");
+
     useCart.getState().clear();
+
     expect(useCart.getState().items).toEqual([]);
     expect(useCart.getState().promotionCode).toBeNull();
   });

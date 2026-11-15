@@ -1,5 +1,6 @@
 import { SIZE_IDS } from "./catalog-ids";
-import { unitPriceOf, type CartItem } from "./cart";
+import { API_BASE_URL } from "./api-client";
+import { getToppingIds, unitPriceOf, type CartItem } from "./cart";
 import type { Quote } from "./quote-types";
 
 export type QuoteRequest = {
@@ -9,29 +10,31 @@ export type QuoteRequest = {
     toppingIds: string[];
     quantity: number;
     clientUnitPrice?: number;
+    note?: string;
   }[];
   promotionCode?: string;
 };
 
-export function getApiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/+$/, "");
-}
-
-/** Tạo payload gửi server. Không gửi tên hay giá cơ bản; server tự tra giá. */
 export function buildQuoteRequest(
   items: CartItem[],
-  promotionCode: string | null
+  promotionCode: string | null,
 ): QuoteRequest {
   const request: QuoteRequest = {
-    items: items.map((i) => ({
-      productId: i.productId,
-      sizeId: SIZE_IDS[i.size],
-      toppingIds: i.toppings,
-      quantity: i.qty,
-      ...(i.toppings.length === 0
-        ? { clientUnitPrice: unitPriceOf(i) }
-        : {}),
-    })),
+    items: items.map((i) => {
+      const note = i.note?.trim();
+      const toppingIds = getToppingIds(i);
+      const clientUnitPrice =
+        i.clientUnitPrice ??
+        (toppingIds.length === 0 ? unitPriceOf(i) : undefined);
+      return {
+        productId: i.productId,
+        sizeId: i.sizeId ?? SIZE_IDS[i.size],
+        toppingIds,
+        quantity: i.qty,
+        ...(clientUnitPrice === undefined ? {} : { clientUnitPrice }),
+        ...(note ? { note } : {}),
+      };
+    }),
   };
   if (promotionCode) request.promotionCode = promotionCode;
   return request;
@@ -40,7 +43,7 @@ export function buildQuoteRequest(
 export async function fetchQuote(
   request: QuoteRequest,
   signal?: AbortSignal,
-  baseUrl: string = getApiBase()
+  baseUrl: string = API_BASE_URL,
 ): Promise<Quote> {
   let res: Response;
   try {

@@ -47,6 +47,21 @@ beforeEach(() => {
   });
 });
 
+const productDetail = {
+  id: 1,
+  name: "Cà phê sữa",
+  description: null,
+  price: 35000,
+  imageUrl: null,
+  availableQuantityBySize: { S: 5, M: 2, L: 1 },
+  sizes: [
+    { id: 1, code: "S" as const, additionalPrice: 0 },
+    { id: 2, code: "M" as const, additionalPrice: 5000 },
+    { id: 3, code: "L" as const, additionalPrice: 10000 },
+  ],
+  toppings: [],
+};
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -54,18 +69,16 @@ afterEach(() => {
 
 describe("trang chi tiết sản phẩm", () => {
   it("hiển thị và giới hạn số lượng theo số ly có thể pha", async () => {
-    vi.mocked(getProduct).mockResolvedValue({
-      id: 1,
-      name: "Cà phê sữa",
-      price: 35000,
-      imageUrl: null,
-      availableQuantityBySize: { S: 5, M: 2, L: 1 },
-    });
+    vi.mocked(getProduct).mockResolvedValue(productDetail);
 
     render(<ProductDetailPage />);
 
-    expect(await screen.findByText("Có thể pha: 2 ly (Size M)")).toBeTruthy();
+    expect(
+      await screen.findByText("Có thể pha: 2 ly (Size M)"),
+    ).toBeTruthy();
+
     const increaseButton = screen.getByRole("button", { name: "+" });
+
     fireEvent.click(increaseButton);
     fireEvent.click(increaseButton);
 
@@ -73,36 +86,30 @@ describe("trang chi tiết sản phẩm", () => {
     expect((increaseButton as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /^L/ }));
+
     expect(screen.getByText("Có thể pha: 1 ly (Size L)")).toBeTruthy();
     expect(screen.getByText("1")).toBeTruthy();
   });
 
   it("chặn mua món không thể pha", async () => {
     vi.mocked(getProduct).mockResolvedValue({
-      id: 1,
-      name: "Cà phê sữa",
-      price: 35000,
-      imageUrl: null,
+      ...productDetail,
       availableQuantityBySize: { S: 0, M: 0, L: 0 },
     });
 
     render(<ProductDetailPage />);
 
-    expect(await screen.findAllByText("Hết hàng (Size M)")).toHaveLength(1);
+    expect(
+      await screen.findByText("Hết hàng (Size M)"),
+    ).toBeTruthy();
+
     expect(
       (screen.getByRole("button", { name: "Hết hàng" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
   });
-
   it("uses backend topping prices and disables toppings with no portions left", async () => {
-    vi.mocked(getProduct).mockResolvedValue({
-      id: 1,
-      name: "Cà phê sữa",
-      price: 35000,
-      imageUrl: null,
-      availableQuantityBySize: { S: 5, M: 2, L: 1 },
-    });
+    vi.mocked(getProduct).mockResolvedValue(productDetail);
 
     render(<ProductDetailPage />);
 

@@ -1,6 +1,7 @@
 import type { CartItem } from "./cart";
 import { calcUnitPrice } from "./pricing";
 import type { Topping } from "./toppings-api";
+import { getToppingIds } from "./cart";
 import type { Size } from "./types";
 import { API_BASE_URL, USE_MOCK_DATA } from "./api-client";
 import { setToken } from "./auth";
@@ -53,6 +54,7 @@ export type Order = {
   promoCode?: string | null;
   createdAt: string;
   items?: OrderItemDetail[];
+  loyaltyTransaction?: { points: number; createdAt: string } | null;
 };
 
 export type PaymentInput =
@@ -66,7 +68,10 @@ export type PaymentResult = {
 };
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
   }
 }
@@ -87,7 +92,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const m = data?.message;
     throw new ApiError(
       res.status,
-      Array.isArray(m) ? m.join(", ") : (m ?? "Có lỗi xảy ra, vui lòng thử lại")
+      Array.isArray(m)
+        ? m.join(", ")
+        : (m ?? "Có lỗi xảy ra, vui lòng thử lại"),
     );
   }
   return data as T;
@@ -151,7 +158,7 @@ export async function createOrder(
     const subtotal = cart.reduce(
       (s, i) =>
         s +
-        calcUnitPrice(i.basePrice, i.size as Size, i.toppings, toppingCatalog) *
+        calcUnitPrice(i.basePrice, i.size as Size, getToppingIds(i), toppingCatalog) *
           i.qty,
       0
     );
@@ -172,11 +179,11 @@ export async function createOrder(
         productId: i.productId,
         size: i.size as Size,
         qty: i.qty,
-        toppings: i.toppings.map(
+        toppings: getToppingIds(i).map(
           (id) => toppingCatalog.find((topping) => topping.id === id)?.name ?? id,
         ),
         lineTotal:
-          calcUnitPrice(i.basePrice, i.size as Size, i.toppings, toppingCatalog) *
+          calcUnitPrice(i.basePrice, i.size as Size, getToppingIds(i), toppingCatalog) *
           i.qty,
       })),
     };
@@ -191,7 +198,7 @@ export async function createOrder(
         productId: i.productId,
         qty: i.qty,
         size: i.size,
-        toppings: i.toppings,
+        toppings: getToppingIds(i),
       })),
       ...(promoCode?.trim() ? { promoCode: promoCode.trim() } : {}),
     }),
@@ -206,6 +213,19 @@ export async function getMyOrders(): Promise<Order[]> {
   return request<Order[]>("/orders");
 }
 
+export async function getOrderById(
+  id: number,
+  signal?: AbortSignal,
+): Promise<Order> {
+  if (USE_MOCK) {
+    await delay(100);
+    const order = readMock().find((entry) => entry.id === id);
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+    return order;
+  }
+  return request<Order>(`/orders/${id}`, { signal });
+}
+
 export async function getCurrentUser(): Promise<AuthenticatedUser> {
   if (USE_MOCK) {
     await delay(100);
@@ -217,7 +237,8 @@ export async function getCurrentUser(): Promise<AuthenticatedUser> {
     return {
       id: 1,
       email,
-      role: email.toLowerCase() === "staff@brewlite.local" ? "STAFF" : "CUSTOMER",
+      role:
+        email.toLowerCase() === "staff@brewlite.local" ? "STAFF" : "CUSTOMER",
     };
   }
   const response = await request<{ user: AuthenticatedUser }>("/auth/me");
@@ -235,7 +256,7 @@ export async function getStaffOrders(): Promise<Order[]> {
 /* ---------- payment ---------- */
 export async function createPayment(
   input: PaymentInput,
-  idempotencyKey: string
+  idempotencyKey: string,
 ): Promise<PaymentResult> {
   if (USE_MOCK) {
     await delay(800);
@@ -261,7 +282,7 @@ export async function createPayment(
 
 export async function updateOrderStatus(
   orderId: number,
-  status: OrderStatus
+  status: OrderStatus,
 ): Promise<void> {
   if (USE_MOCK) {
     await delay(300);
@@ -291,4 +312,18 @@ export async function cancelOrder(orderId: number): Promise<void> {
   await request<void>(`/orders/${orderId}`, {
     method: "DELETE",
   });
+}
+
+export async function cancelStaffOrder(orderId: number): Promise<void> {
+  if (USE_MOCK) {
+    const user = await getCurrentUser();
+    if (user.role !== "STAFF")
+      throw new ApiError(403, "Chỉ nhân viên được hủy đơn");
+    const order = readMock().find((o) => o.id === orderId);
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+    if (!["PENDING", "PREPARING"].includes(order.status))
+      throw new ApiError(409, "Không thể hủy đơn ở trạng thái này");
+    return updateOrderStatus(orderId, "CANCELLED");
+  }
+  await request<void>(`/orders/staff/${orderId}`, { method: "DELETE" });
 }

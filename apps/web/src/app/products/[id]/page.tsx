@@ -5,9 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProduct } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { calcUnitPrice, formatVND, SIZE_EXTRA } from "@/lib/pricing";
+import { calcUnitPrice, formatVND } from "@/lib/pricing";
 import { useToppings } from "@/lib/use-toppings";
-import type { Product, Size } from "@/lib/types";
+import type { ProductDetail, Size } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -15,53 +15,88 @@ export default function ProductDetailPage() {
   const addToCart = useCart((s) => s.add);
   const toppingCatalog = useToppings();
 
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [size, setSize] = useState<Size>("M");
-  const [toppings, setToppings] = useState<string[]>([]);
+  const [selectedToppingIds, setSelectedToppingIds] = useState<string[]>([]);
+  const [note, setNote] = useState("");
   const [qty, setQty] = useState(1);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   useEffect(() => {
     getProduct(Number(params.id))
-      .then(setProduct)
-      .catch((e) => setError(e.message))
+      .then((detail) => {
+        setProduct(detail);
+
+        if (detail && !detail.sizes.some((option) => option.code === "M")) {
+          setSize(detail.sizes[0]?.code ?? "M");
+        }
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Không thể tải sản phẩm.");
+      })
       .finally(() => setLoading(false));
   }, [params.id]);
-
-  const toggleTopping = (id: string) =>
-    setToppings((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    );
 
   if (loading) return <p className="p-4">Đang tải...</p>;
   if (error) return <p className="p-4 text-red-600">{error}</p>;
   if (!product) return <p className="p-4">Không tìm thấy sản phẩm.</p>;
 
-  const unitPrice = calcUnitPrice(product.price, size, toppings, toppingCatalog.toppings);
-  const availableQuantity = product.availableQuantityBySize[size];
-  const selectedToppingsAvailable = toppingCatalog.toppings
-    .filter((topping) => toppings.includes(topping.id))
-    .every((topping) => topping.availableQuantity >= qty);
+  const selectedSize = product.sizes.find((option) => option.code === size);
+  const selectedToppings = toppingCatalog.toppings.filter((topping) =>
+    selectedToppingIds.includes(topping.id),
+  );
+  const availableQuantity = product.availableQuantityBySize[size] ?? 0;
+  const unitPrice = calcUnitPrice(
+    product.price,
+    size,
+    selectedToppingIds,
+    toppingCatalog.toppings,
+  );
+  const selectedToppingsAvailable = selectedToppings.every(
+    (topping) => topping.availableQuantity >= qty,
+  );
+
   const canAdd =
+    Boolean(selectedSize) &&
     availableQuantity > 0 &&
     qty <= availableQuantity &&
-    (toppings.length === 0 ||
+    (selectedToppingIds.length === 0 ||
       (!toppingCatalog.loading &&
         !toppingCatalog.error &&
         selectedToppingsAvailable));
 
+  const toggleTopping = (id: string) => {
+    setSelectedToppingIds((current) =>
+      current.includes(id)
+        ? current.filter((toppingId) => toppingId !== id)
+        : [...current, id],
+    );
+  };
+
   const handleAdd = () => {
-    if (!canAdd) return;
-    addToCart({
+    if (!canAdd || !selectedSize) return;
+
+    const result = addToCart({
       productId: product.id,
       name: product.name,
       imageUrl: product.imageUrl,
       basePrice: product.price,
       size,
-      toppings,
+      sizeId: selectedSize.id,
+      toppings: selectedToppings.map((topping) => topping.name),
+      toppingIds: selectedToppings.map((topping) => topping.id),
+      clientUnitPrice: unitPrice,
+      note: note.trim() || undefined,
       qty,
     });
+
+    if (!result.ok) {
+      setCartError(result.error);
+      return;
+    }
+
     router.push("/cart");
   };
 
@@ -70,8 +105,17 @@ export default function ProductDetailPage() {
       <Link href="/" className="text-sm underline">
         ← Quay lại menu
       </Link>
+
       <h1 className="mt-2 text-2xl font-bold">{product.name}</h1>
-      <p className="text-amber-700">Giá gốc: {formatVND(product.price)}</p>
+
+      {product.description && (
+        <p className="mt-1 text-sm text-gray-600">{product.description}</p>
+      )}
+
+      <p className="mt-2 text-amber-700">
+        Giá gốc: {formatVND(product.price)}
+      </p>
+
       <p
         className={
           availableQuantity > 0
@@ -99,24 +143,31 @@ export default function ProductDetailPage() {
 
       <section className="mt-4">
         <h2 className="mb-2 font-medium">Size</h2>
+
         <div className="flex gap-2">
-          {(["S", "M", "L"] as Size[]).map((s) => (
+          {product.sizes.map((option) => (
             <button
-              key={s}
+              key={option.id}
+              type="button"
               onClick={() => {
-                setSize(s);
+                setSize(option.code);
                 setQty((current) =>
                   Math.max(
                     1,
-                    Math.min(current, product.availableQuantityBySize[s]),
+                    Math.min(
+                      current,
+                      product.availableQuantityBySize[option.code] ?? 0,
+                    ),
                   ),
                 );
               }}
               className={`rounded border px-4 py-2 ${
-                size === s ? "bg-amber-600 text-white" : ""
+                size === option.code ? "bg-amber-600 text-white" : ""
               }`}
             >
-              {s} {SIZE_EXTRA[s] > 0 && `(+${formatVND(SIZE_EXTRA[s])})`}
+              {option.code}
+              {option.additionalPrice > 0 &&
+                ` (+${formatVND(option.additionalPrice)})`}
             </button>
           ))}
         </div>
@@ -139,12 +190,12 @@ export default function ProductDetailPage() {
             >
               <input
                 type="checkbox"
-                checked={toppings.includes(t.id)}
+                checked={selectedToppingIds.includes(t.id)}
                 onChange={() => toggleTopping(t.id)}
                 disabled={
                   toppingCatalog.loading ||
                   t.availableQuantity === 0 ||
-                  (toppings.includes(t.id) === false &&
+                  (!selectedToppingIds.includes(t.id) &&
                     t.availableQuantity < qty)
                 }
               />
@@ -159,18 +210,41 @@ export default function ProductDetailPage() {
         )}
       </section>
 
+      <section className="mt-4">
+        <label htmlFor="product-note" className="mb-2 block font-medium">
+          Ghi chú
+        </label>
+
+        <textarea
+          id="product-note"
+          value={note}
+          maxLength={200}
+          rows={3}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Ví dụ: ít đá, ít ngọt"
+          className="w-full rounded border p-2"
+        />
+      </section>
+
       <section className="mt-4 flex items-center gap-3">
         <h2 className="font-medium">Số lượng</h2>
+
         <button
-          onClick={() => setQty((q) => Math.max(1, q - 1))}
+          type="button"
+          onClick={() => setQty((current) => Math.max(1, current - 1))}
           className="rounded border px-3"
           disabled={qty <= 1}
         >
           -
         </button>
+
         <span>{qty}</span>
+
         <button
-          onClick={() => setQty((q) => Math.min(availableQuantity, q + 1))}
+          type="button"
+          onClick={() =>
+            setQty((current) => Math.min(availableQuantity, current + 1))
+          }
           className="rounded border px-3"
           disabled={qty >= availableQuantity}
         >
@@ -178,7 +252,14 @@ export default function ProductDetailPage() {
         </button>
       </section>
 
+      {cartError && (
+        <p role="alert" className="mt-4 text-sm text-red-600">
+          {cartError}
+        </p>
+      )}
+
       <button
+        type="button"
         onClick={handleAdd}
         disabled={!canAdd}
         className="mt-6 w-full rounded bg-amber-600 py-3 text-white disabled:cursor-not-allowed disabled:bg-gray-400"
