@@ -56,6 +56,27 @@ export const test = base.extend<{ db: PrismaClient; data: TestData }>({
           token: (await login.json()).access_token,
         });
       }
+      const pearlIngredient = await db.ingredient.upsert({
+        where: { name: "Trân châu" },
+        update: { stockQuantity: 1000 },
+        create: { name: "Trân châu", unit: "g", stockQuantity: 1000 },
+      });
+      await db.topping.upsert({
+        where: { code: "TRAN_CHAU" },
+        update: {
+          name: "Trân châu",
+          price: 5000,
+          ingredientId: pearlIngredient.id,
+          amountRequired: 50,
+        },
+        create: {
+          code: "TRAN_CHAU",
+          name: "Trân châu",
+          price: 5000,
+          ingredientId: pearlIngredient.id,
+          amountRequired: 50,
+        },
+      });
       ingredientId = (
         await db.ingredient.create({
           data: { name: `pw-milk-${suffix}`, unit: "ml", stockQuantity: 200 },
@@ -102,30 +123,4 @@ export async function loginOnPage(page: Page, account: Account) {
   await page.goto("/login");
   await page.getByPlaceholder("Nhập email của bạn").fill(account.email);
   await page.getByPlaceholder("Nhập mật khẩu").fill(account.password);
-  await page.getByRole("button", { name: /^đăng nhập$/i }).click();
-  await expect(
-    page.getByRole("heading", { name: "BrewLite - Menu" }),
-  ).toBeVisible();
-}
-
-export async function checkoutFromMenu(page: Page, data: TestData) {
-  await loginOnPage(page, data.customer);
-  await page.locator(`a[href="/products/${data.productId}"]`).first().click();
-  await expect(
-    page.getByRole("heading", { name: data.productName, exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /^L / }).click();
-  await page.getByRole("checkbox", { name: /Trân châu/ }).check();
-  await page.getByRole("button", { name: "+", exact: true }).click();
-  await page.getByRole("button", { name: /Thêm vào giỏ/ }).click();
-  await expect(
-    page.getByRole("heading", { name: "Giỏ hàng của bạn" }),
-  ).toBeVisible();
-  await expect(page.getByText(data.productName, { exact: true })).toBeVisible();
-  await page
-    .getByRole("link", { name: "Tiến hành thanh toán", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Thanh toán đơn hàng" }),
-  ).toBeVisible();
-}
+  await page.getByRole("button", { name: /^đăng
