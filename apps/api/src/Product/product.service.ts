@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PRODUCT_SIZE_OPTIONS } from '../common/catalog-options';
+import { RecipesService } from '../inventory/recipes.service';
+import { UpdateRecipeDto } from '../inventory/dto/update-recipe.dto';
 
 export type AvailableQuantityBySize = Record<Size, number>;
 
@@ -39,7 +45,35 @@ export function computeAvailableQuantities(
 
 @Injectable()
 export class ProductService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recipes: RecipesService,
+  ) {}
+
+  async getRecipe(id: number) {
+    return (await this.recipes.get(id)).recipeItems;
+  }
+
+  async updateRecipe(id: number, dto: UpdateRecipeDto) {
+    const hasSizes = dto.ingredients.some((entry) => entry.size !== undefined);
+    if (hasSizes && dto.ingredients.some((entry) => entry.size === undefined)) {
+      throw new BadRequestException(
+        'Specify size for every ingredient or omit size for all',
+      );
+    }
+    return (
+      await this.recipes.replace(
+        id,
+        dto.ingredients.flatMap((entry) =>
+          (hasSizes ? [entry.size!] : Object.values(Size)).map((size) => ({
+            size,
+            ingredientId: entry.ingredientId,
+            amountRequired: entry.quantity,
+          })),
+        ),
+      )
+    ).recipeItems;
+  }
 
   async getAllProducts(category?: string) {
     const normalizedCategory = category?.trim().toUpperCase();

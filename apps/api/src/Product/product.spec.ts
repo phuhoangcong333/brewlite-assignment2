@@ -2,6 +2,8 @@ import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
+import { RecipesService } from '../inventory/recipes.service';
+import { Size } from '@prisma/client';
 
 type MockProductRow = {
   id: number;
@@ -12,6 +14,7 @@ type MockProductRow = {
   stock: number;
   version: number;
   recipeItems: {
+    size: Size;
     amountRequired: number;
     ingredient: { stockQuantity: number };
   }[];
@@ -27,9 +30,11 @@ function setup() {
       imageUrl: '/image/Picture1.png',
       stock: 10,
       version: 0,
-      recipeItems: [
-        { amountRequired: 25, ingredient: { stockQuantity: 200 } },
-      ],
+      recipeItems: Object.values(Size).map((size) => ({
+        size,
+        amountRequired: 25,
+        ingredient: { stockQuantity: 200 },
+      })),
     },
     {
       id: 2,
@@ -39,9 +44,11 @@ function setup() {
       imageUrl: '/image/Picture4.png',
       stock: 10,
       version: 0,
-      recipeItems: [
-        { amountRequired: 30, ingredient: { stockQuantity: 150 } },
-      ],
+      recipeItems: Object.values(Size).map((size) => ({
+        size,
+        amountRequired: 30,
+        ingredient: { stockQuantity: 150 },
+      })),
     },
     {
       id: 3,
@@ -71,7 +78,10 @@ function setup() {
     },
   };
 
-  const service = new ProductService(prisma as unknown as PrismaService);
+  const service = new ProductService(
+    prisma as unknown as PrismaService,
+    new RecipesService(prisma as unknown as PrismaService),
+  );
   const controller = new ProductController(service);
 
   return { rows, prisma, service, controller };

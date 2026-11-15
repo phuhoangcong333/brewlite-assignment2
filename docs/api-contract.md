@@ -68,9 +68,18 @@ Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint 
 | `GET /health` | TV7 | Không | Mọi người | Smoke test sau deploy | Đã điền |
 | `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
 | `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Đã điền |
-| `GET /orders` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` (tất cả) | Lịch sử đơn | Khung |
-| `GET /orders/:id` | TV6 | Có | `CUSTOMER` (đơn của mình), `STAFF` | Theo dõi đơn | Khung |
-| `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Khung |
+| `GET /orders` | TV6 | Có | Chỉ lịch sử của tài khoản hiện tại | Lịch sử đơn | Đã kiểm thử |
+| `GET /orders/staff` | TV6 | Có | Chỉ STAFF | Hàng đợi PENDING/PAID/PREPARING/READY | Đã kiểm thử |
+| `GET /orders/:id` | TV6 | Có | Chỉ chủ sở hữu đơn, kể cả tài khoản STAFF | Theo dõi đơn | Đã kiểm thử |
+| `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Đã kiểm thử |
+| `DELETE /orders/:id` | TV6 | Có | Chủ sở hữu | Hủy PENDING/PAYMENT_FAILED và hoàn kho | Đã kiểm thử |
+| `DELETE /orders/staff/:id` | TV6 | Có | Chỉ `STAFF` | Hủy PENDING/PREPARING và hoàn kho | Đã kiểm thử |
+
+### Hủy đơn STAFF — bổ sung TV6 ngày 15/11/2026
+
+`DELETE /orders/staff/:id` không có body, yêu cầu Bearer JWT và role STAFF hiện tại trong database. Thành công trả **204**, hoàn đúng lượng Ingredient đã trừ theo snapshot, chỉ thực hiện một lần trong transaction. Chỉ cho phép PENDING hoặc PREPARING. Không hoàn tiền, không sửa Payment và không cộng điểm thưởng.
+
+Lỗi: **400** ID không phải số nguyên dương Int32; **401** thiếu/sai JWT; **403** không phải STAFF; **404** không có đơn; **409** trạng thái không cho hủy, cạnh tranh cập nhật hoặc hoàn kho vượt giới hạn. `PATCH /orders/:id/status` với `{ "status": "CANCELLED" }` gọi cùng nghiệp vụ. Khách hàng tiếp tục dùng `DELETE /orders/:id`, chỉ đơn mình và PENDING/PAYMENT_FAILED.
 
 ## 4. Chi tiết từng endpoint
 
@@ -336,10 +345,16 @@ Cách tính giảm giá: loại `PERCENT` = làm tròn xuống (`subtotal × gi�
 
 | Mã | Khi nào |
 |---|---|
-| 400 | `items` rỗng hoặc quá 20 phần tử; `quantity` ngoài khoảng 1 đến 10; thiếu `productId` hoặc `sizeId`; sai kiểu dữ liệu |
+| 400 | `items` rỗng hoặc quá 20 phần tử; `quantity` ngoài khoảng 1 đến 10; thiếu `productId` hoặc `sizeId`; sai kiểu dữ liệu; có trường ngoài danh sách ở bảng trên (ví dụ `price`, `unitPrice`, `name`) |
 | 500 | Lỗi máy chủ không lường trước |
 
 Mã khuyến mãi không hợp lệ và sản phẩm không còn bán **không phải lỗi HTTP**: endpoint vẫn trả 200 và báo qua `promotion.valid`, `promotion.reason` và `items[].status`, để giao diện có báo giá hiển thị kèm lý do. Endpoint không cần JWT nên không trả 401 hoặc 403. Lỗi 400 và 500 theo định dạng thống nhất ở mục 2.1.
+
+**Trạng thái đối chiếu code** (kiểm thử trên server `47.129.180.144:3001`, ngày 15/11/2026):
+
+- Trường ngoài danh sách của request **bị từ chối 400**, không bị bỏ qua (do `ValidationPipe` toàn cục trong `main.ts` bật `forbidNonWhitelisted`). Ví dụ `message`: `items.0.property price should not exist`.
+- Body lỗi 400 thực tế gồm `statusCode`, `message` (mảng chuỗi), `path`, `timestamp`. Chưa có `error`, `requestId` và header `X-Request-Id` như mục 2.1 (cần TV7 xác nhận).
+- Bảng `Promotion` hiện chỉ có `code`, `percent`, `expiresAt`, `usageLeft`, nên chỉ có loại `PERCENT`. Các lý do `PROMO_NOT_STARTED`, `PROMO_MIN_ORDER_NOT_MET` và loại `FIXED_AMOUNT`, giảm tối đa chưa thể xảy ra với dữ liệu hiện tại; quy tắc đã được kiểm bằng unit test (`promotion-rules.spec.ts`).
 
 ### 4.4. `POST /auth/register` (TV7)
 
@@ -649,16 +664,21 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
   "id": 105,
   "userId": 1,
   "total": 95000,
+  "discount": 5000,
+  "promoCode": null,
   "status": "READY",
   "createdAt": "2026-11-06T08:30:00Z",
   "items": [
     {
       "productId": 1,
-      "quantity": 2,
-      "price": 45000,
-      "sizeId": 1
+      "qty": 2,
+      "lineTotal": 100000,
+      "size": "M",
+      "toppings": ["Kem"],
+      "product": { "id": 1, "name": "Cà phê sữa", "price": 40000 }
     }
-  ]
+  ],
+  "loyaltyTransaction": null
 }
 ```
 
@@ -668,6 +688,8 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 - Trạng thái gồm: `PENDING`, `PAID`, `PAYMENT_FAILED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`.
 - Frontend tự gọi lại API sau mỗi 5 đến 10 giây để cập nhật trạng thái.
 - API chỉ lấy dữ liệu, không thay đổi trạng thái đơn hàng.
+- `loyaltyTransaction` là null khi chưa được cộng điểm; sau COMPLETED có `{ "points": 9, "createdAt": "..." }`. Tổng dưới 10.000đ không tạo ledger 0 điểm.
+- STAFF xem hàng đợi xử lý qua `GET /orders/staff`, không được dùng endpoint chi tiết để đọc đơn của khách khác.
 
 **Lỗi:**
 
@@ -706,9 +728,9 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
   - `PREPARING` → `READY`
   - `READY` → `COMPLETED`
 - Không được bỏ qua bước hoặc cập nhật đơn đã hoàn thành/hủy.
-- Thanh toán và hủy đơn được xử lý bởi nghiệp vụ tương ứng, không thông qua endpoint này.
+- STAFF có thể gửi `CANCELLED` từ `PENDING` hoặc `PREPARING`; cùng nghiệp vụ với `DELETE /orders/staff/:id`. Hoàn nguyên liệu đúng một lần trong transaction. Không hoàn tiền hoặc sửa Payment. Thanh toán vẫn do Payment service quản lý.
 - Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống ghi nhận `LoyaltyTransaction`.
-- Điểm thưởng dự kiến: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả.
+- Điểm thưởng: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả sau giảm giá; nếu bằng 0 thì không tạo giao dịch điểm.
 - Mỗi đơn hàng chỉ được cộng điểm một lần.
 - Việc cập nhật trạng thái và ghi nhận điểm thưởng thực hiện trong cùng database transaction.
 
@@ -728,9 +750,9 @@ Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc 
 ```json
 {
   "statusCode": 409,
-  "error": "Conflict",
-  "message": "Invalid order status transition: PAID -> COMPLETED",
-  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+  "message": "Cannot transition order from PAID to COMPLETED",
+  "path": "/orders/105/status",
+  "timestamp": "2026-11-14T08:30:00.000Z"
 }
 ```
 

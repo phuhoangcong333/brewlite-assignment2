@@ -9,8 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type AuthenticatedRequest = Request & {
   user?: {
-    sub?: number;
     id?: number;
+    sub?: number;
     userId?: number;
   };
 };
@@ -21,7 +21,8 @@ export class StaffGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
- const userId = request.user?.sub ?? request.user?.id ?? request.user?.userId;
+    const userId =
+      request.user?.id ?? request.user?.sub ?? request.user?.userId;
     if (!userId) {
       throw new ForbiddenException('Chỉ nhân viên mới được phép truy cập');
     }

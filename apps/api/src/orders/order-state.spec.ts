@@ -2,6 +2,8 @@ import { InvalidTransitionException } from '../common/errors';
 import {
   assertTransition,
   canTransition,
+  canCancelOrder,
+  assertCanCancelOrder,
   OrderStatus,
 } from './order-state';
 
@@ -48,5 +50,26 @@ describe('assertTransition', () => {
         new InvalidTransitionException(from, to),
       );
     }
+  });
+});
+
+describe('cancellation by actor', () => {
+  it.each(
+    statuses.flatMap((status) =>
+      (['CUSTOMER', 'STAFF'] as const).map((actor) => [status, actor] as const),
+    ),
+  )('%s cancellation by %s', (status, actor) => {
+    const allowed = (
+      actor === 'STAFF'
+        ? ['PENDING', 'PREPARING']
+        : ['PENDING', 'PAYMENT_FAILED']
+    ).includes(status);
+    expect(canCancelOrder(status, actor)).toBe(allowed);
+    if (allowed)
+      expect(() => assertCanCancelOrder(status, actor)).not.toThrow();
+    else
+      expect(() => assertCanCancelOrder(status, actor)).toThrow(
+        InvalidTransitionException,
+      );
   });
 });

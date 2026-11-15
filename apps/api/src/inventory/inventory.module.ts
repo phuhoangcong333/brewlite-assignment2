@@ -5,6 +5,7 @@ import { InventoryRepository } from './inventory.repository';
 import { InventoryService } from './inventory.service';
 import { PrismaInventoryRepository } from './prisma-inventory.repository';
 import { IngredientsController } from './ingredients.controller';
+import { RecipesService } from './recipes.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
@@ -16,7 +17,8 @@ import { IngredientsController } from './ingredients.controller';
       useExisting: PrismaInventoryRepository,
     },
     InventoryService,
+    RecipesService,
   ],
-  exports: [InventoryService, PrismaInventoryRepository],
+  exports: [InventoryService, PrismaInventoryRepository, RecipesService],
 })
 export class InventoryModule {}
