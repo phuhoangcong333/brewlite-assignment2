@@ -223,6 +223,21 @@ export default function CheckoutPage() {
             {orderTotal !== null || quote ? formatVND(payableTotal) : "—"}
           </span>
         </div>
+        {quoteLoading && (
+          <p role="status" style={{ color: "#6b7280", fontSize: "13px" }}>
+            Đang kiểm tra giá và tồn kho...
+          </p>
+        )}
+        {quoteError && (
+          <p role="alert" style={{ color: "#b91c1c", fontSize: "13px" }}>
+            Không thể kiểm tra giá và tồn kho: {quoteError}
+          </p>
+        )}
+        {!quoteLoading && !quoteError && quoteUnavailable && (
+          <p role="alert" style={{ color: "#b91c1c", fontSize: "13px" }}>
+            Một hoặc nhiều món trong giỏ hàng hiện không đủ tồn kho.
+          </p>
+        )}
 
         {/* Mã khuyến mãi */}
         <div style={{ marginBottom: "24px" }}>
@@ -318,9 +333,9 @@ export default function CheckoutPage() {
               )}
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || !canCreateOrder}
                 onClick={handleCreateQr}
-                style={{ padding: "10px 14px", border: 0, borderRadius: "8px", background: "#f3f4f6", color: "#111827", fontWeight: 600, cursor: "pointer" }}
+                style={{ padding: "10px 14px", border: 0, borderRadius: "8px", background: busy || !canCreateOrder ? "#e5e7eb" : "#f3f4f6", color: "#111827", fontWeight: 600, cursor: busy || !canCreateOrder ? "not-allowed" : "pointer" }}
               >
                 {qrPayload ? "Tạo lại mã QR" : "Tạo mã QR"}
               </button>
