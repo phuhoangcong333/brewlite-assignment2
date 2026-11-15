@@ -1,4 +1,5 @@
 import { SIZE_IDS, TOPPING_IDS } from "./catalog-ids";
+import { getApiBase } from "./api-client";
 import { unitPriceOf, type CartItem } from "./cart";
 import type { Quote } from "./quote-types";
 
@@ -44,7 +45,7 @@ export function buildQuoteRequest(
 export async function fetchQuote(
   request: QuoteRequest,
   signal?: AbortSignal,
-  baseUrl: string = getApiBase()
+  baseUrl: string = getApiBase(),
 ): Promise<Quote> {
   let res: Response;
   try {
