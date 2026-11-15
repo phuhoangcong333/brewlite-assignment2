@@ -1,0 +1,141 @@
+name: CD - Build, Push & Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE_NAME: ${{ github.repository }}/api
+  WEB_IMAGE_NAME: ${{ github.repository }}/web
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image (tagged with commit SHA)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/api
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Web image (tagged with commit SHA)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}:3001
+            NEXT_PUBLIC_USE_MOCK=false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.WEB_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-and-verify:
+    name: Deploy to EC2, Smoke Test & Auto-Rollback
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "~/brewlite-assignment2"
+
+      - name: Deploy, Smoke Test & Rollback on Failure
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: false
+          script: |
+            set -e
+            cd ~/brewlite-assignment2
+
+            NEW_API_IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }}" | tr '[:upper:]' '[:lower:]')
+            NEW_WEB_IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }}" | tr '[:upper:]' '[:lower:]')
+
+            # 1. Lưu lại trạng thái image hiện tại để phục vụ Rollback nếu bản mới lỗi
+            if [ -f .deploy.env ]; then
+              cp .deploy.env .deploy.env.bak
+            fi
+
+            # 2. Đăng nhập GHCR trên EC2 và pull image mới theo commit SHA
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker pull "$NEW_API_IMAGE"
+            docker pull "$NEW_WEB_IMAGE"
+
+            # 3. Ghi nhận tag mới và khởi chạy container (kèm prisma migrate deploy)
+            cat <<EOF > .deploy.env
+            API_IMAGE=$NEW_API_IMAGE
+            WEB_IMAGE=$NEW_WEB_IMAGE
+            EOF
+
+            set +e
+            docker compose --env-file .env --env-file .deploy.env -f docker-compose.prod.yml up -d --remove-orphans
+
+            # 4. Chờ API khởi động & chạy Smoke Test qua GET /health (tối đa 60s)
+            HEALTH_OK=0
+            for i in $(seq 1 12); do
+              STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" http://localhost:3001/health || echo "000")
+              echo "Attempt $i - HTTP $STATUS: $(cat /tmp/health.json 2>/dev/null)"
+              if [ "$STATUS" = "200" ] && grep -q '"status":"ok"' /tmp/health.json; then
+                HEALTH_OK=1
+                break
+              fi
+              sleep 5
+            done
+
+            # 5. Nếu Smoke Test thất bại -> Tự động Rollback về phiên bản trước
+            if [ "$HEALTH_OK" -ne 1 ]; then
+              echo "SMOKE TEST FAILED! Initiating automatic rollback..."
+              if [ -f .deploy.env.bak ]; then
+                cp .deploy.env.bak .deploy.env
+                docker compose --env-file .env --env-file .deploy.env -f docker-compose.prod.yml up -d --remove-orphans
+                echo "Rollback completed to previous working release."
+              else
+                echo "No previous .deploy.env.bak found for rollback."
+              fi
+              exit 1
+            fi
+
+            echo "SMOKE TEST PASSED! Production deployment succeeded."
+            docker image prune -f
