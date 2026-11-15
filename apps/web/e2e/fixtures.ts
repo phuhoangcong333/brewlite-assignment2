@@ -123,4 +123,26 @@ export async function loginOnPage(page: Page, account: Account) {
   await page.goto("/login");
   await page.getByPlaceholder("Nhập email của bạn").fill(account.email);
   await page.getByPlaceholder("Nhập mật khẩu").fill(account.password);
-  await page.getByRole("button", { name: /^đăng
+  await page.getByRole("button", { name: /đăng nhập/i }).click();
+}
+
+export async function checkoutFromMenu(page: Page, data: TestData) {
+  await loginOnPage(page, data.customer);
+
+  await page.goto(`/products/${data.productId}`);
+
+  await page
+    .getByRole("button", { name: /Thêm vào giỏ/i })
+    .click();
+
+  await page.goto("/cart");
+
+  await page
+    .getByRole("link", {
+      name: "Tiến hành thanh toán",
+      exact: true,
+    })
+    .click();
+
+  await expect(page).toHaveURL(/\/checkout$/);
+}
