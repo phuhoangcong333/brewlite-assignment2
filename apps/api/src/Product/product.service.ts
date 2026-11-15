@@ -150,7 +150,9 @@ export class ProductService {
       description: product.description,
       price: product.price,
       imageUrl: product.imageUrl,
+      availableQuantity,
       availableQuantityBySize,
+      stock: availableQuantity,
       sizes: PRODUCT_SIZE_OPTIONS,
       toppings: toppings.map((topping) => ({
         id: topping.id,
