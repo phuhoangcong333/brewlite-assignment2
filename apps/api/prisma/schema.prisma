@@ -46,6 +46,7 @@ model Product {
   imageUrl    String?
   stock       Int          @default(0)
   version     Int          @default(0)
+  description String?
   orderItems  OrderItem[]
   recipeItems RecipeItem[]
 }
@@ -136,6 +137,7 @@ model Ingredient {
   stockQuantity Int               @default(0)
   version       Int               @default(0)
   recipeItems   RecipeItem[]
+  toppings      Topping[]
   reservations  OrderIngredient[]
 }
 
@@ -161,4 +163,14 @@ model RecipeItem {
   ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 
   @@unique([productId, ingredientId, size])
+}
+
+model Topping {
+  id             Int        @id @default(autoincrement())
+  code           String     @unique
+  name           String
+  price          Int
+  ingredientId   Int
+  amountRequired Int
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 }

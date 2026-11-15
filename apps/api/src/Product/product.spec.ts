@@ -13,6 +13,7 @@ type MockProductRow = {
   imageUrl: string | null;
   stock: number;
   version: number;
+  description?: string | null;
   recipeItems: {
     size: Size;
     amountRequired: number;
@@ -30,6 +31,7 @@ function setup() {
       imageUrl: '/image/Picture1.png',
       stock: 10,
       version: 0,
+      description: null,
       recipeItems: Object.values(Size).map((size) => ({
         size,
         amountRequired: 25,
@@ -44,6 +46,7 @@ function setup() {
       imageUrl: '/image/Picture4.png',
       stock: 10,
       version: 0,
+      description: null,
       recipeItems: Object.values(Size).map((size) => ({
         size,
         amountRequired: 30,
@@ -58,6 +61,7 @@ function setup() {
       imageUrl: '/image/Picture7.png',
       stock: 0,
       version: 0,
+      description: null,
       recipeItems: [],
     },
   ];
@@ -75,6 +79,9 @@ function setup() {
         async ({ where }: { where: { id: number } }) =>
           rows.find((p) => p.id === where.id) ?? null,
       ),
+    },
+    topping: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 
@@ -123,7 +130,7 @@ describe('Task 4.3 - GET /products & lọc danh mục', () => {
     const { controller } = setup();
     const detail = await controller.getProductDetail(2);
     expect(detail.name).toBe('Trà đào');
-    expect(detail.availableQuantity).toBe(5);
+    expect(detail.availableQuantityBySize).toEqual({ S: 5, M: 5, L: 5 });
 
     await expect(controller.getProductDetail(999)).rejects.toBeInstanceOf(
       NotFoundException,

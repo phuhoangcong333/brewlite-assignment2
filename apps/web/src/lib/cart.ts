@@ -18,16 +18,26 @@ export type CartItem = {
   imageUrl: string | null;
   basePrice: number;
   size: Size;
+  sizeId?: number;
   toppings: string[];
   qty: number;
+  toppingIds?: number[];
+  clientUnitPrice?: number;
+  note?: string;
 };
 
 export type NewCartItem = Omit<CartItem, "key">;
 
 export type CartResult = { ok: true } | { ok: false; error: string };
 
-const makeKey = (i: NewCartItem) =>
-  `${i.productId}|${i.size}|${[...i.toppings].sort().join(",")}`;
+const makeKey = (i: NewCartItem) => {
+  const toppingKey =
+    i.toppingIds && i.toppingIds.length > 0
+      ? [...i.toppingIds].sort((a, b) => a - b).join(",")
+      : [...i.toppings].sort().join(",");
+
+  return `${i.productId}|${i.sizeId ?? i.size}|${toppingKey}|${i.note?.trim() ?? ""}`;
+};
 
 /* ---------- Hàm thuần (dễ test, không phụ thuộc store) ---------- */
 
@@ -107,7 +117,17 @@ export function sanitizeItems(raw: unknown): CartItem[] {
       imageUrl: r.imageUrl,
       basePrice: r.basePrice,
       size: r.size,
+      sizeId: Number.isInteger(r.sizeId) ? r.sizeId : undefined,
       toppings: [...r.toppings],
+      toppingIds: Array.isArray(r.toppingIds)
+        ? r.toppingIds.filter((id): id is number => Number.isInteger(id))
+        : undefined,
+      clientUnitPrice:
+        typeof r.clientUnitPrice === "number" &&
+        Number.isFinite(r.clientUnitPrice)
+          ? r.clientUnitPrice
+          : undefined,
+      note: typeof r.note === "string" ? r.note : undefined,
       qty: Math.min(r.qty, MAX_QTY_PER_LINE),
     });
   }
@@ -157,7 +177,7 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "brewlite-cart",
-      version: 1,
+      version: 3,
       partialize: (s) => ({ items: s.items, promotionCode: s.promotionCode }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as { items?: unknown; promotionCode?: unknown };
@@ -173,6 +193,7 @@ export const useCart = create<CartState>()(
 
 /* Giá ước tính phía client, chỉ để gửi `clientUnitPrice`. Giá hiển thị lấy từ server. */
 export const unitPriceOf = (i: CartItem) =>
+  i.clientUnitPrice ??
   calcUnitPrice(i.basePrice, i.size, i.toppings);
 export const lineTotalOf = (i: CartItem) => unitPriceOf(i) * i.qty;
 export const cartSubtotal = (items: CartItem[]) =>

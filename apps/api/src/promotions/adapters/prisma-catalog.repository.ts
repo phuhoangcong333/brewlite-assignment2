@@ -1,19 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { CatalogRepository } from '../repositories';
-import { CatalogProduct, CatalogTopping } from '../promotion.types';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Size } from '@prisma/client';
-import { computeAvailableQuantities } from '../../Product/product.service';
-
-const SIZES: { id: number; size: Size; extraPrice: number }[] = [
-  { id: 1, size: Size.S, extraPrice: 0 },
-  { id: 2, size: Size.M, extraPrice: 5_000 },
-  { id: 3, size: Size.L, extraPrice: 10_000 },
-];
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { computeAvailableQuantities } from "../../Product/product.service";
+import { PRODUCT_SIZE_OPTIONS } from "../../common/catalog-options";
+import { CatalogProduct, CatalogTopping } from "../promotion.types";
+import { CatalogRepository } from "../repositories";
 
 const TOPPINGS: CatalogTopping[] = [
-  { id: 1, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
-  { id: 2, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
+  {
+    id: 1,
+    price: 5_000,
+    stock: Number.MAX_SAFE_INTEGER,
+  },
+  {
+    id: 2,
+    price: 5_000,
+    stock: Number.MAX_SAFE_INTEGER,
+  },
 ];
 
 @Injectable()
@@ -27,7 +29,9 @@ export class PrismaCatalogRepository extends CatalogRepository {
       where: { id: { in: ids } },
       include: {
         recipeItems: {
-          include: { ingredient: true },
+          include: {
+            ingredient: true,
+          },
         },
       },
     });
@@ -37,16 +41,19 @@ export class PrismaCatalogRepository extends CatalogRepository {
         product.recipeItems,
         product.stock,
       );
+
       return {
         id: product.id,
         name: product.name,
         imageUrl: product.imageUrl,
         basePrice: product.price,
-        sizes: SIZES.map(({ id, size, extraPrice }) => ({
-          id,
-          extraPrice,
-          stock: availableQuantityBySize[size],
-        })),
+        sizes: PRODUCT_SIZE_OPTIONS.map(
+          ({ id, code, additionalPrice }) => ({
+            id,
+            extraPrice: additionalPrice,
+            stock: availableQuantityBySize[code],
+          }),
+        ),
       };
     });
   }

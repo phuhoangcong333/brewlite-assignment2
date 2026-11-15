@@ -7,3 +7,23 @@ export type Product = {
   imageUrl: string | null;
   availableQuantityBySize: Record<Size, number>;
 };
+
+export type ProductSizeOption = {
+  id: number;
+  code: Size;
+  additionalPrice: number;
+};
+
+export type ProductToppingOption = {
+  id: number;
+  code: string;
+  name: string;
+  additionalPrice: number;
+  isAvailable: boolean;
+};
+
+export type ProductDetail = Product & {
+  description: string | null;
+  sizes: ProductSizeOption[];
+  toppings: ProductToppingOption[];
+};
