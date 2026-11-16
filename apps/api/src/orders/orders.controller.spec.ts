@@ -60,4 +60,33 @@ describe('OrdersController', () => {
 
     expect(orderService.createOrder).not.toHaveBeenCalled();
   });
+
+  it('rejects quantities above the quote limit', async () => {
+    const dto = plainToInstance(CreateOrderDto, {
+      items: [{ productId: 3, qty: 11, size: 'S' }],
+    });
+
+    const errors = await validate(dto);
+    const itemError = errors[0]?.children?.[0];
+    const quantityError = itemError?.children?.find(
+      (error) => error.property === 'qty',
+    );
+
+    expect(quantityError?.constraints).toHaveProperty('max');
+  });
+
+  it('rejects more order items than the quote limit', async () => {
+    const dto = plainToInstance(CreateOrderDto, {
+      items: Array.from({ length: 21 }, () => ({
+        productId: 3,
+        qty: 1,
+        size: 'S',
+      })),
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.find((error) => error.property === 'items')?.constraints)
+      .toHaveProperty('arrayMaxSize');
+  });
 });

@@ -32,8 +32,25 @@ const ingredients = [
   { name: 'Đào ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Vải ngâm', unit: 'g', stockQuantity: 1_200 },
   { name: 'Bột Matcha', unit: 'g', stockQuantity: 800 },
-  { name: "Trân châu", unit: "g", stockQuantity: 1_000 },
-  { name: "Kem", unit: "g", stockQuantity: 0 },
+  { name: 'Trân châu', unit: 'g', stockQuantity: 1_500 },
+  { name: 'Kem / Kem cheese', unit: 'ml', stockQuantity: 1_000 },
+];
+
+const toppings = [
+  {
+    id: 'pearl',
+    name: 'Trân châu',
+    ingredientName: 'Trân châu',
+    price: 5_000,
+    amountPerPortion: 50,
+  },
+  {
+    id: 'cream',
+    name: 'Kem / Kem cheese',
+    ingredientName: 'Kem / Kem cheese',
+    price: 5_000,
+    amountPerPortion: 30,
+  },
 ];
 
 type RecipeIngredient = {
@@ -151,23 +168,6 @@ const user = [
 
 
 
-const toppingDefinitions = [
-  {
-    code: "TRAN_CHAU",
-    name: "Trân châu",
-    price: 5_000,
-    ingredientName: "Trân châu",
-    amountRequired: 50, 
-  },
-  {
-    code: "KEM",
-    name: "Kem",
-    price: 5_000,
-    ingredientName: "Kem",
-    amountRequired: 30, 
-  },
-];
-
 async function seed(): Promise<void> {
   const staffEmail = process.env.STAFF_EMAIL?.trim().toLowerCase();
   const staffPassword = process.env.STAFF_PASSWORD;
@@ -221,35 +221,28 @@ async function seed(): Promise<void> {
       ingredientMap.set(ing.name, savedIngredient.id);
     }
 
+    for (const topping of toppings) {
+      const ingredientId = ingredientMap.get(topping.ingredientName);
+      if (!ingredientId) {
+        throw new Error(`Missing ingredient for topping "${topping.name}"`);
+      }
 
-    for (const topping of toppingDefinitions) {
-    const ingredientId = ingredientMap.get(topping.ingredientName);
-
-    if (!ingredientId || topping.amountRequired <= 0) {
-      throw new Error(
-        `Chưa cấu hình hợp lệ cho topping ${topping.code}`,
-      );
+      await transaction.topping.upsert({
+        where: { id: topping.id },
+        create: {
+          id: topping.id,
+          name: topping.name,
+          price: topping.price,
+          amountPerPortion: topping.amountPerPortion,
+          ingredientId,
+        },
+        update: {
+          name: topping.name,
+          price: topping.price,
+          ingredientId,
+        },
+      });
     }
-
-    await transaction.topping.upsert({
-      where: { code: topping.code },
-      create: {
-        code: topping.code,
-        name: topping.name,
-        price: topping.price,
-        ingredientId,
-        amountRequired: topping.amountRequired,
-      },
-      update: {
-        name: topping.name,
-        price: topping.price,
-        ingredientId,
-        amountRequired: topping.amountRequired,
-      },
-    });
-  }
-
-
     // 2. Gán công thức định lượng (RecipeItem) cho 8 món trong bảng Product
     const allProducts = await transaction.product.findMany({
       where: { name: { in: products.map(({ name }) => name) } },

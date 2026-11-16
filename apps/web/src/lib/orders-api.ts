@@ -1,5 +1,7 @@
 import type { CartItem } from "./cart";
-import { unitPriceOf } from "./cart";
+import { calcUnitPrice } from "./pricing";
+import type { Topping } from "./toppings-api";
+import { getToppingIds } from "./cart";
 import type { Size } from "./types";
 import { API_BASE_URL, USE_MOCK_DATA } from "./api-client";
 import { setToken } from "./auth";
@@ -17,11 +19,6 @@ export function clearSession(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem("access_token");
 }
-
-export const TOPPING_NAME: Record<string, string> = {
-  pearl: "Trân châu",
-  cream: "Kem",
-};
 
 export type OrderStatus =
   | "PENDING"
@@ -154,11 +151,15 @@ export async function register(email: string, password: string) {
 export async function createOrder(
   cart: CartItem[],
   promoCode?: string,
+  toppingCatalog: readonly Topping[] = [],
 ): Promise<{ id: number; total: number; discount?: number }> {
   if (USE_MOCK) {
     await delay(500);
     const subtotal = cart.reduce(
-      (s, i) => s + unitPriceOf(i) * i.qty,
+      (s, i) =>
+        s +
+        calcUnitPrice(i.basePrice, i.size as Size, getToppingIds(i), toppingCatalog) *
+          i.qty,
       0
     );
     let discount = 0;
@@ -178,8 +179,12 @@ export async function createOrder(
         productId: i.productId,
         size: i.size as Size,
         qty: i.qty,
-        toppings: i.toppings.map((t) => TOPPING_NAME[t] ?? t),
-        lineTotal: unitPriceOf(i) * i.qty,
+        toppings: getToppingIds(i).map(
+          (id) => toppingCatalog.find((topping) => topping.id === id)?.name ?? id,
+        ),
+        lineTotal:
+          calcUnitPrice(i.basePrice, i.size as Size, getToppingIds(i), toppingCatalog) *
+          i.qty,
       })),
     };
     writeMock([order, ...readMock()]);
@@ -193,7 +198,7 @@ export async function createOrder(
         productId: i.productId,
         qty: i.qty,
         size: i.size,
-        toppings: i.toppings.map((t) => TOPPING_NAME[t] ?? t),
+        toppings: getToppingIds(i),
       })),
       ...(promoCode?.trim() ? { promoCode: promoCode.trim() } : {}),
     }),

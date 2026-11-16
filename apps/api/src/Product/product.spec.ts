@@ -1,9 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
 import { RecipesService } from '../inventory/recipes.service';
-import { Size } from '@prisma/client';
 
 type MockProductRow = {
   id: number;
@@ -106,6 +106,11 @@ describe('Task 4.3 - GET /products & lọc danh mục', () => {
       category: 'COFFEE',
       availableQuantity: 8,
       stock: 8,
+    });
+    expect(result[0].availableQuantityBySize).toEqual({
+      S: 8,
+      M: 8,
+      L: 8,
     });
     expect(result[2]).toMatchObject({
       id: 3,

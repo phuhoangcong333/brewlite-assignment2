@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/lib/auth-context";
 import {
   getIngredients,
   getInventoryProducts,
+  adjustIngredientStock,
   restockIngredient,
   updateProductRecipe,
   type InventoryIngredient,
@@ -16,6 +17,11 @@ import {
 } from "@/lib/inventory-api";
 import { ApiError as AuthApiError, getCurrentUser } from "@/lib/orders-api";
 import type { Size } from "@/lib/types";
+import {
+  getToppings,
+  updateToppingPortion,
+  type Topping,
+} from "@/lib/toppings-api";
 
 type RecipeDraftItem = {
   ingredientId: number | null;
@@ -24,6 +30,12 @@ type RecipeDraftItem = {
 
 type RecipeDrafts = Record<Size, RecipeDraftItem[]>;
 const RECIPE_SIZES: Size[] = ["S", "M", "L"];
+
+function stockBadgeClass(stockQuantity: number): string {
+  if (stockQuantity <= 50) return "bg-red-100 text-red-800";
+  if (stockQuantity <= 100) return "bg-yellow-100 text-yellow-800";
+  return "bg-green-100 text-green-800";
+}
 
 function getApiStatus(error: unknown): number | undefined {
   if (
@@ -52,16 +64,25 @@ export default function StaffInventoryPage() {
   const router = useRouter();
   const [ingredients, setIngredients] = useState<InventoryIngredient[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
+  const [toppings, setToppings] = useState<Topping[]>([]);
   const [recipeDrafts, setRecipeDrafts] = useState<
     Record<number, RecipeDrafts>
   >({});
   const [restockAmounts, setRestockAmounts] = useState<Record<number, string>>(
     {},
   );
+  const [adjustmentAmounts, setAdjustmentAmounts] = useState<
+    Record<number, string>
+  >({});
+  const [portionDrafts, setPortionDrafts] = useState<Record<string, string>>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [restockingId, setRestockingId] = useState<number | null>(null);
+  const [adjustingId, setAdjustingId] = useState<number | null>(null);
   const [savingProductId, setSavingProductId] = useState<number | null>(null);
+  const [savingToppingId, setSavingToppingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -91,12 +112,21 @@ export default function StaffInventoryPage() {
       }
 
       try {
-        const [nextIngredients, nextProducts] = await Promise.all([
+        const [nextIngredients, nextProducts, nextToppings] = await Promise.all([
           getIngredients(),
           getInventoryProducts(),
+          getToppings(),
         ]);
         setIngredients(nextIngredients);
         setProducts(nextProducts);
+        setToppings(nextToppings);
+        setPortionDrafts((current) => {
+          const next = { ...current };
+          for (const topping of nextToppings) {
+            next[topping.id] ??= String(topping.amountPerPortion);
+          }
+          return next;
+        });
         setRecipeDrafts((current) => {
           const next = { ...current };
           for (const product of nextProducts) {
@@ -197,7 +227,12 @@ export default function StaffInventoryPage() {
     }
 
     try {
-      setProducts(await getInventoryProducts());
+      const [nextProducts, nextToppings] = await Promise.all([
+        getInventoryProducts(),
+        getToppings(),
+      ]);
+      setProducts(nextProducts);
+      setToppings(nextToppings);
       setNotice(
         `Đã nhập thêm ${amount} ${ingredient.unit} ${ingredient.name}.`,
       );
@@ -218,8 +253,106 @@ export default function StaffInventoryPage() {
           `Đã nhập kho thành công nhưng không thể làm mới số lượng món: ${message}`,
         );
       }
+
     } finally {
       setRestockingId(null);
+    }
+  }
+
+  async function handleAdjustStock(
+    event: React.FormEvent<HTMLFormElement>,
+    ingredient: InventoryIngredient,
+  ) {
+    event.preventDefault();
+    const amount = Number(adjustmentAmounts[ingredient.id]);
+    if (!Number.isSafeInteger(amount) || amount === 0) {
+      setError("Số lượng điều chỉnh phải là số nguyên khác 0.");
+      return;
+    }
+
+    setAdjustingId(ingredient.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const updatedIngredient = await adjustIngredientStock(
+        ingredient.id,
+        amount,
+      );
+      setIngredients((current) =>
+        current.map((item) =>
+          item.id === updatedIngredient.id ? updatedIngredient : item,
+        ),
+      );
+      setAdjustmentAmounts((current) => ({
+        ...current,
+        [ingredient.id]: "",
+      }));
+
+      try {
+        const [nextProducts, nextToppings] = await Promise.all([
+          getInventoryProducts(),
+          getToppings(),
+        ]);
+        setProducts(nextProducts);
+        setToppings(nextToppings);
+        setNotice(
+          `Đã điều chỉnh tồn kho ${ingredient.name} ${
+            amount > 0 ? `+${amount}` : amount
+          } ${ingredient.unit}.`,
+        );
+      } catch (refreshError) {
+        const message =
+          refreshError instanceof Error
+            ? refreshError.message
+            : "Không thể làm mới số lượng món có thể pha.";
+        handleRequestError(
+          refreshError,
+          `Đã cập nhật tồn kho nhưng không thể làm mới dữ liệu: ${message}`,
+        );
+        if (
+          getApiStatus(refreshError) !== 401 &&
+          getApiStatus(refreshError) !== 403
+        ) {
+          setError(
+            `Đã cập nhật tồn kho nhưng không thể làm mới dữ liệu: ${message}`,
+          );
+        }
+      }
+    } catch (requestError) {
+      handleRequestError(requestError, "Không thể điều chỉnh tồn kho.");
+    } finally {
+      setAdjustingId(null);
+    }
+  }
+
+  async function handleSaveToppingPortion(
+    event: React.FormEvent<HTMLFormElement>,
+    topping: Topping,
+  ) {
+    event.preventDefault();
+    const amountPerPortion = Number(portionDrafts[topping.id]);
+    if (!Number.isSafeInteger(amountPerPortion) || amountPerPortion <= 0) {
+      setError("Định lượng topping phải là số nguyên dương.");
+      return;
+    }
+
+    setSavingToppingId(topping.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const updated = await updateToppingPortion(topping.id, amountPerPortion);
+      setToppings((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setPortionDrafts((current) => ({
+        ...current,
+        [topping.id]: String(updated.amountPerPortion),
+      }));
+      setNotice(`Đã cập nhật định lượng ${topping.name}.`);
+    } catch (requestError) {
+      handleRequestError(requestError, "Không thể cập nhật định lượng topping.");
+    } finally {
+      setSavingToppingId(null);
     }
   }
 
@@ -385,7 +518,11 @@ export default function StaffInventoryPage() {
     );
   }
 
-  const busy = restockingId !== null || savingProductId !== null;
+  const busy =
+    restockingId !== null ||
+    adjustingId !== null ||
+    savingProductId !== null ||
+    savingToppingId !== null;
 
   return (
     <ProtectedRoute role="STAFF">
@@ -451,32 +588,140 @@ export default function StaffInventoryPage() {
                         <p className="mt-1 text-sm text-gray-600">
                           Hiện có:{" "}
                           <strong>
-                            {ingredient.stockQuantity} {ingredient.unit}
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 ${stockBadgeClass(
+                                ingredient.stockQuantity,
+                              )}`}
+                            >
+                              {ingredient.stockQuantity} {ingredient.unit}
+                            </span>
                           </strong>
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-4">
+                        <form
+                          className="flex flex-wrap items-end gap-2"
+                          onSubmit={(event) =>
+                            void handleRestock(event, ingredient)
+                          }
+                        >
+                          <label className="text-sm text-gray-700">
+                            Nhập thêm ({ingredient.unit})
+                            <input
+                              aria-label={`Số lượng nhập thêm ${ingredient.name}`}
+                              type="number"
+                              min="1"
+                              step="1"
+                              required
+                              value={restockAmounts[ingredient.id] ?? ""}
+                              onChange={(event) =>
+                                setRestockAmounts((current) => ({
+                                  ...current,
+                                  [ingredient.id]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 block w-36 rounded-lg border border-gray-300 px-3 py-2"
+                            />
+                          </label>
+                          <button
+                            type="submit"
+                            disabled={busy || loading}
+                            className="rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {restockingId === ingredient.id
+                              ? "Đang nhập..."
+                              : "Nhập kho"}
+                          </button>
+                        </form>
+                        <form
+                          className="flex flex-wrap items-end gap-2"
+                          onSubmit={(event) =>
+                            void handleAdjustStock(event, ingredient)
+                          }
+                        >
+                          <label className="text-sm text-gray-700">
+                            Điều chỉnh thực tế (+/- {ingredient.unit}; số âm để giảm)
+                            <input
+                              aria-label={`Điều chỉnh tồn kho ${ingredient.name}`}
+                              type="number"
+                              step="1"
+                              required
+                              value={adjustmentAmounts[ingredient.id] ?? ""}
+                              onChange={(event) =>
+                                setAdjustmentAmounts((current) => ({
+                                  ...current,
+                                  [ingredient.id]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 block w-40 rounded-lg border border-gray-300 px-3 py-2"
+                            />
+                          </label>
+                          <button
+                            type="submit"
+                            disabled={busy || loading}
+                            className="rounded-lg border border-amber-600 px-4 py-2 font-semibold text-amber-800 disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {adjustingId === ingredient.id
+                              ? "Đang cập nhật..."
+                              : "Cập nhật thực tế"}
+                          </button>
+                        </form>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="mb-10">
+              <h2 className="mb-4 text-xl font-bold">Định lượng topping</h2>
+              {toppings.length === 0 ? (
+                <p className="rounded-xl border bg-white p-5 text-gray-600">
+                  Chưa có topping trong hệ thống.
+                </p>
+              ) : (
+                <div className="grid gap-4">
+                  {toppings.map((topping) => (
+                    <article
+                      key={topping.id}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-white p-4 shadow-sm"
+                    >
+                      <div>
+                        <h3 className="font-semibold">{topping.name}</h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                          Tồn:{" "}
+                          <strong
+                            className={`inline-flex rounded-full px-2 py-0.5 ${stockBadgeClass(
+                              topping.stockQuantity,
+                            )}`}
+                          >
+                            {topping.stockQuantity} {topping.unit}
+                          </strong>{" "}
+                          · Có thể bán: {topping.availableQuantity} phần
                         </p>
                       </div>
                       <form
                         className="flex flex-wrap items-end gap-2"
                         onSubmit={(event) =>
-                          void handleRestock(event, ingredient)
+                          void handleSaveToppingPortion(event, topping)
                         }
                       >
                         <label className="text-sm text-gray-700">
-                          Nhập thêm ({ingredient.unit})
+                          Định lượng mỗi phần ({topping.unit})
                           <input
-                            aria-label={`Số lượng nhập thêm ${ingredient.name}`}
+                            aria-label={`Định lượng mỗi phần ${topping.name}`}
                             type="number"
                             min="1"
                             step="1"
                             required
-                            value={restockAmounts[ingredient.id] ?? ""}
+                            value={portionDrafts[topping.id] ?? ""}
                             onChange={(event) =>
-                              setRestockAmounts((current) => ({
+                              setPortionDrafts((current) => ({
                                 ...current,
-                                [ingredient.id]: event.target.value,
+                                [topping.id]: event.target.value,
                               }))
                             }
-                            className="mt-1 block w-36 rounded-lg border border-gray-300 px-3 py-2"
+                            className="mt-1 block w-40 rounded-lg border border-gray-300 px-3 py-2"
                           />
                         </label>
                         <button
@@ -484,9 +729,9 @@ export default function StaffInventoryPage() {
                           disabled={busy || loading}
                           className="rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white disabled:cursor-wait disabled:opacity-60"
                         >
-                          {restockingId === ingredient.id
-                            ? "Đang nhập..."
-                            : "Nhập kho"}
+                          {savingToppingId === topping.id
+                            ? "Đang lưu..."
+                            : "Lưu định lượng"}
                         </button>
                       </form>
                     </article>

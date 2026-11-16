@@ -156,12 +156,11 @@ export class ProductService {
       sizes: PRODUCT_SIZE_OPTIONS,
       toppings: toppings.map((topping) => ({
         id: topping.id,
-        code: topping.code,
         name: topping.name,
         additionalPrice: topping.price,
         isAvailable:
-          topping.amountRequired > 0 &&
-          topping.ingredient.stockQuantity >= topping.amountRequired,
+          topping.amountPerPortion > 0 &&
+          topping.ingredient.stockQuantity >= topping.amountPerPortion,
       })),
     };
   }

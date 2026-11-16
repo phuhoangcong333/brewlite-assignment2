@@ -1,13 +1,13 @@
-import { SIZE_IDS, TOPPING_IDS } from "./catalog-ids";
+import { SIZE_IDS } from "./catalog-ids";
 import { API_BASE_URL } from "./api-client";
-import { unitPriceOf, type CartItem } from "./cart";
+import { getToppingIds, unitPriceOf, type CartItem } from "./cart";
 import type { Quote } from "./quote-types";
 
 export type QuoteRequest = {
   items: {
     productId: number;
     sizeId: number;
-    toppingIds: number[];
+    toppingIds: string[];
     quantity: number;
     clientUnitPrice?: number;
     note?: string;
@@ -22,18 +22,16 @@ export function buildQuoteRequest(
   const request: QuoteRequest = {
     items: items.map((i) => {
       const note = i.note?.trim();
-      const toppingIds =
-        i.toppingIds ??
-        i.toppings
-          .map((t) => TOPPING_IDS[t])
-          .filter((id): id is number => Number.isInteger(id));
-
+      const toppingIds = getToppingIds(i);
+      const clientUnitPrice =
+        i.clientUnitPrice ??
+        (toppingIds.length === 0 ? unitPriceOf(i) : undefined);
       return {
         productId: i.productId,
         sizeId: i.sizeId ?? SIZE_IDS[i.size],
         toppingIds,
         quantity: i.qty,
-        clientUnitPrice: i.clientUnitPrice ?? unitPriceOf(i),
+        ...(clientUnitPrice === undefined ? {} : { clientUnitPrice }),
         ...(note ? { note } : {}),
       };
     }),

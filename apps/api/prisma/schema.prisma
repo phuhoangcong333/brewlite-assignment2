@@ -100,7 +100,9 @@ model OrderItem {
   productId Int
   size      Size
   qty       Int
-  toppings  String[] @default([])
+  toppings       String[] @default([])
+  toppingIds     String[] @default([])
+  toppingAmounts Int[] @default([])
   lineTotal Int
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -137,11 +139,10 @@ model Ingredient {
   stockQuantity Int               @default(0)
   version       Int               @default(0)
   recipeItems   RecipeItem[]
-  toppings      Topping[]
+  topping       Topping?
   reservations  OrderIngredient[]
 }
 
-// Exact consumption at order creation; recipe edits cannot change refunds.
 model OrderIngredient {
   orderId      Int
   ingredientId Int
@@ -166,11 +167,10 @@ model RecipeItem {
 }
 
 model Topping {
-  id             Int        @id @default(autoincrement())
-  code           String     @unique
-  name           String
-  price          Int
-  ingredientId   Int
-  amountRequired Int
-  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  id               String     @id
+  name             String     @unique
+  price            Int
+  amountPerPortion Int
+  ingredientId     Int        @unique
+  ingredient       Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 }

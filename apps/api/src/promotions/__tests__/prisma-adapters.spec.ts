@@ -77,14 +77,34 @@ describe('PrismaCatalogRepository', () => {
     ]);
   });
 
-  it('returns the supported toppings without querying a nonexistent table', async () => {
-    const prisma = {} as unknown as PrismaService;
+  it('loads topping prices and available portions from ingredient stock', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'pearl',
+        price: 5_000,
+        amountPerPortion: 50,
+        ingredient: { stockQuantity: 125 },
+      },
+      {
+        id: 'cream',
+        price: 5_000,
+        amountPerPortion: 30,
+        ingredient: { stockQuantity: 20 },
+      },
+    ]);
+    const prisma = {
+      topping: { findMany },
+    } as unknown as PrismaService;
     const repository = new PrismaCatalogRepository(prisma);
 
-    await expect(repository.findToppings([1, 2, 99])).resolves.toEqual([
-      { id: 1, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
-      { id: 2, price: 5_000, stock: Number.MAX_SAFE_INTEGER },
+    await expect(repository.findToppings(['pearl', 'cream', 'unknown'])).resolves.toEqual([
+      { id: 'pearl', price: 5_000, stock: 2 },
+      { id: 'cream', price: 5_000, stock: 0 },
     ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['pearl', 'cream', 'unknown'] } },
+      include: { ingredient: { select: { stockQuantity: true } } },
+    });
   });
 });
 

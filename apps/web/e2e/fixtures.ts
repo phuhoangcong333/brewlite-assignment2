@@ -62,19 +62,19 @@ export const test = base.extend<{ db: PrismaClient; data: TestData }>({
         create: { name: "Trân châu", unit: "g", stockQuantity: 1000 },
       });
       await db.topping.upsert({
-        where: { code: "TRAN_CHAU" },
+        where: { id: "pearl" },
         update: {
           name: "Trân châu",
           price: 5000,
           ingredientId: pearlIngredient.id,
-          amountRequired: 50,
+          amountPerPortion: 50,
         },
         create: {
-          code: "TRAN_CHAU",
+          id: "pearl",
           name: "Trân châu",
           price: 5000,
           ingredientId: pearlIngredient.id,
-          amountRequired: 50,
+          amountPerPortion: 50,
         },
       });
       ingredientId = (

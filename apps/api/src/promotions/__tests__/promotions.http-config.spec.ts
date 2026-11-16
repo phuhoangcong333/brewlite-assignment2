@@ -47,7 +47,7 @@ describe('POST /promotions/validate – cấu hình giống main.ts', () => {
   const item = (over: Record<string, unknown> = {}) => ({
     productId: 1,
     sizeId: 1,
-    toppingIds: [1],
+    toppingIds: ['pearl'],
     quantity: 2,
     ...over,
   });

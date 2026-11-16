@@ -6,10 +6,7 @@ export const SIZE_EXTRA: Record<Size, number> = {
   L: 10000,
 };
 
-export const TOPPINGS = [
-  { id: "pearl", name: "Trân châu", price: 5000 },
-  { id: "cream", name: "Kem", price: 5000 },
-];
+type ToppingPrice = { id: string; price: number };
 
 export function calculateUnitPrice(
   basePrice: number,
@@ -31,29 +28,15 @@ export function calcUnitPrice(
   basePrice: number,
   size: Size,
   toppingIds: string[],
+  toppings: readonly ToppingPrice[] = [],
 ) {
-  const selectedToppings = TOPPINGS.filter((topping) => {
-    if (topping.id === "pearl") {
-      return toppingIds.some((id) =>
-        ["pearl", "TRAN_CHAU", "Trân châu"].includes(id),
-      );
-    }
-
-    if (topping.id === "cream") {
-      return toppingIds.some((id) =>
-        ["cream", "KEM", "Kem"].includes(id),
-      );
-    }
-
-    return false;
-  }).map((topping) => ({
-    additionalPrice: topping.price,
-  }));
-
+  const toppingPriceById = new Map(toppings.map((topping) => [topping.id, topping.price]));
   return calculateUnitPrice(
     basePrice,
     SIZE_EXTRA[size],
-    selectedToppings,
+    toppingIds.map((id) => ({
+      additionalPrice: toppingPriceById.get(id) ?? 0,
+    })),
   );
 }
 

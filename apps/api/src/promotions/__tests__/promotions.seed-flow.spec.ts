@@ -10,7 +10,7 @@ import { PromotionsService } from '../promotions.service';
  * Kiểm tra luồng báo giá với PrismaCatalogRepository + PrismaPromotionRepository THẬT
  * (chỉ giả lập PrismaService) và dữ liệu giống prisma/seed.ts.
  * Khác với các spec khác dùng InMemory fixtures (giá size M = +6.000), ở đây giá theo adapter thật:
- * size S/M/L có id 1/2/3, phụ thu 0/5.000/10.000, topping 1 và 2 giá 5.000.
+ * size S/M/L có id 1/2/3, phụ thu 0/5.000/10.000 và topping lấy giá/tồn kho từ Prisma.
  */
 
 const NOW = new Date('2026-11-14T12:00:00Z');
@@ -50,6 +50,20 @@ const PROMO_ROWS = [
   { id: 2, code: 'BREW20', percent: 20, expiresAt: EXPIRES, usageLeft: 5 },
   { id: 3, code: 'HETLUOT', percent: 10, expiresAt: EXPIRES, usageLeft: 0 },
 ];
+const TOPPING_ROWS = [
+  {
+    id: 'pearl',
+    price: 5_000,
+    amountPerPortion: 50,
+    ingredient: { stockQuantity: 1_500 },
+  },
+  {
+    id: 'cream',
+    price: 5_000,
+    amountPerPortion: 30,
+    ingredient: { stockQuantity: 1_000 },
+  },
+];
 
 describe('PromotionsService + Prisma adapters (dữ liệu giống seed)', () => {
   const findUnique = jest.fn(async ({ where }: { where: { code: string } }) =>
@@ -60,6 +74,12 @@ describe('PromotionsService + Prisma adapters (dữ liệu giống seed)', () =>
     product: {
       findMany: jest.fn(async ({ where }: { where: { id: { in: number[] } } }) =>
         PRODUCT_ROWS.filter((p) => where.id.in.includes(p.id)),
+      ),
+    },
+    topping: {
+      findMany: jest.fn(
+        async ({ where }: { where: { id: { in: string[] } } }) =>
+          TOPPING_ROWS.filter((topping) => where.id.in.includes(topping.id)),
       ),
     },
     promotion: { findUnique, update },
@@ -97,7 +117,7 @@ describe('PromotionsService + Prisma adapters (dữ liệu giống seed)', () =>
 
   it('có topping: (29.000 + 5.000 + 5.000) × 2 = 78.000, GIAM10 giảm 7.800, tổng 70.200', async () => {
     const q = await service.validate(
-      dto({ items: [{ productId: 1, sizeId: SIZE_M, toppingIds: [1], quantity: 2 }], promotionCode: 'GIAM10' }),
+      dto({ items: [{ productId: 1, sizeId: SIZE_M, toppingIds: ['pearl'], quantity: 2 }], promotionCode: 'GIAM10' }),
       NOW,
     );
     expect(q).toMatchObject({ subtotal: 78_000, discount: 7_800, total: 70_200 });
@@ -140,11 +160,11 @@ describe('PromotionsService + Prisma adapters (dữ liệu giống seed)', () =>
     expect(q).toMatchObject({ subtotal: 0, total: 0 });
   });
 
-  it('topping không hỗ trợ (id 3) hoặc sản phẩm/size không tồn tại: PRODUCT_NOT_FOUND', async () => {
+  it('topping không hỗ trợ hoặc sản phẩm/size không tồn tại: PRODUCT_NOT_FOUND', async () => {
     const q = await service.validate(
       dto({
         items: [
-          { productId: 1, sizeId: SIZE_M, toppingIds: [3], quantity: 1 },
+          { productId: 1, sizeId: SIZE_M, toppingIds: ['unknown'], quantity: 1 },
           { productId: 1, sizeId: 99, toppingIds: [], quantity: 1 },
           { productId: 777, sizeId: SIZE_S, toppingIds: [], quantity: 1 },
         ],

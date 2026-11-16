@@ -5,19 +5,6 @@ import { PRODUCT_SIZE_OPTIONS } from "../../common/catalog-options";
 import { CatalogProduct, CatalogTopping } from "../promotion.types";
 import { CatalogRepository } from "../repositories";
 
-const TOPPINGS: CatalogTopping[] = [
-  {
-    id: 1,
-    price: 5_000,
-    stock: Number.MAX_SAFE_INTEGER,
-  },
-  {
-    id: 2,
-    price: 5_000,
-    stock: Number.MAX_SAFE_INTEGER,
-  },
-];
-
 @Injectable()
 export class PrismaCatalogRepository extends CatalogRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -58,7 +45,17 @@ export class PrismaCatalogRepository extends CatalogRepository {
     });
   }
 
-  async findToppings(ids: number[]): Promise<CatalogTopping[]> {
-    return TOPPINGS.filter((topping) => ids.includes(topping.id));
+  async findToppings(ids: string[]): Promise<CatalogTopping[]> {
+    const rows = await this.prisma.topping.findMany({
+      where: { id: { in: ids } },
+      include: { ingredient: { select: { stockQuantity: true } } },
+    });
+    return rows.map((topping) => ({
+      id: topping.id,
+      price: topping.price,
+      stock: Math.floor(
+        topping.ingredient.stockQuantity / topping.amountPerPortion,
+      ),
+    }));
   }
 }

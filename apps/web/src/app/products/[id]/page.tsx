@@ -5,19 +5,21 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProduct } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { formatVND } from "@/lib/pricing";
+import { calcUnitPrice, formatVND } from "@/lib/pricing";
+import { useToppings } from "@/lib/use-toppings";
 import type { ProductDetail, Size } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const addToCart = useCart((s) => s.add);
+  const toppingCatalog = useToppings();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [size, setSize] = useState<Size>("M");
-  const [selectedToppingIds, setSelectedToppingIds] = useState<number[]>([]);
+  const [selectedToppingIds, setSelectedToppingIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [qty, setQty] = useState(1);
   const [cartError, setCartError] = useState<string | null>(null);
@@ -42,25 +44,30 @@ export default function ProductDetailPage() {
   if (!product) return <p className="p-4">Không tìm thấy sản phẩm.</p>;
 
   const selectedSize = product.sizes.find((option) => option.code === size);
-  const selectedToppings = product.toppings.filter((topping) =>
+  const selectedToppings = toppingCatalog.toppings.filter((topping) =>
     selectedToppingIds.includes(topping.id),
   );
   const availableQuantity = product.availableQuantityBySize[size] ?? 0;
-
-  const unitPrice =
-    product.price +
-    (selectedSize?.additionalPrice ?? 0) +
-    selectedToppings.reduce(
-      (total, topping) => total + topping.additionalPrice,
-      0,
-    );
+  const unitPrice = calcUnitPrice(
+    product.price,
+    size,
+    selectedToppingIds,
+    toppingCatalog.toppings,
+  );
+  const selectedToppingsAvailable = selectedToppings.every(
+    (topping) => topping.availableQuantity >= qty,
+  );
 
   const canAdd =
-    Boolean(selectedSize) && availableQuantity > 0 && qty <= availableQuantity;
+    Boolean(selectedSize) &&
+    availableQuantity > 0 &&
+    qty <= availableQuantity &&
+    (selectedToppingIds.length === 0 ||
+      (!toppingCatalog.loading &&
+        !toppingCatalog.error &&
+        selectedToppingsAvailable));
 
-  const toggleTopping = (id: number, isAvailable: boolean) => {
-    if (!isAvailable) return;
-
+  const toggleTopping = (id: string) => {
     setSelectedToppingIds((current) =>
       current.includes(id)
         ? current.filter((toppingId) => toppingId !== id)
@@ -168,35 +175,38 @@ export default function ProductDetailPage() {
 
       <section className="mt-4">
         <h2 className="mb-2 font-medium">Topping</h2>
-
-        {product.toppings.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            Chưa có topping khả dụng.
+        {toppingCatalog.error && (
+          <p role="alert" className="mb-2 text-sm text-red-600">
+            {toppingCatalog.error}
           </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {product.toppings.map((topping) => (
-              <label
-                key={topping.id}
-                className={
-                  topping.isAvailable
-                    ? "flex items-center gap-2"
-                    : "flex items-center gap-2 text-gray-400"
+        )}
+        <div className="flex flex-col gap-1">
+          {toppingCatalog.toppings.map((t) => (
+            <label
+              key={t.id}
+              className={`flex items-center gap-2 ${
+                t.availableQuantity === 0 ? "text-gray-400" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedToppingIds.includes(t.id)}
+                onChange={() => toggleTopping(t.id)}
+                disabled={
+                  toppingCatalog.loading ||
+                  t.availableQuantity === 0 ||
+                  (!selectedToppingIds.includes(t.id) &&
+                    t.availableQuantity < qty)
                 }
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedToppingIds.includes(topping.id)}
-                  disabled={!topping.isAvailable}
-                  onChange={() =>
-                    toggleTopping(topping.id, topping.isAvailable)
-                  }
-                />
-                {topping.name} (+{formatVND(topping.additionalPrice)})
-                {!topping.isAvailable && " — Hết hàng"}
-              </label>
-            ))}
-          </div>
+              />
+              {t.name} (+{formatVND(t.price)}) · còn {t.availableQuantity} phần
+            </label>
+          ))}
+        </div>
+        {!selectedToppingsAvailable && (
+          <p className="mt-1 text-sm text-red-600">
+            Tồn kho topping không đủ cho số lượng đã chọn.
+          </p>
         )}
       </section>
 

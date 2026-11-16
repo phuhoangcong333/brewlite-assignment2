@@ -130,13 +130,10 @@ describe("setItemQty và removeItem", () => {
 
 describe("tính tiền ước tính", () => {
   it("đơn giá = giá gốc + size + topping", () => {
-    const [cartItem] = addItem(
-      [],
-      item({ size: "M", toppings: ["pearl"], qty: 2 }),
-    ).items;
-
-    expect(unitPriceOf(cartItem)).toBe(45000 + 5000 + 5000);
-    expect(lineTotalOf(cartItem)).toBe(110000);
+    const [i] = addItem([], item({ size: "M", toppings: ["pearl"], qty: 2 })).items;
+    const toppingCatalog = [{ id: "pearl", price: 5000 }];
+    expect(unitPriceOf(i, toppingCatalog)).toBe(45000 + 5000 + 5000);
+    expect(lineTotalOf(i, toppingCatalog)).toBe(110000);
   });
 
   it("tạm tính và tổng số ly", () => {
@@ -172,6 +169,18 @@ describe("sanitizeItems", () => {
 
     expect(out).toHaveLength(1);
     expect(out[0].key).toBe("1|M||");
+  });
+
+  it("chuyển topping ID số đã lưu sang ID chuỗi", () => {
+    const oldItem = {
+      ...item({ toppings: ["Trân châu"] }),
+      toppingIds: [1],
+    };
+
+    expect(sanitizeItems([oldItem])[0]).toMatchObject({
+      key: "1|M|pearl|",
+      toppingIds: ["pearl"],
+    });
   });
 
   it("gộp dòng trùng và ép số lượng về giới hạn", () => {

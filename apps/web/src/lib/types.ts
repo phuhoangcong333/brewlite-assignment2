@@ -15,8 +15,7 @@ export type ProductSizeOption = {
 };
 
 export type ProductToppingOption = {
-  id: number;
-  code: string;
+  id: string;
   name: string;
   additionalPrice: number;
   isAvailable: boolean;

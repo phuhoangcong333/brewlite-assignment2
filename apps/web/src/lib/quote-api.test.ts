@@ -17,12 +17,12 @@ afterEach(() => vi.unstubAllGlobals());
 describe("buildQuoteRequest", () => {
   const items = addItem([], base).items;
 
-  it("đổi size và topping sang id, đổi qty thành quantity", () => {
+  it("đổi size, giữ topping id do backend cấp, đổi qty thành quantity", () => {
     const req = buildQuoteRequest(items, null);
     expect(req.items[0]).toMatchObject({
       productId: 7,
       sizeId: 3,
-      toppingIds: [1, 2],
+      toppingIds: ["pearl", "cream"],
       quantity: 2,
     });
   });
@@ -33,9 +33,8 @@ describe("buildQuoteRequest", () => {
     expect(sent).not.toContain("basePrice");
   });
 
-  it("gửi clientUnitPrice để server phát hiện giá đổi", () => {
-    // 30000 + 10000 (L) + 5000 + 5000
-    expect(buildQuoteRequest(items, null).items[0].clientUnitPrice).toBe(50000);
+  it("không gửi giá client có topping để tránh dùng giá catalog cũ", () => {
+    expect(buildQuoteRequest(items, null).items[0]).not.toHaveProperty("clientUnitPrice");
   });
 
   it("chỉ thêm promotionCode khi có mã", () => {

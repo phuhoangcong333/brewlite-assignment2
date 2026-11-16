@@ -24,6 +24,7 @@ import {
   CancellationActor,
   OrderStatus,
 } from './order-state';
+import { computeDiscount } from '../promotions/promotion-rules';
 import { calculateLoyaltyPoints } from './loyalty-points';
 
 const MAX_CREATE_ATTEMPTS = 3;
@@ -32,8 +33,6 @@ const SIZE_PRICE: Record<Size, number> = {
   M: 5_000,
   L: 10_000,
 };
-const TOPPING_PRICE = 5_000;
-const VALID_TOPPINGS = new Set(['Trân châu', 'Kem']);
 
 export interface CreateOrderItemInput extends InventoryWant {
   size: Size;
@@ -52,7 +51,6 @@ function validateCreateOrderInput(
   if (items.length === 0) {
     throw new RangeError('An order must contain at least one item');
   }
-
   for (const item of items) {
     if (
       !Number.isSafeInteger(item.productId) ||
@@ -63,10 +61,12 @@ function validateCreateOrderInput(
     ) {
       throw new BadRequestException('Invalid product, quantity or size');
     }
-    for (const topping of item.toppings ?? []) {
-      if (!VALID_TOPPINGS.has(topping)) {
-        throw new RangeError(`Unsupported topping: ${topping}`);
-      }
+    const toppings = item.toppings ?? [];
+    if (
+      toppings.some((topping) => topping.trim().length === 0) ||
+      new Set(toppings).size !== toppings.length
+    ) {
+      throw new BadRequestException('Invalid or duplicate topping');
     }
   }
 }
@@ -84,8 +84,17 @@ function toInventorySnapshots(
 function buildOrderItems(
   products: readonly { id: number; price: number }[],
   items: readonly CreateOrderItemInput[],
+  toppings: readonly {
+    id: string;
+    name: string;
+    price: number;
+    amountPerPortion: number;
+  }[],
 ) {
   const prices = new Map(products.map(({ id, price }) => [id, price]));
+  const toppingMap = new Map(
+    toppings.map((topping) => [topping.id, topping]),
+  );
 
   return items.map((item) => {
     const productPrice = prices.get(item.productId);
@@ -93,9 +102,18 @@ function buildOrderItems(
       throw new RangeError(`Product ${item.productId} was not found`);
     }
 
-    const toppings = item.toppings ?? [];
+    const toppingIdsForItem = item.toppings ?? [];
+    const selectedToppings = toppingIdsForItem.map((id) => toppingMap.get(id));
+    const resolvedToppings = selectedToppings.filter(
+      (topping): topping is (typeof toppings)[number] => topping !== undefined,
+    );
+    if (resolvedToppings.length !== toppingIdsForItem.length) {
+      throw new RangeError(`Unsupported topping on product ${item.productId}`);
+    }
     const unitPrice =
-      productPrice + SIZE_PRICE[item.size] + TOPPING_PRICE * toppings.length;
+      productPrice +
+      SIZE_PRICE[item.size] +
+      resolvedToppings.reduce((sum, topping) => sum + topping.price, 0);
     const lineTotal = unitPrice * item.qty;
     if (!Number.isSafeInteger(lineTotal)) {
       throw new RangeError(
@@ -107,7 +125,11 @@ function buildOrderItems(
       productId: item.productId,
       size: item.size,
       qty: item.qty,
-      toppings,
+      toppings: resolvedToppings.map((topping) => topping.name),
+      toppingIds: toppingIdsForItem,
+      toppingAmounts: resolvedToppings.map(
+        (topping) => topping.amountPerPortion,
+      ),
       lineTotal,
     };
   });
@@ -250,42 +272,59 @@ export class OrderService {
                 },
               },
             });
+          const toppingIds = [
+            ...new Set(items.flatMap((item) => item.toppings ?? [])),
+          ];
+          const toppings =
+            toppingIds.length > 0
+              ? await transaction.topping.findMany({
+                  where: { id: { in: toppingIds } },
+                  include: {
+                    ingredient: {
+                      select: {
+                        id: true,
+                        name: true,
+                        unit: true,
+                        stockQuantity: true,
+                        version: true,
+                      },
+                    },
+                  },
+                })
+              : [];
+          const toppingMap = new Map(toppings.map((topping) => [topping.id, topping]));
+          if (toppings.length !== toppingIds.length) {
+            throw new BadRequestException('Có topping không tồn tại');
+          }
 
-            const hasRecipeItems = products.some(
-              (p) => p.recipeItems && p.recipeItems.length > 0,
-            );
+          const requiredIngredients = new Map<
+            number,
+            {
+              name: string;
+              unit: string;
+              stockQuantity: number;
+              version: number;
+              totalRequired: number;
+            }
+          >();
+          const hasRecipeItems = products.some(
+            (p) => p.recipeItems && p.recipeItems.length > 0,
+          );
 
             const consumption: Array<{
               ingredientId: number;
               quantity: number;
             }> = [];
 
+            if (products.length !== productIds.length) {
+              throw new BadRequestException(
+                'Không tìm thấy sản phẩm trong hệ thống',
+              );
+            }
+            const productMap = new Map(products.map((p) => [p.id, p]));
+
             if (hasRecipeItems) {
-              if (products.length !== productIds.length) {
-                throw new BadRequestException(
-                  'Không tìm thấy sản phẩm trong hệ thống',
-                );
-              }
-
-              const productMap = new Map(products.map((p) => [p.id, p]));
-              const requiredIngredients = new Map<
-                number,
-                {
-                  name: string;
-                  unit: string;
-                  stockQuantity: number;
-                  version: number;
-                  totalRequired: number;
-                }
-              >();
-
               for (const item of items) {
-                if (!Number.isSafeInteger(item.qty) || item.qty <= 0) {
-                  throw new BadRequestException(
-                    `Số lượng đặt cho sản phẩm ${item.productId} phải lớn hơn 0`,
-                  );
-                }
-
                 const product = productMap.get(item.productId)!;
                 if (!product.recipeItems || product.recipeItems.length === 0) {
                   throw new BadRequestException(
@@ -316,50 +355,33 @@ export class OrderService {
                   }
                 }
               }
+            }
 
-              // Kiểm tra đủ nguyên liệu (trả về lỗi 400 nếu thiếu nguyên liệu)
-              for (const [, info] of requiredIngredients.entries()) {
-                if (
-                  !Number.isSafeInteger(info.totalRequired) ||
-                  info.stockQuantity < info.totalRequired
-                ) {
-                  throw new BadRequestException(
-                    `Không đủ nguyên liệu "${info.name}" (cần ${info.totalRequired}${info.unit}, còn ${info.stockQuantity}${info.unit})`,
-                  );
+            for (const item of items) {
+              for (const id of item.toppings ?? []) {
+                const topping = toppingMap.get(id);
+                if (!topping) {
+                  throw new BadRequestException(`Topping ${id} không tồn tại`);
+                }
+                const ingredient = topping.ingredient;
+                const needed = topping.amountPerPortion * item.qty;
+                const existing = requiredIngredients.get(ingredient.id);
+                if (existing) {
+                  existing.totalRequired += needed;
+                } else {
+                  requiredIngredients.set(ingredient.id, {
+                    name: ingredient.name,
+                    unit: ingredient.unit,
+                    stockQuantity: ingredient.stockQuantity,
+                    version: ingredient.version,
+                    totalRequired: needed,
+                  });
                 }
               }
+            }
 
-              // Trừ trực tiếp vào bảng Ingredient kèm Optimistic Locking
-              for (const [ingredientId, info] of [...requiredIngredients].sort(
-                ([a], [b]) => a - b,
-              )) {
-                const updated = await transaction.ingredient.updateMany({
-                  where: {
-                    id: ingredientId,
-                    version: info.version,
-                    stockQuantity: { gte: info.totalRequired },
-                  },
-                  data: {
-                    stockQuantity: { decrement: info.totalRequired },
-                    version: { increment: 1 },
-                  },
-                });
-
-                if (updated.count !== 1) {
-                  throw new RetryOrderTransactionError();
-                }
-                consumption.push({
-                  ingredientId,
-                  quantity: info.totalRequired,
-                });
-              }
-            } else {
-              // Giữ nguyên luồng chuẩn khi sản phẩm không gắn RecipeItem (tương thích bộ test hiện có)
-              const updates = planReserve(
-                items,
-                toInventorySnapshots(products),
-              );
-
+            if (!hasRecipeItems) {
+              const updates = planReserve(items, toInventorySnapshots(products));
               const applied =
                 await this.inventoryRepository.applyUpdatesInTransaction(
                   transaction,
@@ -370,7 +392,37 @@ export class OrderService {
               }
             }
 
-            const orderItems = buildOrderItems(products, items);
+            for (const [ingredientId, info] of requiredIngredients.entries()) {
+              if (
+                !Number.isSafeInteger(info.totalRequired) ||
+                info.totalRequired <= 0 ||
+                info.stockQuantity < info.totalRequired
+              ) {
+                throw new BadRequestException(
+                  `Không đủ nguyên liệu "${info.name}" (cần ${info.totalRequired}${info.unit}, còn ${info.stockQuantity}${info.unit})`,
+                );
+              }
+              const updated = await transaction.ingredient.updateMany({
+                where: {
+                  id: ingredientId,
+                  version: info.version,
+                  stockQuantity: { gte: info.totalRequired },
+                },
+                data: {
+                  stockQuantity: { decrement: info.totalRequired },
+                  version: { increment: 1 },
+                },
+              });
+              if (updated.count !== 1) {
+                throw new RetryOrderTransactionError();
+              }
+              consumption.push({
+                ingredientId,
+                quantity: info.totalRequired,
+              });
+            }
+
+            const orderItems = buildOrderItems(products, items, toppings);
             const subtotal = calculateOrderTotal(orderItems);
             let discount = 0;
             let appliedPromoCode: string | undefined;
@@ -396,7 +448,14 @@ export class OrderService {
                 );
               }
 
-              discount = Math.floor((subtotal * promotion.percent) / 100);
+              discount = computeDiscount(
+                {
+                  discountType: 'PERCENT',
+                  discountValue: promotion.percent,
+                  maxDiscountAmount: null,
+                },
+                subtotal,
+              );
               appliedPromoCode = promotion.code;
               const consumed = await transaction.promotion.updateMany({
                 where: {
@@ -483,7 +542,15 @@ export class OrderService {
           userId: true,
           total: true,
           status: true,
-          items: { select: { productId: true, size: true, qty: true } },
+          items: {
+            select: {
+              productId: true,
+              size: true,
+              qty: true,
+              toppingIds: true,
+              toppingAmounts: true,
+            },
+          },
           usesIngredientInventory: true,
           ingredients: { select: { ingredientId: true, quantity: true } },
         },
@@ -500,46 +567,102 @@ export class OrderService {
       let releaseUpdates: InventoryUpdate[] = [];
       const ingredientReleases = new Map<number, number>();
       if (to === 'CANCELLED') {
-        if (order.usesIngredientInventory === true) {
-          for (const entry of order.ingredients)
-            ingredientReleases.set(entry.ingredientId, entry.quantity);
-        } else {
-          const products = await transaction.product.findMany({
-            where: {
-              id: {
-                in: [...new Set(order.items.map((item) => item.productId))],
+        const productIds = [
+          ...new Set(order.items.map(({ productId }) => productId)),
+        ];
+        const products = await transaction.product.findMany({
+          where: { id: { in: productIds } },
+          select: {
+            id: true,
+            stock: true,
+            version: true,
+            recipeItems: {
+              select: {
+                ingredientId: true,
+                size: true,
+                amountRequired: true,
               },
             },
-            select: { id: true, stock: true, version: true, recipeItems: true },
-          });
-          // Only pre-snapshot TV4 orders (NULL) use the old recipe-based refund.
-          // New legacy product-stock orders remain product-stock even if staff later adds a recipe.
-          if (
-            order.usesIngredientInventory === null &&
-            products.some((product) => product.recipeItems.length > 0)
-          ) {
-            const recipes = new Map(
-              products.map((product) => [product.id, product.recipeItems]),
+          },
+        });
+        const hasRecipeItems = products.some(
+          (product) => product.recipeItems.length > 0,
+        );
+
+        if (
+          order.usesIngredientInventory !== false &&
+          order.ingredients.length > 0
+        ) {
+          for (const ingredient of order.ingredients) {
+            ingredientReleases.set(ingredient.ingredientId, ingredient.quantity);
+          }
+        } else if (
+          order.usesIngredientInventory === null &&
+          ['PENDING', 'PAYMENT_FAILED'].includes(from) &&
+          (hasRecipeItems || order.items.some((item) => item.toppingIds.length > 0))
+        ) {
+          const recipesByProduct = new Map(
+            products.map((product) => [product.id, product.recipeItems]),
+          );
+          for (const item of order.items) {
+            const recipes = (recipesByProduct.get(item.productId) ?? []).filter(
+              (recipe) => recipe.size === item.size,
             );
-            for (const item of order.items) {
-              for (const recipe of (recipes.get(item.productId) ?? []).filter(
-                (recipe) => recipe.size === item.size,
-              )) {
-                ingredientReleases.set(
-                  recipe.ingredientId,
-                  (ingredientReleases.get(recipe.ingredientId) ?? 0) +
-                    recipe.amountRequired * item.qty,
+            for (const recipe of recipes) {
+              const quantity = recipe.amountRequired * item.qty;
+              ingredientReleases.set(
+                recipe.ingredientId,
+                (ingredientReleases.get(recipe.ingredientId) ?? 0) + quantity,
+              );
+            }
+          }
+
+          const toppingIds = [
+            ...new Set(order.items.flatMap((item) => item.toppingIds)),
+          ];
+          const toppings =
+            toppingIds.length > 0
+              ? await transaction.topping.findMany({
+                  where: { id: { in: toppingIds } },
+                  select: {
+                    id: true,
+                    amountPerPortion: true,
+                    ingredientId: true,
+                  },
+                })
+              : [];
+          const toppingsById = new Map(
+            toppings.map((topping) => [topping.id, topping]),
+          );
+          for (const item of order.items) {
+            for (const [index, toppingId] of item.toppingIds.entries()) {
+              const topping = toppingsById.get(toppingId);
+              const amountPerPortion = item.toppingAmounts[index];
+              if (!topping || !Number.isSafeInteger(amountPerPortion) || amountPerPortion <= 0) {
+                throw new BadRequestException(
+                  `Không thể hoàn kho topping ${toppingId}`,
                 );
               }
+              const quantity = amountPerPortion * item.qty;
+              ingredientReleases.set(
+                topping.ingredientId,
+                (ingredientReleases.get(topping.ingredientId) ?? 0) +
+                  quantity,
+              );
             }
-          } else {
-            releaseUpdates = planCancel(
-              from,
-              order.items,
-              toInventorySnapshots(products),
-              actor,
-            );
           }
+        }
+
+        const shouldRestoreProductStock =
+          order.usesIngredientInventory !== true &&
+          (order.usesIngredientInventory !== null || !hasRecipeItems);
+        if (shouldRestoreProductStock) {
+          releaseUpdates = planCancel(
+            from,
+            order.items,
+            toInventorySnapshots(products),
+            actor,
+          );
         }
       }
 
@@ -586,7 +709,9 @@ export class OrderService {
           });
           if (restored.count !== 1) throw new InventoryConcurrencyException();
         }
-      } else if (
+      }
+
+      if (
         releaseUpdates.length > 0 &&
         !(await this.inventoryRepository.applyUpdatesInTransaction(
           transaction,
