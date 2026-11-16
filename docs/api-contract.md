@@ -1,0 +1,767 @@
+# Hợp đồng API BrewLite
+
+> **Người giữ file:** TV7. **Khung dựng:** 04/11/2026; **cập nhật 05/11/2026** (chốt JWT lưu ở localStorage và gửi bằng header Bearer). **Mỗi người điền endpoint của mình trước N6 (07/11).**
+>
+> Mỗi endpoint có đúng một người làm. Các luồng khác gọi theo hợp đồng này nên có thể code song song. Muốn đổi hợp đồng sau khi đã điền: báo người giữ file (TV7) và những người đang gọi endpoint đó, rồi ghi vào mục "Lịch sử thay đổi".
+
+## 1. Cách điền
+
+1. Chỉ sửa **phần endpoint của mình** (mục 4) để tránh xung đột khi gộp. Không sửa mục 2 và 3 nếu chưa báo TV7.
+2. Thay mọi chỗ ghi `_Chưa điền_` bằng nội dung thật: request mẫu, response mẫu (JSON), các mã lỗi.
+3. JSON mẫu phải **chạy được thật** (đúng tên trường, đúng kiểu dữ liệu). Người gọi endpoint sẽ code theo mẫu này.
+4. Điền xong, đổi cột "Trạng thái" ở mục 3 từ `Khung` sang `Đã điền` và mở PR nhỏ (ví dụ `Task 2.x: Điền api-contract cho GET /products`).
+5. Nếu thay đổi sau khi người khác đã code theo, **báo trong daily** và ghi vào mục 5.
+
+## 2. Quy ước chung
+
+| Mục | Quy ước (đề xuất, nhóm xác nhận) |
+|---|---|
+| Đường dẫn gốc | Không thêm tiền tố, đúng như bảng ở mục 3 (ví dụ `/products`). Nếu nhóm muốn tiền tố `/api` thì đổi tại đây một lần. |
+| Định dạng | Request và response là JSON (`Content-Type: application/json`), tên trường dạng `camelCase`. |
+| Xác thực | Endpoint cần đăng nhập nhận header `Authorization: Bearer <accessToken>`. Token lấy từ `POST /auth/login`. |
+| Vai trò | `CUSTOMER` (Khách) và `STAFF` (Nhân viên), nằm trong JWT. Endpoint chỉ dành cho nhân viên trả 403 khi gọi bằng vai trò Khách. |
+| Tiền tệ | VNĐ, số nguyên (ví dụ `45000`), không dùng số thập phân. |
+| Thời gian | Chuỗi ISO 8601, múi giờ UTC (ví dụ `2026-11-06T08:30:00Z`). |
+| Mã người dùng, mã đơn | Kiểu `id` (số hoặc chuỗi) theo `schema.prisma`. Các ví dụ dưới đây dùng số. |
+| Mã request | Mỗi request có mã `requestId`. Response có header `X-Request-Id` và lỗi có trường `requestId` để truy vết log. |
+
+### 2.1. Định dạng lỗi thống nhất
+
+Mọi lỗi trả về theo cùng một dạng (TV7 làm bộ lọc lỗi chung):
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": ["email must be an email"],
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+`message` là chuỗi hoặc mảng chuỗi. Không bao giờ chứa stack trace hay câu SQL.
+
+### 2.2. Mã trạng thái HTTP dùng chung
+
+| Mã | Ý nghĩa | Ví dụ |
+|---|---|---|
+| 200 | Thành công | Lấy danh sách, đăng nhập |
+| 201 | Tạo mới thành công | Đăng ký, tạo đơn |
+| 400 | Dữ liệu gửi lên không hợp lệ | Thiếu trường, sai định dạng |
+| 401 | Chưa đăng nhập hoặc token sai / hết hạn; sai email hoặc mật khẩu | Gọi `POST /orders` không có token |
+| 403 | Đã đăng nhập nhưng không đủ quyền | Khách gọi `PATCH /orders/:id/status` |
+| 404 | Không tìm thấy | `GET /orders/:id` không tồn tại |
+| 409 | Xung đột trạng thái | Email đã tồn tại, hết hàng |
+| 422 | Nghiệp vụ không thể xử lý | Thanh toán mô phỏng thất bại; đơn chuyển `PAYMENT_FAILED` |
+| 503 | Dịch vụ không sẵn sàng | `/health` khi mất kết nối database |
+
+## 3. Bảng tổng hợp endpoint
+
+Cột "Cần JWT" và "Vai trò" là **đề xuất của TV7**; chủ endpoint xác nhận hoặc sửa khi điền.
+
+| Endpoint | Người làm | Cần JWT | Vai trò | Dùng cho | Trạng thái |
+|---|---|---|---|---|---|
+| `GET /products` | TV1 | Không | Mọi người | Menu (có lọc danh mục) | Đã điền |
+| `GET /products/:id` | TV2 | Không | Mọi người | Chi tiết, size, topping | Đã điền |
+| `POST /promotions/validate` | TV3 | Không | Mọi người | Giỏ hàng: báo giá và mã khuyến mãi | Đã điền |
+| `POST /auth/register` | TV7 | Không | Mọi người | Đăng ký | Đã điền |
+| `POST /auth/login` | TV7 | Không | Mọi người | Đăng nhập, cấp JWT | Đã điền |
+| `GET /health` | TV7 | Không | Mọi người | Smoke test sau deploy | Đã điền |
+| `POST /orders` | TV4 | Có | `CUSTOMER` | Đặt đơn | Đã điền |
+| `POST /payments` | TV5 | Có | `CUSTOMER` | Thanh toán (header `Idempotency-Key`) | Đã điền |
+| `GET /orders` | TV6 | Có | Chỉ lịch sử của tài khoản hiện tại | Lịch sử đơn | Đã kiểm thử |
+| `GET /orders/staff` | TV6 | Có | Chỉ STAFF | Hàng đợi PENDING/PAID/PREPARING/READY | Đã kiểm thử |
+| `GET /orders/:id` | TV6 | Có | Chỉ chủ sở hữu đơn, kể cả tài khoản STAFF | Theo dõi đơn | Đã kiểm thử |
+| `PATCH /orders/:id/status` | TV6 | Có | Chỉ `STAFF` | Nhân viên đổi trạng thái | Đã kiểm thử |
+| `DELETE /orders/:id` | TV6 | Có | Chủ sở hữu | Hủy PENDING/PAYMENT_FAILED và hoàn kho | Đã kiểm thử |
+| `DELETE /orders/staff/:id` | TV6 | Có | Chỉ `STAFF` | Hủy PENDING/PREPARING và hoàn kho | Đã kiểm thử |
+
+### Hủy đơn STAFF — bổ sung TV6 ngày 15/11/2026
+
+`DELETE /orders/staff/:id` không có body, yêu cầu Bearer JWT và role STAFF hiện tại trong database. Thành công trả **204**, hoàn đúng lượng Ingredient đã trừ theo snapshot, chỉ thực hiện một lần trong transaction. Chỉ cho phép PENDING hoặc PREPARING. Không hoàn tiền, không sửa Payment và không cộng điểm thưởng.
+
+Lỗi: **400** ID không phải số nguyên dương Int32; **401** thiếu/sai JWT; **403** không phải STAFF; **404** không có đơn; **409** trạng thái không cho hủy, cạnh tranh cập nhật hoặc hoàn kho vượt giới hạn. `PATCH /orders/:id/status` với `{ "status": "CANCELLED" }` gọi cùng nghiệp vụ. Khách hàng tiếp tục dùng `DELETE /orders/:id`, chỉ đơn mình và PENDING/PAYMENT_FAILED.
+
+## 4. Chi tiết từng endpoint
+
+### 4.1. `GET /products` (TV1)
+
+**Gợi ý từ phân công:** lọc theo danh mục; dữ liệu seed từ 12 món, có vài món hết hàng.
+**Query:**
+
+Tham số | Kiểu | Bắt buộc | Mô tả
+categoryId | number | Không | ID danh mục cần lọc sản phẩm. Nếu không truyền, trả về tất cả sản phẩm.
+
+Ví dụ:
+
+GET /products
+GET /products?categoryId=1
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Cà phê sữa đá",
+      "price": 25000,
+      "imageUrl": "/uploads/ca-phe-sua-da.jpg",
+      "categoryId": 1,
+      "categoryName": "Cà phê",
+      "stock": 20,
+      "isAvailable": true
+    },
+    {
+      "id": 2,
+      "name": "Bạc xỉu",
+      "price": 30000,
+      "imageUrl": "/uploads/bac-xiu.jpg",
+      "categoryId": 1,
+      "categoryName": "Cà phê",
+      "stock": 0,
+      "isAvailable": false
+    }
+  ],
+  "total": 2
+}
+```
+
+**Quy ước:**
+
+- price: Giá sản phẩm, đơn vị VNĐ, kiểu số nguyên.
+- stock: Số lượng tồn kho.
+- isAvailable: true nếu còn hàng (stock > 0), false nếu hết hàng (stock = 0).
+- categoryId: ID danh mục của sản phẩm.
+- categoryName: Tên danh mục sản phẩm.
+- total: Tổng số sản phẩm trong kết quả trả về.
+- Không truyền categoryId thì lấy tất cả sản phẩm.
+- Truyền categoryId thì chỉ lấy sản phẩm thuộc danh mục tương ứng.
+- Sản phẩm hết hàng vẫn được trả về để giao diện hiển thị trạng thái hết hàng.
+
+Lỗi:
+
+| Mã | Trường hợp
+| 400 | categoryId không hợp lệ hoặc không phải số nguyên dương.
+| 404 | Không tìm thấy danh mục tương ứng với categoryId.
+| 500 | Lỗi hệ thống khi truy vấn danh sách sản phẩm.
+
+### 4.2. `GET /products/:id` (TV2)
+
+**Response 200:**
+```ts
+type ProductDetailResponse = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  availableQuantityBySize: Record<"S" | "M" | "L", number>;
+  sizes: {
+    id: number;
+    code: "S" | "M" | "L";
+    additionalPrice: number;
+  }[];
+  toppings: {
+    id: number;
+    code: "TRAN_CHAU" | "KEM";
+    name: string;
+    additionalPrice: number;
+    isAvailable: boolean;
+  }[];
+};
+```
+
+**Quy ước size:**
+
+- ID 1, 2, 3 lần lượt ứng với S, M, L, theo ánh xạ đang dùng trong frontend và backend.
+
+- Phụ thu lần lượt là 0, 5.000, 10.000 VNĐ theo cấu hình hiện tại.
+
+- availableQuantityBySize chỉ phản ánh tồn kho của công thức nền theo size. Không tính topping tùy chọn vào số lượng này.
+
+**Quy ước topping:**
+
+- id là ID của bản ghi Topping trong database. code dùng TRAN_CHAU và KEM. Frontend gửi đúng ID nhận được từ GET /products/:id khi gọi API báo giá.
+
+- Giá hiện tại trong frontend và backend là 5.000 VNĐ mỗi topping.
+
+- isAvailable cho biết topping có đủ nguyên liệu cho ít nhất một serving hay không. Topping không khả dụng vẫn nằm trong response để frontend hiển thị nhưng không cho chọn.
+
+- Tồn kho topping được tính riêng từ nguyên liệu và amountRequired mỗi serving. Giá trị gram/ml thực tế chưa có trong code; không tự đặt giá trị.
+
+- Báo giá vẫn do backend xác nhận qua POST /promotions/validate.
+
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+| 400 | ID không hợp lệ. |
+| 404 | Không tìm thấy sản phẩm. |
+| 500 | Lỗi hệ thống. |
+
+### 4.3. `POST /promotions/validate` (TV3)
+
+Báo giá cho giỏ hàng và kiểm tra mã khuyến mãi trong cùng một lần gọi. **Giá do server tính**: client chỉ gửi mã sản phẩm, size, topping, số lượng, ghi chú và mã khuyến mãi; mọi trường giá mà client gửi đều không được dùng để tính (xem ADR "Giá tính ở server"). Không cần đăng nhập. Endpoint **không thay đổi dữ liệu**: không trừ kho, không tăng lượt dùng mã (`usedCount` chỉ tăng khi `POST /orders` thành công).
+
+Mảng `items` có **cùng cấu trúc** với `items` của `POST /orders` (mục 4.7) để client dùng một payload cho cả hai bước. `POST /orders` luôn tính lại giá, không tin kết quả báo giá cũ.
+
+- **Request:**
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "sizeId": 1,
+      "toppingIds": [1, 2],
+      "quantity": 2,
+      "note": "Ít đá, ít ngọt",
+      "clientUnitPrice": 56000
+    }
+  ],
+  "promotionCode": "BREW2026"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `items` | mảng | Có | 1 đến 20 phần tử |
+| `items[].productId` | số | Có | Mã sản phẩm |
+| `items[].sizeId` | số | Có | Mã size của sản phẩm (TV2) |
+| `items[].toppingIds` | mảng số | Không | Có thể rỗng hoặc bỏ qua |
+| `items[].quantity` | số nguyên | Có | 1 đến 10 |
+| `items[].note` | chuỗi | Không | Ghi chú của khách (tối đa 200 ký tự, đề xuất) |
+| `items[].clientUnitPrice` | số nguyên | Không | Đơn giá client đang hiển thị, **chỉ dùng để phát hiện giá đã đổi** (`priceChanged`), không dùng để tính |
+| `promotionCode` | chuỗi | Không | Không phân biệt hoa/thường, cắt khoảng trắng hai đầu. Bỏ qua hoặc để rỗng nếu không dùng mã |
+
+- **Response 200** (có mã hợp lệ):
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "productName": "Trà sữa trân châu",
+      "imageUrl": "/images/tra-sua.jpg",
+      "sizeId": 1,
+      "toppingIds": [1, 2],
+      "quantity": 2,
+      "status": "AVAILABLE",
+      "unavailableToppingIds": [],
+      "unitPrice": 56000,
+      "lineTotal": 112000,
+      "priceChanged": false
+    }
+  ],
+  "subtotal": 112000,
+  "promotion": {
+    "code": "BREW2026",
+    "valid": true,
+    "discountAmount": 11200,
+    "reason": null,
+    "message": null
+  },
+  "discount": 11200,
+  "total": 100800
+}
+```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `items[].status` | `AVAILABLE`, `OUT_OF_STOCK`, `TOPPING_OUT_OF_STOCK` hoặc `PRODUCT_NOT_FOUND` |
+| `items[].unavailableToppingIds` | Các topping hết hàng của dòng (khi `status` là `TOPPING_OUT_OF_STOCK`), ngược lại là mảng rỗng |
+| `items[].unitPrice` | Đơn giá một ly = giá cơ bản + phụ thu size + tổng giá topping |
+| `items[].lineTotal` | `unitPrice × quantity`. Dòng không `AVAILABLE` có `lineTotal` bằng 0 và **không tính vào** `subtotal` |
+| `items[].priceChanged` | `true` nếu `clientUnitPrice` có gửi và khác `unitPrice` hiện tại |
+| `subtotal` | Tổng `lineTotal` của các dòng `AVAILABLE` |
+| `promotion` | `null` nếu request không có `promotionCode` |
+| `promotion.valid` | `true` nếu mã áp dụng được |
+| `promotion.reason` | `null` khi hợp lệ; khi không hợp lệ là một trong: `PROMO_NOT_FOUND` (sai mã hoặc mã đã tắt), `PROMO_NOT_STARTED`, `PROMO_EXPIRED`, `PROMO_MIN_ORDER_NOT_MET`, `PROMO_USAGE_LIMIT_REACHED` |
+| `promotion.message` | Câu tiếng Việt hiển thị cho khách khi không hợp lệ, ví dụ "Mã đã hết hạn" |
+| `discount` | Số tiền giảm thực tế (0 nếu không có mã hoặc mã không hợp lệ) |
+| `total` | `subtotal - discount`, luôn lớn hơn hoặc bằng 0 |
+
+Cách tính giảm giá: loại `PERCENT` = làm tròn xuống (`subtotal × giá trị / 100`), không vượt mức giảm tối đa của mã; loại `FIXED_AMOUNT` = số tiền cố định. Giảm giá không vượt `subtotal`.
+
+- **Response 200 khi mã không hợp lệ** (vẫn trả báo giá, tổng không đổi):
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "productName": "Trà sữa trân châu",
+      "imageUrl": "/images/tra-sua.jpg",
+      "sizeId": 1,
+      "toppingIds": [1, 2],
+      "quantity": 2,
+      "status": "AVAILABLE",
+      "unavailableToppingIds": [],
+      "unitPrice": 56000,
+      "lineTotal": 112000,
+      "priceChanged": false
+    }
+  ],
+  "subtotal": 112000,
+  "promotion": {
+    "code": "HETHAN",
+    "valid": false,
+    "discountAmount": 0,
+    "reason": "PROMO_EXPIRED",
+    "message": "Mã đã hết hạn"
+  },
+  "discount": 0,
+  "total": 112000
+}
+```
+
+- **Response 200 khi có dòng hết hàng** (dòng đó không tính vào tổng):
+
+```json
+{
+  "items": [
+    {
+      "productId": 3,
+      "productName": "Cà phê sữa",
+      "imageUrl": "/images/ca-phe-sua.jpg",
+      "sizeId": 1,
+      "toppingIds": [],
+      "quantity": 1,
+      "status": "OUT_OF_STOCK",
+      "unavailableToppingIds": [],
+      "unitPrice": 35000,
+      "lineTotal": 0,
+      "priceChanged": false
+    }
+  ],
+  "subtotal": 0,
+  "promotion": null,
+  "discount": 0,
+  "total": 0
+}
+```
+
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | `items` rỗng hoặc quá 20 phần tử; `quantity` ngoài khoảng 1 đến 10; thiếu `productId` hoặc `sizeId`; sai kiểu dữ liệu; có trường ngoài danh sách ở bảng trên (ví dụ `price`, `unitPrice`, `name`) |
+| 500 | Lỗi máy chủ không lường trước |
+
+Mã khuyến mãi không hợp lệ và sản phẩm không còn bán **không phải lỗi HTTP**: endpoint vẫn trả 200 và báo qua `promotion.valid`, `promotion.reason` và `items[].status`, để giao diện có báo giá hiển thị kèm lý do. Endpoint không cần JWT nên không trả 401 hoặc 403. Lỗi 400 và 500 theo định dạng thống nhất ở mục 2.1.
+
+**Trạng thái đối chiếu code** (kiểm thử trên server `47.129.180.144:3001`, ngày 15/11/2026):
+
+- Trường ngoài danh sách của request **bị từ chối 400**, không bị bỏ qua (do `ValidationPipe` toàn cục trong `main.ts` bật `forbidNonWhitelisted`). Ví dụ `message`: `items.0.property price should not exist`.
+- Body lỗi 400 thực tế gồm `statusCode`, `message` (mảng chuỗi), `path`, `timestamp`. Chưa có `error`, `requestId` và header `X-Request-Id` như mục 2.1 (cần TV7 xác nhận).
+- Bảng `Promotion` hiện chỉ có `code`, `percent`, `expiresAt`, `usageLeft`, nên chỉ có loại `PERCENT`. Các lý do `PROMO_NOT_STARTED`, `PROMO_MIN_ORDER_NOT_MET` và loại `FIXED_AMOUNT`, giảm tối đa chưa thể xảy ra với dữ liệu hiện tại; quy tắc đã được kiểm bằng unit test (`promotion-rules.spec.ts`).
+
+### 4.4. `POST /auth/register` (TV7)
+
+Tạo tài khoản mới, vai trò mặc định là `CUSTOMER`. Mật khẩu được băm bằng bcrypt, không bao giờ trả về.
+
+- **Request:**
+
+```json
+{
+  "email": "khach@example.com",
+  "password": "MatKhau123",
+  "name": "Nguyễn Văn A"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `email` | chuỗi | Có | Đúng định dạng email, duy nhất |
+| `password` | chuỗi | Có | Tối thiểu 8 ký tự (đề xuất) |
+| `name` | chuỗi | Có | Không rỗng |
+
+- **Response 201:**
+
+```json
+{
+  "id": 1,
+  "email": "khach@example.com",
+  "name": "Nguyễn Văn A",
+  "role": "CUSTOMER"
+}
+```
+
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Thiếu trường, email sai định dạng, mật khẩu quá ngắn |
+| 409 | Email đã được đăng ký |
+
+### 4.5. `POST /auth/login` (TV7)
+
+Xác thực và cấp JWT. Sai email và sai mật khẩu cùng trả 401 với cùng một thông báo (không tiết lộ email có tồn tại hay không).
+
+- **Request:**
+
+```json
+{
+  "email": "khach@example.com",
+  "password": "MatKhau123"
+}
+```
+
+- **Response 200:**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "khach@example.com",
+    "name": "Nguyễn Văn A",
+    "role": "CUSTOMER"
+  }
+}
+```
+
+- **Nội dung JWT (payload):** `sub` (mã người dùng), `role`, `iat`, `exp`. Thời hạn đề xuất 1 giờ.
+- **Cách dùng token:** gửi header `Authorization: Bearer <accessToken>` ở các endpoint cần đăng nhập.
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Thiếu trường hoặc sai định dạng |
+| 401 | Sai email hoặc mật khẩu |
+
+**Lỗi chung của endpoint cần JWT** (JwtAuthGuard và RolesGuard, mọi người dùng chung):
+
+| Mã | Khi nào |
+|---|---|
+| 401 | Không có token, token sai chữ ký hoặc token hết hạn |
+| 403 | Token hợp lệ nhưng vai trò không đủ quyền |
+
+### 4.6. `GET /health` (TV7)
+
+Kiểm tra API chạy và kết nối được database. Không cần đăng nhập. Dùng cho smoke test sau deploy (TV1: CD và rollback).
+
+- **Response 200:**
+
+```json
+{
+  "status": "ok",
+  "database": "up",
+  "timestamp": "2026-11-06T08:30:00Z"
+}
+```
+
+- **Response 503** (mất kết nối database):
+
+```json
+{
+  "status": "error",
+  "database": "down",
+  "timestamp": "2026-11-06T08:30:00Z"
+}
+```
+
+### 4.7. `POST /orders` (TV4)
+
+Tạo đơn hàng mới từ giỏ hàng hiện tại, kiểm tra tồn kho và trừ kho an toàn trong một Database Transaction. Yêu cầu phải đăng nhập (có JWT).
+
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Request:**
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "sizeId": 1,
+      "toppingIds": [1, 2],
+      "note": "Ít đá, ít ngọt"
+    }
+  ],
+  "promotionCode": "BREW2026"
+}
+```
+
+- **Response 201:** 
+```json
+{
+  "id": 105,
+  "userId": 1,
+  "total": 95000,
+  "status": "PENDING",
+  "createdAt": "2026-11-06T08:30:00Z",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "price": 45000,
+      "sizeId": 1
+    }
+  ]
+}
+```
+
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Giỏ hàng rỗng (`items` trống), thiếu trường bắt buộc, sai kiểu dữ liệu hoặc `quantity <= 0` |
+| 401 | Chưa đăng nhập, thiếu header `Authorization` hoặc token JWT sai / hết hạn |
+| 409 | Sản phẩm hoặc topping hết hàng / số lượng tồn kho (`stock`) không đủ |
+
+- **Response lỗi 400 (Dữ liệu gửi lên không hợp lệ):**
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": [
+    "items should not be empty",
+    "quantity must not be less than 1"
+  ],
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+- **Response lỗi 401 (Chưa đăng nhập / Token hết hạn):**
+
+```json
+{
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "Unauthorized",
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+- **Response lỗi 409 (Sản phẩm hết hàng / Không đủ tồn kho):**
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Product stock is insufficient",
+  "requestId": "b1f4c0de-1111-4a2b-9c3d-0123456789ab"
+}
+```
+
+### 4.8. `POST /payments` (TV5)
+
+Xử lý thanh toán đơn hàng qua Ví hoặc Thẻ mô phỏng. Bắt buộc có `Idempotency-Key` để chống trừ tiền trùng khi gửi lại; server đọc `Order.total` và không nhận số tiền do client tự khai báo.
+
+- **Header:**
+  - `Authorization: Bearer *** (vai trò `CUSTOMER`)
+  - `Idempotency-Key: <UUIDv4>` (chuỗi duy nhất toàn cục; code hiện tại mới kiểm tra không rỗng và tối đa 200 ký tự)
+
+- **Request:**
+
+```json
+{
+  "orderId": 1042,
+  "method": "WALLET",
+  "walletId": "WALLET-1234"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `orderId` | số nguyên (Int) | Có | Đơn hàng tồn tại, đang ở trạng thái `PENDING` hoặc `PAYMENT_FAILED` |
+| `method` | chuỗi (String) | Có | Chỉ chấp nhận `"WALLET"` hoặc `"CARD"` |
+| `walletId` | chuỗi | Có khi `method = WALLET` | Mã ví mô phỏng |
+| `cardNumber` | chuỗi | Có khi `method = CARD` | Số thẻ mô phỏng; đuôi `0000` làm thanh toán thất bại |
+
+- **Response 200 / 201** (201: tạo mới thành công; 200: replay payment thành công khi trùng Idempotency-Key; replay payment thất bại giữ mã 422):
+
+```json
+{
+  "paymentId": 1,
+  "orderId": 1042,
+  "amount": 85000,
+  "method": "WALLET",
+  "payment_status": "PAID",
+  "order_status": "PAID",
+  "replayed": false
+}
+```
+
+- **Lỗi:**
+
+| Mã | Khi nào |
+|---|---|
+| 400 | Thiếu header `Idempotency-Key`, key rỗng/quá dài, hoặc request payment không hợp lệ |
+| 401 | Chưa đăng nhập, token sai hoặc token hết hạn |
+| 404 | Không tìm thấy đơn hàng theo `orderId`, hoặc key thuộc payment của người dùng khác |
+| 409 | Đơn hàng không ở trạng thái được phép thanh toán (đã hoàn thành hoặc đã hủy), hoặc key dùng cho order/method khác |
+| 422 | Thanh toán mô phỏng thất bại (thẻ test lỗi đuôi `0000`, ví không đủ tiền); đơn chuyển `PAYMENT_FAILED`, giữ nguyên tồn kho để thử lại |
+
+- **Quy ước:**
+  - `Idempotency-Key` là duy nhất toàn cục trong bảng `Payment`.
+  - Cùng key và cùng request không tạo `Payment` mới; kết quả đã lưu được replay. Cùng key nhưng khác `orderId` hoặc `method` trả `409`.
+  - Cùng key sau payment thất bại tiếp tục trả `422`; lần retry thanh toán phải dùng key mới.
+  - Thanh toán thành công: Cập nhật `Order.status` sang `PAID` trong transaction.
+  - Thanh toán thất bại (422): Cập nhật `Order.status` sang `PAYMENT_FAILED`, giữ nguyên tồn kho và giỏ hàng, cho phép khách đổi phương thức để thanh toán lại.
+
+**Trạng thái đối chiếu code:** DTO, unique key, replay và các nhánh xung đột đã có trong `apps/api`. Tuy nhiên service hiện chưa ném `UnprocessableEntityException` cho payment thất bại và chưa validate UUIDv4, nên HTTP 422/UUIDv4 trong hợp đồng là tiêu chí cần hoàn thiện, không phải bằng chứng code đã đạt đủ.
+
+
+### 4.9. `GET /orders` (TV6)
+
+**Gợi ý từ phân công:** Trả về lịch sử đơn hàng của khách hàng đang đăng nhập, sắp xếp từ mới nhất đến cũ nhất.
+
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Query:** Không có. Backend lấy userId từ JWT.
+- **Request:** Không có body.
+
+- **Response 200:**
+
+```json
+[
+  {
+    "id": 105,
+    "userId": 1,
+    "total": 95000,
+    "status": "PREPARING",
+    "createdAt": "2026-11-06T08:30:00Z",
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 2,
+        "price": 45000,
+        "sizeId": 1
+      }
+    ]
+  }
+]
+```
+
+**Quy ước:**
+- Khách hàng chỉ xem được đơn hàng của chính mình.
+- Danh sách sắp xếp theo `createdAt` giảm dần.
+- Nếu chưa có đơn hàng, trả về mảng rỗng `[]`.
+- `total` và `price` là số nguyên VNĐ.
+- Trạng thái đơn sử dụng enum `OrderStatus`.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 500 | Lỗi hệ thống khi truy vấn lịch sử đơn hàng |
+
+### 4.10. `GET /orders/:id` (TV6)
+
+**Gợi ý từ phân công:** Xem chi tiết và theo dõi trạng thái đơn hàng. Giao diện tự làm mới mỗi 5 đến 10 giây.
+
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Path parameter:** `id` là mã đơn hàng, kiểu số nguyên dương.
+- **Request:** Không có body.
+
+- **Response 200:**
+
+```json
+{
+  "id": 105,
+  "userId": 1,
+  "total": 95000,
+  "discount": 5000,
+  "promoCode": null,
+  "status": "READY",
+  "createdAt": "2026-11-06T08:30:00Z",
+  "items": [
+    {
+      "productId": 1,
+      "qty": 2,
+      "lineTotal": 100000,
+      "size": "M",
+      "toppings": ["Kem"],
+      "product": { "id": 1, "name": "Cà phê sữa", "price": 40000 }
+    }
+  ],
+  "loyaltyTransaction": null
+}
+```
+
+**Quy ước:**
+- Khách hàng chỉ được xem đơn hàng của mình.
+- Đơn hàng không tồn tại hoặc không thuộc khách hàng trả về `404`.
+- Trạng thái gồm: `PENDING`, `PAID`, `PAYMENT_FAILED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`.
+- Frontend tự gọi lại API sau mỗi 5 đến 10 giây để cập nhật trạng thái.
+- API chỉ lấy dữ liệu, không thay đổi trạng thái đơn hàng.
+- `loyaltyTransaction` là null khi chưa được cộng điểm; sau COMPLETED có `{ "points": 9, "createdAt": "..." }`. Tổng dưới 10.000đ không tạo ledger 0 điểm.
+- STAFF xem hàng đợi xử lý qua `GET /orders/staff`, không được dùng endpoint chi tiết để đọc đơn của khách khác.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 400 | ID đơn hàng không hợp lệ |
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 404 | Không tìm thấy đơn hàng hoặc đơn không thuộc khách hàng |
+| 500 | Lỗi hệ thống |
+
+### 4.11. `PATCH /orders/:id/status` (TV6)
+
+**Gợi ý từ phân công:** Nhân viên cập nhật trạng thái đơn hàng theo đúng thứ tự. Chuyển trạng thái sai bị từ chối; tích điểm khi đơn hoàn thành.
+
+- **Header:** `Authorization: Bearer <accessToken>` (vai trò `STAFF`)
+- **Path parameter:** `id` là mã đơn hàng, kiểu số nguyên dương.
+
+- **Request:**
+
+```json
+{
+  "status": "PREPARING"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `status` | string | Có | Trạng thái đích phải hợp lệ theo State Machine |
+
+- **Response 204:** Cập nhật thành công, không trả về body. Frontend gọi lại `GET /orders/:id` để lấy trạng thái mới.
+
+**Quy ước:**
+- Chỉ nhân viên có vai trò `STAFF` được cập nhật trạng thái.
+- Các chuyển trạng thái do nhân viên thực hiện:
+  - `PAID` → `PREPARING`
+  - `PREPARING` → `READY`
+  - `READY` → `COMPLETED`
+- Không được bỏ qua bước hoặc cập nhật đơn đã hoàn thành/hủy.
+- STAFF có thể gửi `CANCELLED` từ `PENDING` hoặc `PREPARING`; cùng nghiệp vụ với `DELETE /orders/staff/:id`. Hoàn nguyên liệu đúng một lần trong transaction. Không hoàn tiền hoặc sửa Payment. Thanh toán vẫn do Payment service quản lý.
+- Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống ghi nhận `LoyaltyTransaction`.
+- Điểm thưởng: `points = floor(total / 10000)`, với `total` là tổng tiền thực trả sau giảm giá; nếu bằng 0 thì không tạo giao dịch điểm.
+- Mỗi đơn hàng chỉ được cộng điểm một lần.
+- Việc cập nhật trạng thái và ghi nhận điểm thưởng thực hiện trong cùng database transaction.
+
+**Lỗi:**
+
+| Mã | Trường hợp |
+|---|---|
+| 400 | ID hoặc status không hợp lệ, thiếu trường bắt buộc |
+| 401 | Không có JWT, JWT không hợp lệ hoặc hết hạn |
+| 403 | Người dùng không có vai trò STAFF |
+| 404 | Không tìm thấy đơn hàng |
+| 409 | Chuyển trạng thái sai thứ tự hoặc xung đột cập nhật |
+| 500 | Lỗi hệ thống |
+
+- **Response lỗi 409 (Chuyển trạng thái không hợp lệ):**
+
+```json
+{
+  "statusCode": 409,
+  "message": "Cannot transition order from PAID to COMPLETED",
+  "path": "/orders/105/status",
+  "timestamp": "2026-11-14T08:30:00.000Z"
+}
+```
+
+Các lỗi khác sử dụng định dạng thống nhất tại mục 2.1.
+  
+
+## 5. Lịch sử thay đổi
+
+| Ngày | Người sửa | Nội dung |
+|---|---|---|
+| 04/11/2026 | TV7 | Dựng khung; điền quy ước chung và 3 endpoint của TV7 (`/auth/register`, `/auth/login`, `/health`) |
+| 05/11/2026 | TV7 | Chốt ADR JWT: token lưu ở localStorage và gửi bằng header Bearer (`POST /auth/login` trả `accessToken` trong body) |

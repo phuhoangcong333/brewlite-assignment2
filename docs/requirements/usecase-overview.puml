@@ -1,0 +1,73 @@
+@startuml usecase-overview
+' Use-case diagram tổng quát - BrewLite (Task 1.2)
+' Actor: Khách hàng, Nhân viên quầy, Quản lý cửa hàng, Dịch vụ thanh toán. Quan hệ: association, include, extend.
+left to right direction
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor white
+  BorderColor #3A9AD9
+  BorderThickness 2
+  ArrowColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BorderColor #3A9AD9
+}
+
+title Use-case diagram tổng quát – BrewLite
+
+actor "Khách hàng" as Customer
+actor "Nhân viên quầy" as Staff
+actor "Quản lý cửa hàng" as Manager
+actor "Dịch vụ thanh toán\n(mô phỏng)" as Pay
+
+rectangle "BrewLite" {
+  usecase "Xem menu" as UC01
+  usecase "Lọc theo\ndanh mục" as UC01a
+  usecase "Chọn tùy chọn\n(size, topping, ghi chú)" as UC02
+  usecase "Quản lý giỏ hàng" as UC03
+  usecase "Áp dụng mã\nkhuyến mãi" as UC03a
+  usecase "Đặt đơn" as UC04
+  usecase "Kiểm tra tồn kho" as UC04a
+  usecase "Hủy đơn" as UC04b
+  usecase "Thanh toán đơn hàng\n(Ví / Thẻ)" as UC05
+  usecase "Thanh toán lại\nkhi thất bại" as UC05a
+  usecase "Theo dõi trạng thái đơn" as UC06
+  usecase "Xem lịch sử đơn" as UC07
+  usecase "Cập nhật trạng thái đơn" as UC08
+  usecase "Tích điểm thưởng" as UC08a
+  usecase "Đăng ký" as UC09
+  usecase "Đăng nhập" as UC10
+}
+
+Customer -- UC01
+Customer -- UC02
+Customer -- UC03
+Customer -- UC04
+Customer -- UC04b
+Customer -- UC05
+Customer -- UC06
+Customer -- UC07
+Customer -- UC09
+Customer -- UC10
+
+UC05 -- Pay
+UC08 -- Staff
+UC10 -- Staff
+Staff <|-- Manager
+
+UC01a .> UC01 : <<extend>>
+UC03a .> UC03 : <<extend>>
+UC05a .> UC05 : <<extend>>
+UC08a .> UC08 : <<extend>>
+
+UC04 .> UC04a : <<include>>
+UC04 .> UC10 : <<include>>
+UC08 .> UC10 : <<include>>
+@enduml

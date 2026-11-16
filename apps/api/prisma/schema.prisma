@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PREPARING
+  READY
+  COMPLETED
+  PAYMENT_FAILED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+}
+
+enum PaymentMethod {
+  WALLET
+  CARD
+}
+
+enum Size {
+  S
+  M
+  L
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+}
+
+model Product {
+  id          Int          @id @default(autoincrement())
+  name        String
+  price       Int
+  category    String       @default("COFFEE")
+  imageUrl    String?
+  stock       Int          @default(0)
+  version     Int          @default(0)
+  description String?
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[]
+}
+
+model User {
+  id                  Int                  @id @default(autoincrement())
+  email               String               @unique
+  passwordHash        String
+  role                UserRole             @default(CUSTOMER)
+  loyaltyPoints       Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  orders              Order[]
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model Order {
+  id                      Int                 @id @default(autoincrement())
+  userId                  Int
+  status                  OrderStatus         @default(PENDING)
+  total                   Int
+  discount                Int                 @default(0)
+  promoCode               String?
+  createdAt               DateTime            @default(now())
+  user                    User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  promotion               Promotion?          @relation(fields: [promoCode], references: [code], onDelete: Restrict)
+  items                   OrderItem[]
+  payments                Payment[]
+  loyaltyTransaction      LoyaltyTransaction?
+  usesIngredientInventory Boolean?
+  ingredients             OrderIngredient[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model LoyaltyTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  orderId   Int      @unique
+  points    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  size      Size
+  qty       Int
+  toppings       String[] @default([])
+  toppingIds     String[] @default([])
+  toppingAmounts Int[] @default([])
+  lineTotal Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  orderId        Int
+  idempotencyKey String        @unique
+  amount         Int
+  method         PaymentMethod
+  status         PaymentStatus
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Promotion {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  percent   Int
+  expiresAt DateTime
+  usageLeft Int
+  orders    Order[]
+}
+
+model Ingredient {
+  id            Int               @id @default(autoincrement())
+  name          String            @unique
+  unit          String            @default("g")
+  stockQuantity Int               @default(0)
+  version       Int               @default(0)
+  recipeItems   RecipeItem[]
+  topping       Topping?
+  reservations  OrderIngredient[]
+}
+
+model OrderIngredient {
+  orderId      Int
+  ingredientId Int
+  quantity     Int
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([orderId, ingredientId])
+  @@index([ingredientId])
+}
+
+model RecipeItem {
+  id             Int        @id @default(autoincrement())
+  productId      Int
+  ingredientId   Int
+  size           Size       @default(M)
+  amountRequired Int
+  product        Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, ingredientId, size])
+}
+
+model Topping {
+  id               String     @id
+  name             String     @unique
+  price            Int
+  amountPerPortion Int
+  ingredientId     Int        @unique
+  ingredient       Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+}

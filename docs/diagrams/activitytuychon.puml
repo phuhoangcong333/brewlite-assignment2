@@ -1,0 +1,52 @@
+
+@startuml
+title Activity Diagram - Chọn tùy chọn sản phẩm
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam activity {
+    BackgroundColor white
+    BorderColor #2F80ED
+    DiamondBackgroundColor #EAF2FF
+    DiamondBorderColor #2F80ED
+    ArrowColor #333333
+    FontColor #222222
+}
+
+|Khách hàng|
+start
+:Mở chi tiết sản phẩm;
+:Chọn kích thước (Size);
+
+if (Có topping?) then (Có)
+    :Chọn topping;
+else (Không)
+endif
+
+:Nhập ghi chú (nếu có);
+:Nhấn "Thêm vào giỏ hàng";
+
+|Hệ thống|
+:Kiểm tra sản phẩm;
+:Kiểm tra size và topping;
+:Kiểm tra tính hợp lệ của tùy chọn;
+
+if (Thông tin hợp lệ?) then (Có)
+    :Tính giá sản phẩm\n(theo size và topping);
+    :Tạo thông tin sản phẩm\nkèm tùy chọn;
+    :Thêm sản phẩm vào giỏ hàng;
+    :Cập nhật tổng tiền;
+
+    |Khách hàng|
+    :Hiển thị giỏ hàng\nđã cập nhật;
+    stop
+else (Không)
+    :Trả về thông báo lỗi;
+
+    |Khách hàng|
+    :Hiển thị thông báo lỗi;
+    :Điều chỉnh tùy chọn;
+    stop
+endif
+
+@enduml

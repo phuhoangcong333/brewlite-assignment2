@@ -1,0 +1,77 @@
+@startuml activity-xem-menu
+title Activity diagram: Xem menu (TV1)
+
+skinparam defaultFontName Arial
+skinparam titleFontColor #1F3864
+skinparam ArrowColor #333333
+skinparam ActivityBackgroundColor #E8F0FE
+skinparam ActivityBorderColor #4A6FA5
+skinparam ActivityDiamondBackgroundColor #FFF4D6
+skinparam ActivityDiamondBorderColor #B58A1B
+skinparam ActivityStartColor #222222
+skinparam ActivityEndColor #222222
+skinparam swimlaneBorderColor #9AA7BD
+skinparam swimlaneTitleFontColor #1F3864
+
+|#F6F8FC|Khách hàng|
+|#FFFFFF|Next.js UI|
+|#F6F8FC|NestJS API|
+|#FFFFFF|Database|
+
+|Khách hàng|
+start
+:Mở ứng dụng BrewLite;
+
+|Next.js UI|
+:Hiển thị khung chờ (skeleton);
+:Gửi GET /products;
+
+|NestJS API|
+:Nhận yêu cầu;
+
+|Database|
+:Truy vấn danh sách món;
+
+|NestJS API|
+if (Truy vấn thành công?) then (có)
+  :Trả 200 và danh sách món (JSON);
+  
+  |Next.js UI|
+  if (Danh sách có món?) then (có)
+    :Hiển thị lưới món (hình, tên, giá);
+    if (Có món hết hàng?) then (có)
+      :Gắn nhãn "Hết hàng", khóa nút thêm vào giỏ; <<#FDE8E8>>
+    else (không)
+    endif
+    
+    |Khách hàng|
+    if (Chọn danh mục?) then (có)
+      |Next.js UI|
+      :Lọc danh sách theo danh mục;
+      :Cập nhật lưới món;
+    else (không)
+    endif
+    
+    |Khách hàng|
+    :Xem menu và chọn một món;
+  else (rỗng)
+    |Next.js UI|
+    :Hiển thị "Hiện chưa có sản phẩm nào"; <<#FDE8E8>>
+  endif
+else (lỗi)
+  :Trả lỗi 5xx;
+  
+  |Next.js UI|
+  :Hiển thị thông báo lỗi và nút "Thử lại"; <<#FDE8E8>>
+  
+  |Khách hàng|
+  if (Bấm "Thử lại"?) then (có)
+    :Quay lại bước tải menu;
+    detach
+  else (không)
+  endif
+endif
+
+|Khách hàng|
+stop
+@enduml

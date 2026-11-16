@@ -1,0 +1,69 @@
+@startuml
+' BrewLite Assignment 2 - Use-case rieng cua TV6
+' Dang nhap / JWT do TV7 phu trach; UC Checkout do TV4 phu trach.
+left to right direction
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam ArrowColor #475569
+skinparam actor {
+  BorderColor #0F172A
+  FontColor #0F172A
+}
+skinparam usecase {
+  BackgroundColor #EFF6FF
+  BorderColor #2563EB
+  FontColor #0F172A
+}
+skinparam rectangle {
+  BorderColor #94A3B8
+  FontColor #0F172A
+}
+title BrewLite - Use Case Diagram: Theo dõi đơn hàng (TV6)
+
+actor "Khách hàng" as KH
+actor "Nhân viên quầy" as NV
+
+rectangle "BrewLite - Luong TV6" {
+  usecase "UC-TV6-01\nXem xác nhận đơn" as UC01
+  usecase "UC-TV6-02\nXem lịch sử đơn" as UC02
+  usecase "UC-TV6-03\nXem chi tiết đơn" as UC03
+  usecase "UC-TV6-04\nTheo dõi trạng thái đơn" as UC04
+  usecase "UC-TV6-05\nHủy đơn chưa thanh toán" as UC05
+  usecase "UC-TV6-06\nXem đơn cần xử lý" as UC06
+  usecase "UC-TV6-07\nCập nhật trạng thái đơn" as UC07
+  usecase "UC-TV6-08\nKiểm tra thứ tự trạng thái" as UC08
+  usecase "UC-TV6-09\nKiểm tra quyền nhân viên" as UC09
+  usecase "UC-TV6-10\nGhi nhận điểm thưởng" as UC10
+}
+
+KH --> UC01
+KH --> UC02
+KH --> UC03
+KH --> UC04
+KH --> UC05
+NV --> UC06
+NV --> UC07
+
+UC04 ..> UC03 : <<include>>
+UC07 ..> UC08 : <<include>>
+UC07 ..> UC09 : <<include>>
+UC10 ..> UC07 : <<extend>>\n[READY -> COMPLETED]
+
+note right of UC04
+  GET /orders/:id
+  Tu lam moi moi 8 giay
+  Don bi huy duoc hien thi ro rang
+end note
+
+note right of UC10
+  Chi ghi mot giao dich diem
+  cho moi don hoan thanh
+end note
+
+note bottom of UC07
+  Chuyen sai thu tu: 409
+  Khach hang khong co quyen: 403
+end note
+
+@enduml

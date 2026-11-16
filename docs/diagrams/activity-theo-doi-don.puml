@@ -1,0 +1,95 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+title BrewLite - TV6 - Activity theo doi va cap nhat trang thai don
+
+|Nguoi dung|
+start
+:Truy cap module don hang;
+if (Vai tro?) then (Khach hang)
+  :Mo trang lich su don;
+  |Next.js|
+  :Gui GET /orders voi JWT;
+  |NestJS API|
+  if (JWT hop le?) then (Khong)
+    :Tra 401;
+    |Next.js|
+    :Chuyen /login;
+    stop
+  endif
+  |PostgreSQL|
+  :Lay cac don thuoc userId;
+  |Next.js|
+  if (Lich su rong?) then (Co)
+    :Hien thi chua co don;
+    stop
+  endif
+  :Hien thi lich su don;
+  |Nguoi dung|
+  :Chon don can theo doi;
+  repeat
+    |Next.js|
+    :Gui GET /orders/:id;
+    |NestJS API|
+    :Kiem tra JWT va userId;
+    if (Don khong ton tai / khong thuoc khach?) then (Co)
+      :Tra 404;
+      |Next.js|
+      :Thong bao khong tim thay don;
+      stop
+    endif
+    |PostgreSQL|
+    :Doc trang thai moi nhat;
+    |Next.js|
+    if (CANCELLED?) then (Co)
+      :Hien thi don da huy;
+      stop
+    elseif (COMPLETED?) then (Co)
+      :Hien thi hoan thanh va diem thuong;
+      stop
+    elseif (PAYMENT_FAILED?) then (Co)
+      :Thong bao thanh toan that bai;
+    else (Khac)
+      :Hien thi tien do PAID / PREPARING / READY;
+    endif
+    :Cho 8 giay khi tab dang mo;
+  repeat while (Khach van xem don?) is (Co)
+  -> (Khong)
+  stop
+else (Nhan vien)
+  :Nhan vien chon don va trang thai tiep;
+  |Next.js|
+  :PATCH /orders/:id/status;
+  |NestJS API|
+  if (JWT hop le va role STAFF?) then (Khong)
+    :Tra 401 hoac 403;
+    stop
+  endif
+  |PostgreSQL|
+  :Doc trang thai hien tai;
+  |NestJS API|
+  if (Chuyen trang thai hop le?) then (Khong)
+    :Tra 409;
+    |Next.js|
+    :Bao loi, giu nguyen don;
+    stop
+  endif
+  |PostgreSQL|
+  :Cap nhat trang thai co dieu kien;
+  if (Cap nhat thanh cong?) then (Khong)
+    :Rollback, tra 409;
+    stop
+  endif
+  if (READY sang COMPLETED?) then (Co)
+    :Tao LoyaltyTransaction;
+    :Cong diem cho User dung mot lan;
+  endif
+  :Commit transaction;
+  |NestJS API|
+  :Tra 204 No Content;
+  |Next.js|
+  :Hien thi trang thai da cap nhat;
+  stop
+endif
+@enduml

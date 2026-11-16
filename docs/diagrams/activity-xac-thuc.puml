@@ -1,0 +1,96 @@
+@startuml activity-xac-thuc
+title Activity diagram: Đăng ký / Đăng nhập (TV7)
+
+skinparam defaultFontName Arial
+skinparam titleFontColor #1F3864
+skinparam ArrowColor #333333
+skinparam ActivityBackgroundColor #E8F0FE
+skinparam ActivityBorderColor #4A6FA5
+skinparam ActivityDiamondBackgroundColor #FFF4D6
+skinparam ActivityDiamondBorderColor #B58A1B
+skinparam ActivityStartColor #222222
+skinparam ActivityEndColor #222222
+skinparam swimlaneBorderColor #9AA7BD
+skinparam swimlaneTitleFontColor #1F3864
+
+|#F6F8FC|Khách|
+|#FFFFFF|Giao diện Next.js|
+|#F6F8FC|API NestJS|
+|#FFFFFF|Database|
+
+|Khách|
+start
+:Mở trang đăng ký / đăng nhập;
+
+if (Đã có tài khoản?) then (chưa)
+  repeat
+    |Khách|
+    :Nhập email, mật khẩu, tên;
+    |Giao diện Next.js|
+    :Gửi POST /auth/register;
+    |API NestJS|
+    :Validate dữ liệu (ValidationPipe);
+    if (Dữ liệu hợp lệ?) then (không)
+      |Giao diện Next.js|
+      #FDE8E8:Hiển thị lỗi từng trường (400);
+    else (có)
+      |Database|
+      :Tìm User theo email;
+      |API NestJS|
+      if (Email đã tồn tại?) then (có)
+        |Giao diện Next.js|
+        #FDE8E8:Báo email đã được dùng (409);
+      else (chưa)
+        |API NestJS|
+        :Băm mật khẩu (bcrypt);
+        |Database|
+        :Lưu User, vai trò Khách;
+        |Giao diện Next.js|
+        :Báo đăng ký thành công, chuyển sang đăng nhập;
+      endif
+    endif
+  repeat while (Đăng ký chưa thành công?)
+else (rồi)
+endif
+
+repeat
+  repeat
+    |Khách|
+    :Nhập email và mật khẩu;
+    |Giao diện Next.js|
+    :Gửi POST /auth/login;
+    |API NestJS|
+    :Validate dữ liệu (sai định dạng trả 400);
+    |Database|
+    :Tìm User theo email;
+    |API NestJS|
+    if (Có User và mật khẩu khớp (bcrypt)?) then (không)
+      |Giao diện Next.js|
+      #FDE8E8:Báo sai email hoặc mật khẩu (401);
+    else (có)
+      |API NestJS|
+      :Ký JWT (sub, role, exp);
+      |Giao diện Next.js|
+      :Lưu token, cập nhật auth context, quay lại trang trước;
+    endif
+  repeat while (Đăng nhập chưa thành công?)
+
+  |Khách|
+  :Thao tác cần đăng nhập (vd. đặt đơn);
+  |Giao diện Next.js|
+  :Gửi request kèm Authorization: Bearer token;
+  |API NestJS|
+  :JwtAuthGuard kiểm tra chữ ký và hạn;
+  if (Token hợp lệ và chưa hết hạn?) then (không)
+    |Giao diện Next.js|
+    #FDE8E8:Xóa token, báo phiên hết hạn (401);
+  else (có)
+    |API NestJS|
+    :Xử lý yêu cầu nghiệp vụ;
+    |Giao diện Next.js|
+    :Hiển thị kết quả;
+  endif
+repeat while (Phiên hết hạn, cần đăng nhập lại?)
+
+stop
+@enduml
