@@ -10,6 +10,13 @@ BrewLite là ứng dụng đặt đồ uống trực tuyến gồm:
 README này là hướng dẫn bàn giao: cài đặt, cấu hình, chạy, migration/seed,
 kiểm thử, build và kiểm tra các tài liệu truy vết.
 
+## Links & Documentation (Sprint 2)
+
+- **Production URL (HTTPS):** [BrewLite Production](https://47.129.180.144.sslip.io)
+- **Demo Video:** [Xem video nghiệm thu BrewLite](https://drive.google.com/file/d/1nEoMsIKDN8ifOlwJy8bl21vhLiF7Rftd/view?usp=sharing)
+- **Sprint Retrospective:** [Biên bản Sprint 2](docs/sprint2-review-retro.md)
+- **Deploy & Rollback Guide:** [Hướng dẫn triển khai và rollback](docs/deploy-and-rollback.md)
+
 ## 1. Cấu trúc repository
 
 ```text
@@ -52,19 +59,19 @@ Copy-Item apps/api/.env.example apps/api/.env
 
 Các biến chính:
 
-| Biến | Chạy trực tiếp trên máy | Chạy trong Compose |
-|---|---|---|
-| `PORT` | `3001` | `3001` |
-| `DATABASE_URL` | `postgresql://brewlite:brewlite123@localhost:5433/brewlite?schema=public` | Compose tự ghi đè bằng hostname `db:5432` |
-| `JWT_SECRET` | Chuỗi bí mật đủ dài cho môi trường local | Dùng secret ngoài repository ở production |
-| `STAFF_EMAIL` | Tài khoản nhân viên seed | Đọc từ `apps/api/.env` |
-| `STAFF_PASSWORD` | Mật khẩu nhân viên seed | Đọc từ `apps/api/.env` |
+| Biến             | Chạy trực tiếp trên máy                                                   | Chạy trong Compose                        |
+| ---------------- | ------------------------------------------------------------------------- | ----------------------------------------- |
+| `PORT`           | `3001`                                                                    | `3001`                                    |
+| `DATABASE_URL`   | `postgresql://brewlite:brewlite123@localhost:5433/brewlite?schema=public` | Compose tự ghi đè bằng hostname `db:5432` |
+| `JWT_SECRET`     | Chuỗi bí mật đủ dài cho môi trường local                                  | Dùng secret ngoài repository ở production |
+| `STAFF_EMAIL`    | Tài khoản nhân viên seed                                                  | Đọc từ `apps/api/.env`                    |
+| `STAFF_PASSWORD` | Mật khẩu nhân viên seed                                                   | Đọc từ `apps/api/.env`                    |
 
 ### Frontend
 
-| Biến | Giá trị local thật |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3001` |
+| Biến                   | Giá trị local thật                                |
+| ---------------------- | ------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`  | `http://localhost:3001`                           |
 | `NEXT_PUBLIC_USE_MOCK` | `false` để gọi Backend thật; `true` chỉ dùng mock |
 
 Khi chạy `docker compose`, `NEXT_PUBLIC_*` được truyền lúc build image. Nếu
@@ -92,13 +99,13 @@ docker compose logs -f api
 
 Địa chỉ truy cập:
 
-| Thành phần | Địa chỉ |
-|---|---|
-| Frontend | http://localhost:3000 |
-| Backend | http://localhost:3001 |
-| Health check | http://localhost:3001/health |
-| Swagger | http://localhost:3001/api-docs |
-| PostgreSQL từ host | `localhost:5433` |
+| Thành phần         | Địa chỉ                        |
+| ------------------ | ------------------------------ |
+| Frontend           | http://localhost:3000          |
+| Backend            | http://localhost:3001          |
+| Health check       | http://localhost:3001/health   |
+| Swagger            | http://localhost:3001/api-docs |
+| PostgreSQL từ host | `localhost:5433`               |
 
 Kiểm tra migration và seed trong container:
 
