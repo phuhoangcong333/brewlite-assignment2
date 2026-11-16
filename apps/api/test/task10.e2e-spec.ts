@@ -140,6 +140,84 @@ describeDb('Task 10 HTTP integration', () => {
       .expect(401);
   });
 
+  it('rejects POST /orders with an invalid JWT', async () => {
+    const productId = await createProduct(1);
+
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', 'Bearer invalid-token')
+      .send({ items: [{ productId, qty: 1, size: 'S' }] })
+      .expect(401);
+  });
+
+  it.each([
+    { items: [] },
+    { items: [{ productId: 1, qty: 0, size: 'S' }] },
+    { items: [{ productId: 1, qty: 1, size: 'INVALID' }] },
+  ])('rejects invalid POST /orders input %#', async (body) => {
+    const productId = await createProduct(1);
+    const orderCount = await prisma.order.count({
+      where: { userId, items: { some: { productId } } },
+    });
+
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ...body,
+        items: body.items.map((item) => ({ ...item, productId })),
+      })
+      .expect(400);
+
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(1);
+    await expect(
+      prisma.order.count({
+        where: { userId, items: { some: { productId } } },
+      }),
+    ).resolves.toBe(orderCount);
+  });
+
+  it('rejects an order exceeding available stock without making stock negative', async () => {
+    const productId = await createProduct(1);
+
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ productId, qty: 2, size: 'S' }] })
+      .expect(400);
+
+    await expect(ingredientQuantity(prisma, productId)).resolves.toBe(1);
+    await expect(
+      prisma.order.count({
+        where: { userId, items: { some: { productId } } },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it('persists the product price used when POST /orders was placed', async () => {
+    const productId = await createProduct(1);
+
+    const response = await createOrder(productId);
+    expect(response.status).toBe(201);
+    await prisma.product.update({
+      where: { id: productId },
+      data: { price: 99_000 },
+    });
+
+    await expect(
+      prisma.order.findUniqueOrThrow({
+        where: { id: response.body.id },
+        select: {
+          total: true,
+          items: { select: { productId: true, lineTotal: true } },
+        },
+      }),
+    ).resolves.toEqual({
+      total: 1_000,
+      items: [{ productId, lineTotal: 1_000 }],
+    });
+  });
+
   it('TV5: GET /orders/me returns only the authenticated user orders', async () => {
     const productId = await createProduct(1);
     const ownOrder = await createOrder(productId);
