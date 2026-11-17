@@ -4,6 +4,43 @@
 > **Mục đích:** Truy vết xuyên suốt Task 1–5: yêu cầu (FR/NFR) → User Story/Use Case → sơ đồ/ADR → GitHub Issue/PR/commit → thành phần code → Test Case/bằng chứng → nghiệm thu.  
 > **Lưu ý:** Do bảng Issues đã thống nhất mới có tiêu đề và phân công, chưa có số `#` GitHub trong nội dung trao đổi, ma trận dùng mã tham chiếu S1-I1…S2-I7 và nguyên tiêu đề Issue. Thay bằng số `#`/URL thật khi cập nhật repository. Đường dẫn code và mã Test Case dưới đây là vị trí/mã dự kiến, chưa khẳng định đã được triển khai hoặc kiểm thử.
 
+## Handoff update – 2026-11-16
+
+Phần dưới đây bổ sung bằng chứng đã quan sát được trên nhánh
+`feat/tv2-product-detail` sau khi đồng bộ `origin/dev` tại commit `4bcaf13`.
+Các ô `TBD` ở những phần do TV1–TV7 cung cấp phải
+được thay bằng Issue/PR/commit/test report thực tế; không suy đoán số Issue,
+URL production hoặc kết quả deploy.
+
+| Hạng mục bàn giao | Đường dẫn/bằng chứng hiện có | Trạng thái đối chiếu |
+|---|---|---|
+| README chạy local, Docker, migration/seed, test/build | `README.md` | Đã cập nhật tài liệu; cần thử trên máy sạch |
+| Deploy/rollback | `docs/deployment.md`, `docs/deploy-and-rollback.md`, `.github/workflows/cd.yml`, `docker-compose.prod.yml` | Có runbook/CD/rollback trên code; cần xác nhận lần deploy thực tế |
+| Product detail API/schema/seed | `apps/api/src/Product/`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/seed.ts`, `apps/api/prisma/migrations/` | Có file trên nhánh; cần xác nhận CI/DB sạch |
+| Product detail UI/API client | `apps/web/src/app/products/[id]/`, `apps/web/src/lib/api.ts`, `apps/web/src/lib/types.ts` | Có file trên nhánh |
+| Pricing/cart test | `apps/web/src/lib/pricing.test.ts`, `apps/web/src/lib/cart.test.ts` | Frontend full test: 69/69 passed |
+| Topping inventory API/UI | `apps/api/src/inventory/toppings.controller.ts`, `apps/web/src/lib/toppings-api.ts`, `apps/web/src/lib/use-toppings.ts` | Có endpoint, test controller và client sau khi sync `origin/dev` |
+| API smoke collection | `apps/api/postman/BrewLite-local-smoke.postman_collection.json` | Có collection; cần chạy với DB/Backend đang hoạt động |
+| Build Backend | `npx.cmd prisma generate` → `npm.cmd run build` trong `apps/api` | Passed sau khi generate Prisma Client |
+| Build Frontend | `npm.cmd run build` trong `apps/web` | Turbopack gặp `EPERM` khi tạo `.next` trên môi trường hiện tại; cần xác nhận lại trên máy dev/CI |
+| Release Notes | `docs/release-notes.md` | Đã tạo bản release candidate |
+| Sprint Review/Retrospective | `docs/sprint2-review-retro.md` | Đã tạo biên bản; chờ xác nhận thành viên |
+
+### Bảng thu thập truy vết TV1–TV7
+
+Mỗi thành viên điền một dòng bằng dữ liệu lấy trực tiếp từ GitHub/CI. Dòng
+chưa có bằng chứng giữ nguyên `TBD` và trạng thái `Chưa xác nhận`.
+
+| Thành viên | Phạm vi | Issue URL/# | PR URL | Commit SHA | Code/docs path | Test/CI evidence | Người xác nhận | Trạng thái |
+|---|---|---|---|---|---|---|---|---|
+| TV1 | Deploy, CI/CD, database, rollback | TBD | TBD | `4bcaf13` | `docs/deploy-and-rollback.md`, `.github/workflows/cd.yml`, `docker-compose.prod.yml` | `/health`, migration, smoke test, rollback | TBD | Có code/docs; chờ bằng chứng deploy |
+| TV2 | Product detail, API client, PWA, tài liệu | TBD | TBD | `4bcaf13` | `apps/web/src/app/products/[id]/`, `apps/api/src/Product/`, `README.md` | Frontend 69/69 tests passed; API build passed | TBD | Có code/test local; chờ link PR |
+| TV3 | Cart, pricing, promotion | TBD | TBD | TBD | `apps/web/src/lib/cart.ts`, `apps/api/src/promotions/` | promotion/cart tests | TBD | Chưa xác nhận |
+| TV4 | Order, inventory, transaction | TBD | TBD | TBD | `apps/api/src/orders/`, Prisma schema | order/inventory tests | TBD | Chưa xác nhận |
+| TV5 | Payment, idempotency | TBD | TBD | TBD | `apps/api/src/payments/`, postman collection | payment/idempotency tests | TBD | Chưa xác nhận |
+| TV6 | Order state, loyalty, E2E | TBD | TBD | TBD | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `docs/testing/` | state/loyalty/E2E tests | TBD | Chưa xác nhận |
+| TV7 | Auth, JWT, guards, architecture | TBD | TBD | TBD | `apps/api/src/auth/`, `docs/architecture/` | auth/guard/health tests | TBD | Chưa xác nhận |
+
 ## 1. Quy ước trạng thái
 
 | Trạng thái | Ý nghĩa |

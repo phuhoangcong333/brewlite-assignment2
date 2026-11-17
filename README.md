@@ -1,446 +1,270 @@
-# brewlite-assignment2
-Đồ án  BrewLite Assignment 2 - Nhóm 11
-# BrewLite -- Ứng dụng đặt hàng trực tuyến
+# BrewLite – Assignment 2
 
-BrewLite là ứng dụng web hỗ trợ khách hàng xem thực đơn, lựa chọn sản
-phẩm, quản lý giỏ hàng và đặt hàng trực tuyến. Dự án được xây dựng theo
-mô hình frontend--backend, sử dụng Next.js cho giao diện, NestJS cho API
-và PostgreSQL để lưu trữ dữ liệu.
+BrewLite là ứng dụng đặt đồ uống trực tuyến gồm:
 
-Tài liệu này hướng dẫn cài đặt, khởi chạy, kiểm tra và trình diễn
-BrewLite trên môi trường local bằng Docker Compose.
+- Frontend: Next.js, React, TypeScript, PWA.
+- Backend: NestJS, Prisma và PostgreSQL.
+- Xác thực: JWT do module Auth dùng chung cung cấp.
+- Chạy local: Docker Compose hoặc chạy frontend/backend trực tiếp trên máy.
 
-> **Lưu ý:** Các chức năng và địa chỉ trong tài liệu phản ánh cấu hình
-> demo được mô tả cho dự án. Trước buổi trình diễn, hãy đối chiếu với
-> `docker-compose.yml`, file `.env`, mã nguồn controller/service và kiểm
-> thử thực tế trên nhánh sẽ dùng để demo.
+README này là hướng dẫn bàn giao: cài đặt, cấu hình, chạy, migration/seed,
+kiểm thử, build và kiểm tra các tài liệu truy vết.
 
-------------------------------------------------------------------------
+## Links & Documentation (Sprint 2)
 
-## 1. Tổng quan công nghệ
+- **Production URL (HTTPS):** [BrewLite Production](https://47.129.180.144.sslip.io)
+- **Demo Video:** [Xem video nghiệm thu BrewLite](https://drive.google.com/file/d/1nEoMsIKDN8ifOlwJy8bl21vhLiF7Rftd/view?usp=sharing)
+- **Sprint Retrospective:** [Biên bản Sprint 2](docs/sprint2-review-retro.md)
+- **Deploy & Rollback Guide:** [Hướng dẫn triển khai và rollback](docs/deploy-and-rollback.md)
 
-  Thành phần                     Công nghệ
-  ------------------------------ -----------------------------
-  Frontend                       Next.js, React, TypeScript
-  Backend                        NestJS, Node.js, TypeScript
-  Cơ sở dữ liệu                  PostgreSQL
-  ORM                            Prisma
-  Xác thực                       JSON Web Token (JWT)
-  Mã hóa mật khẩu                bcrypt
-  Đóng gói và triển khai local   Docker, Docker Compose
+## 1. Cấu trúc repository
 
-## 2. Chức năng chính
-
-### 2.1. Tài khoản và xác thực
-
--   Đăng ký tài khoản.
--   Đăng nhập bằng email và mật khẩu.
--   Xác thực người dùng bằng JWT.
--   Bảo vệ các API yêu cầu đăng nhập.
-
-### 2.2. Sản phẩm
-
--   Xem danh sách sản phẩm.
--   Xem thông tin chi tiết sản phẩm.
--   Lấy dữ liệu sản phẩm từ backend.
-
-### 2.3. Giỏ hàng
-
--   Thêm sản phẩm vào giỏ hàng.
--   Xem danh sách sản phẩm đã chọn.
--   Thay đổi số lượng sản phẩm.
--   Cập nhật và kiểm tra tổng tiền.
-
-### 2.4. Đặt hàng
-
--   Gửi yêu cầu tạo đơn hàng từ giỏ hàng.
--   Xem danh sách đơn hàng.
--   Xem chi tiết đơn hàng (nếu giao diện đã triển khai).
--   Theo dõi và cập nhật trạng thái đơn hàng theo quy tắc nghiệp vụ ở
-    backend.
-
-### 2.5. Thanh toán và tồn kho
-
--   Gửi yêu cầu thanh toán thông qua API.
--   Nhận và hiển thị kết quả xử lý thanh toán.
--   Kiểm tra logic cập nhật tồn kho trong quy trình đặt hàng.
--   Xử lý trạng thái đơn hàng theo luồng nghiệp vụ được triển khai.
-
-> **Phạm vi demo:** Kết quả của từng chức năng phụ thuộc vào mã nguồn,
-> cấu hình môi trường và dữ liệu hiện tại. Không nên giới thiệu một chức
-> năng là hoàn thiện nếu chưa kiểm thử thành công trên môi trường demo.
-
-## 3. Yêu cầu môi trường
-
-Cần cài đặt các công cụ sau:
-
--   **Git** -- lấy mã nguồn dự án.
--   **Docker Desktop** -- chạy các container.
--   **Docker Compose** -- công cụ điều phối các service, thường được
-    tích hợp trong Docker Desktop.
-
-Trước khi thực hiện, hãy: 1. Khởi động Docker Desktop. 2. Chờ Docker
-Engine chuyển sang trạng thái hoạt động. 3. Mở PowerShell hoặc Terminal
-tại thư mục dự án.
-
-## 4. Khởi chạy dự án bằng Docker Compose
-
-### 4.1. Mở thư mục dự án
-
-Nếu dự án đã được clone về máy, chuyển đến thư mục gốc:
-
-``` powershell
-cd brewlite
+```text
+apps/api/       NestJS API, Prisma schema/migration/seed
+apps/web/       Next.js frontend, unit/component/E2E test
+docs/           API contract, architecture, deployment, traceability
+docker-compose.yml
 ```
 
-Thay đường dẫn trên bằng vị trí thực tế của thư mục BrewLite trên máy.
+## 2. Yêu cầu môi trường
 
-### 4.2. Kiểm tra cấu hình Compose
+- Git.
+- Node.js 24 LTS (Node.js 20+ có thể dùng cho các script không chạy Docker).
+- npm.
+- Docker Desktop đang chạy Docker Engine.
 
-``` powershell
+Trên Windows PowerShell, nếu execution policy chặn `npm.ps1` hoặc `npx.ps1`,
+dùng `npm.cmd` và `npx.cmd` như các ví dụ bên dưới.
+
+## 3. Lấy mã nguồn
+
+```powershell
+git clone <URL_REPOSITORY>
+Set-Location D:\CNPM\brewlite-assignment2
+git switch feat/tv2-product-detail
+```
+
+Không commit `.env`, mật khẩu hoặc JWT secret. Chỉ commit các file
+`.env.example` và tài liệu hướng dẫn.
+
+## 4. Biến môi trường
+
+### Backend: `apps/api/.env`
+
+Tạo từ file mẫu:
+
+```powershell
+Copy-Item apps/api/.env.example apps/api/.env
+```
+
+Các biến chính:
+
+| Biến             | Chạy trực tiếp trên máy                                                   | Chạy trong Compose                        |
+| ---------------- | ------------------------------------------------------------------------- | ----------------------------------------- |
+| `PORT`           | `3001`                                                                    | `3001`                                    |
+| `DATABASE_URL`   | `postgresql://brewlite:brewlite123@localhost:5433/brewlite?schema=public` | Compose tự ghi đè bằng hostname `db:5432` |
+| `JWT_SECRET`     | Chuỗi bí mật đủ dài cho môi trường local                                  | Dùng secret ngoài repository ở production |
+| `STAFF_EMAIL`    | Tài khoản nhân viên seed                                                  | Đọc từ `apps/api/.env`                    |
+| `STAFF_PASSWORD` | Mật khẩu nhân viên seed                                                   | Đọc từ `apps/api/.env`                    |
+
+### Frontend
+
+| Biến                   | Giá trị local thật                                |
+| ---------------------- | ------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`  | `http://localhost:3001`                           |
+| `NEXT_PUBLIC_USE_MOCK` | `false` để gọi Backend thật; `true` chỉ dùng mock |
+
+Khi chạy `docker compose`, `NEXT_PUBLIC_*` được truyền lúc build image. Nếu
+đổi API URL, phải build lại image frontend.
+
+## 5. Cách 1 – chạy toàn bộ bằng Docker Compose
+
+Từ thư mục gốc repository:
+
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2
+Copy-Item apps/api/.env.example apps/api/.env
 docker compose config --quiet
-```
-
-Nếu lệnh không báo lỗi, cấu hình Docker Compose có thể được phân tích
-thành công.
-
-### 4.3. Build và khởi chạy các service
-
-``` powershell
 docker compose up --build -d
-```
-
-Lệnh này build image khi cần và chạy các container ở chế độ nền.
-
-### 4.4. Kiểm tra trạng thái
-
-``` powershell
 docker compose ps
 ```
 
-Các service dự kiến:
+`api` tự chạy `prisma migrate deploy`, `prisma db seed` rồi khởi động NestJS.
+Nếu cần xem log:
 
-  Service      Vai trò
-  ------------ --------------------------
-  `frontend`   Giao diện web Next.js
-  `backend`    API NestJS
-  `db`         Cơ sở dữ liệu PostgreSQL
-
-Tên service thực tế phải khớp với tên khai báo trong
-`docker-compose.yml`.
-
-### 4.5. Xem log khi cần
-
-Xem 100 dòng log gần nhất:
-
-``` powershell
-docker compose logs --tail=100 backend frontend db
+```powershell
+docker compose logs --tail=100 api web db
+docker compose logs -f api
 ```
 
-Theo dõi log liên tục:
+Địa chỉ truy cập:
 
-``` powershell
-docker compose logs -f backend frontend db
+| Thành phần         | Địa chỉ                        |
+| ------------------ | ------------------------------ |
+| Frontend           | http://localhost:3000          |
+| Backend            | http://localhost:3001          |
+| Health check       | http://localhost:3001/health   |
+| Swagger            | http://localhost:3001/api-docs |
+| PostgreSQL từ host | `localhost:5433`               |
+
+Kiểm tra migration và seed trong container:
+
+```powershell
+docker compose exec api npx prisma migrate status --schema prisma/schema.prisma
+docker compose exec api npx prisma db seed --schema prisma/schema.prisma
 ```
 
-Nhấn `Ctrl + C` để dừng theo dõi log. Thao tác này **không** dừng các
-container đang chạy.
+Dừng ứng dụng nhưng giữ volume database:
 
-## 5. Địa chỉ truy cập
-
-Theo cấu hình cổng được sử dụng cho bản demo:
-
-  Thành phần               Địa chỉ
-  ------------------------ -------------------------------------------
-  Frontend                 http://localhost:3000
-  Backend                  http://localhost:3001
-  PostgreSQL từ máy host   `localhost:5433`
-  Prisma Studio            http://localhost:5555 (sau khi khởi chạy)
-
-Các cổng trên có thể thay đổi theo `docker-compose.yml` và biến môi
-trường. Nếu không truy cập được, kiểm tra cột `PORTS` trong kết quả:
-
-``` powershell
-docker compose ps
-```
-
-## 6. Mở Prisma Studio
-
-Prisma Studio cho phép xem và kiểm tra dữ liệu trong PostgreSQL bằng
-giao diện trình duyệt.
-
-### 6.1. Thiết lập kết nối từ PowerShell
-
-Thực hiện tại thư mục gốc dự án. Ví dụ dưới đây lấy thông tin user và
-password từ container database, sau đó tạo `DATABASE_URL` tạm thời cho
-phiên PowerShell hiện tại:
-
-``` powershell
-$user = (docker compose exec -T db printenv POSTGRES_USER).Trim()
-$password = (docker compose exec -T db printenv POSTGRES_PASSWORD).Trim()
-$encodedPassword = [uri]::EscapeDataString($password)
-
-$env:DATABASE_URL = "postgresql://${user}:${encodedPassword}@localhost:5433/brewlite?schema=public"
-```
-
-> Nếu tên database, user, password hoặc cổng host trong
-> `docker-compose.yml` khác với ví dụ, hãy điều chỉnh cho đúng cấu hình
-> thực tế. Không chia sẻ mật khẩu và không commit thông tin bí mật lên
-> Git.
-
-### 6.2. Chạy Prisma Studio
-
-``` powershell
-cd .\backend
-npx.cmd prisma studio --schema prisma/schema.prisma --port 5555
-```
-
-Mở trình duyệt tại:
-
-``` text
-http://localhost:5555
-```
-
-Giữ cửa sổ terminal đang chạy Prisma Studio trong thời gian sử dụng. Khi
-hoàn tất, nhấn `Ctrl + C`.
-
-## 7. Kịch bản trình diễn
-
-Nên thực hiện theo thứ tự dưới đây để thể hiện luồng nghiệp vụ từ lúc
-khách hàng truy cập đến khi đơn hàng được ghi nhận.
-
-  -------------------------------------------------------------------------
-  Bước                    Nội dung                  Kết quả cần kiểm tra
-  ----------------------- ------------------------- -----------------------
-  1                       Mở trang chủ tại          Giao diện tải thành
-                          `http://loc alhost:3000`   công, danh sách sản
-                                                    phẩm hiển thị
-
-  2                       Truy cập `/register` và   Hệ thống phản hồi kết
-                          đăng ký tài khoản         quả đăng ký
-
-  3                       Truy cập `/login` và đăng Đăng nhập thành công,
-                          nhập                      trạng thái xác thực
-                                                    được cập nhật
-
-  4                       Chọn một sản phẩm và mở   Thông tin sản phẩm được
-                          trang chi tiết            hiển thị đúng
-
-  5                       Thêm sản phẩm vào giỏ     Giỏ hàng cập nhật đúng
-                          hàng, thay đổi số lượng   sản phẩm, số lượng và
-                                                    tổng tiền
-
-  6                       Mở trang checkout và gửi  Backend tiếp nhận yêu
-                          yêu cầu đặt hàng          cầu và trả kết quả phù
-                                                    hợp
-
-  7                       Thực hiện thanh toán theo Hiển thị kết quả thanh
-                          giao diện hiện có         toán thành công hoặc
-                                                    thất bại
-
-  8                       Mở danh sách đơn hàng và  Thông tin và trạng thái
-                          xem chi tiết (nếu có)     đơn hàng phù hợp
-
-  9                       Kiểm tra dữ liệu bằng     Dữ liệu được lưu đúng
-                          Prisma Studio             với thao tác đã thực
-                                                    hiện
-  -------------------------------------------------------------------------
-
-Đường dẫn giao diện `/register`, `/login`, checkout và lịch sử đơn hàng
-cần được xác nhận trong frontend trước khi trình diễn.
-
-## 8. API tham khảo
-
-Các endpoint dưới đây là danh sách tham khảo theo mô tả dự án. Cần đối
-chiếu với controller, module và cấu hình route thực tế trước khi sử
-dụng.
-
-  -----------------------------------------------------------------------
-  Phương thức             Endpoint                Mục đích
-  ----------------------- ----------------------- -----------------------
-  `POST`                  `/auth/register`        Đăng ký tài khoản
-
-  `POST`                  `/auth/login`           Đăng nhập
-
-  `GET`                   `/products`             Lấy danh sách sản phẩm
-
-  `GET`                   `/products/:id`         Lấy chi tiết sản phẩm
-
-  `GET`                   `/orders`               Lấy danh sách đơn hàng
-                                                  của người dùng
-
-  `POST`                  `/orders`               Tạo đơn hàng
-
-  `PATCH`                 `/orders/:id/status`    Cập nhật trạng thái đơn
-                                                  hàng theo quy tắc
-                                                  backend
-
-  `POST`                  `/payments`             Gửi yêu cầu thanh toán
-  -----------------------------------------------------------------------
-
-Địa chỉ backend theo cấu hình demo:
-
-``` text
-http://localhost:3001
-```
-
-Ví dụ lấy danh sách sản phẩm:
-
-``` http
-GET http://localhost:3001/products
-```
-
-Đối với API yêu cầu xác thực, gửi JWT trong HTTP header:
-
-``` http
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Cấu trúc request, response, DTO và điều kiện xác thực cụ thể được quy
-định trong mã nguồn backend.
-
-## 9. Kiểm tra migration và cơ sở dữ liệu
-
-### 9.1. Kiểm tra trạng thái migration
-
-Từ thư mục gốc dự án, chạy:
-
-``` powershell
-docker compose exec backend npx prisma migrate status --schema prisma/schema.prisma
-```
-
-Nếu database đã được cập nhật theo các migration hiện có, không cần chạy
-migration lại chỉ để kiểm tra.
-
-### 9.2. Kiểm tra dữ liệu
-
-Có thể sử dụng Prisma Studio theo hướng dẫn ở mục 6 để kiểm tra các bảng
-và bản ghi liên quan, chẳng hạn tài khoản, sản phẩm, đơn hàng và chi
-tiết đơn hàng (tùy schema thực tế).
-
-Khi kiểm tra, nên đối chiếu dữ liệu trước và sau thao tác đặt hàng để
-xác nhận kết quả được lưu đúng.
-
-## 10. Build và kiểm thử trước buổi demo
-
-### 10.1. Build image
-
-``` powershell
-docker compose build
-```
-
-### 10.2. Khởi chạy lại ứng dụng
-
-``` powershell
-docker compose up --build -d
-```
-
-Backend sẽ tự chạy `prisma migrate deploy` và `prisma db seed` khi khởi động,
-trước khi mở API. Đảm bảo đã tạo `backend/.env` từ `.env.example`; Compose tự
-nạp file này để seed tài khoản nhân viên.
-
-### 10.3. Kiểm tra container
-
-``` powershell
-docker compose ps
-```
-
-### 10.4. Kiểm tra log backend và frontend
-
-``` powershell
-docker compose logs --tail=100 backend
-docker compose logs --tail=100 frontend
-```
-
-### 10.5. Checklist trước khi trình diễn
-
--   [ ] Docker Desktop đang hoạt động.
--   [ ] `docker compose config --quiet` chạy không lỗi.
--   [ ] Các container cần thiết ở trạng thái hoạt động.
--   [ ] Frontend truy cập được.
--   [ ] Backend khởi động thành công.
--   [ ] PostgreSQL kết nối được.
--   [ ] Đăng ký tài khoản hoạt động.
--   [ ] Đăng nhập và xác thực JWT hoạt động.
--   [ ] Danh sách và chi tiết sản phẩm hiển thị.
--   [ ] Thêm sản phẩm vào giỏ hàng hoạt động.
--   [ ] Thay đổi số lượng và tính tổng tiền chính xác.
--   [ ] Tạo đơn hàng hoạt động.
--   [ ] Thanh toán trả về kết quả phù hợp với phạm vi demo.
--   [ ] Danh sách/chi tiết đơn hàng hoạt động (nếu đã triển khai).
--   [ ] Dữ liệu trong database phù hợp với thao tác kiểm thử.
-
-## 11. Xử lý lỗi thường gặp
-
-### 11.1. Docker không khởi động
-
--   Kiểm tra Docker Desktop đã mở và Docker Engine đã sẵn sàng.
--   Kiểm tra cấu hình Compose:
-
-``` powershell
-docker compose config --quiet
-docker compose ps
-```
-
-### 11.2. Frontend hoặc backend build thất bại
-
-Đọc thông báo lỗi trong terminal hoặc log. Kiểm tra dependency, lỗi
-TypeScript, cấu hình môi trường và Dockerfile. Sau khi sửa, chạy lại:
-
-``` powershell
-docker compose up --build -d
-```
-
-### 11.3. Backend không kết nối được database
-
-Kiểm tra: - Service `db` có đang chạy không. - `DATABASE_URL` có đúng
-thông tin kết nối không. - Backend trong Docker Compose phải dùng
-hostname service database và cổng nội bộ, thường là `db:5432`. - Ứng
-dụng chạy trực tiếp trên máy host có thể dùng `localhost:5433` nếu
-Compose ánh xạ cổng như cấu hình demo.
-
-Không dùng `localhost:5433` làm hostname database từ bên trong container
-backend, trừ khi cấu hình mạng đặc biệt yêu cầu điều đó.
-
-### 11.4. API trả về `Cannot GET` hoặc `Cannot POST`
-
-Kiểm tra: - Địa chỉ và cổng backend. - Đường dẫn, phương thức HTTP có
-đúng không. - Controller đã khai báo endpoint chưa. - Module chứa
-controller đã được đăng ký trong `AppModule` chưa. - Frontend có gọi
-đúng API base URL không. - Backend đã được build và khởi động lại sau
-khi thay đổi mã nguồn chưa.
-
-### 11.5. API trả về `401 Unauthorized`
-
-Kiểm tra: - Người dùng đã đăng nhập chưa. - JWT có hợp lệ và còn hạn
-không. - Request có gửi header `Authorization: Bearer <JWT_TOKEN>`
-không. - Guard và cấu hình JWT ở backend có hoạt động đúng không.
-
-### 11.6. Không truy cập được Prisma Studio
-
-Kiểm tra: - Prisma Studio đã khởi chạy thành công chưa. - `DATABASE_URL`
-có trỏ đến đúng database không. - Cổng `5555` có đang được ứng dụng khác
-sử dụng không. - Terminal chạy Prisma Studio có bị đóng không.
-
-## 12. Dừng ứng dụng
-
-Để dừng và xóa các container do Compose quản lý:
-
-``` powershell
+```powershell
 docker compose down
 ```
 
-Thông thường, lệnh này không xóa volume dữ liệu PostgreSQL. **Không thêm
-tùy chọn `-v`** nếu muốn giữ lại dữ liệu trong volume.
+Chỉ dùng `docker compose down -v` khi muốn xóa toàn bộ dữ liệu local để tạo
+lại database sạch.
 
-## 13. Kết luận
+## 6. Cách 2 – chạy database bằng Docker, app trực tiếp trên máy
 
-BrewLite minh họa quy trình đặt hàng trực tuyến từ đăng ký, đăng nhập,
-xem sản phẩm, quản lý giỏ hàng đến tạo đơn và xử lý thanh toán. Docker
-Compose giúp thống nhất môi trường chạy frontend, backend và database,
-hỗ trợ nhóm triển khai và kiểm thử tích hợp trên máy local.
+### 6.1. Khởi động PostgreSQL
 
-Dự án được xây dựng phục vụ mục đích học tập và trình diễn. Trước khi
-triển khai thực tế, cần tiếp tục đánh giá bảo mật, xử lý lỗi, tính nhất
-quán dữ liệu, khả năng mở rộng và tích hợp thanh toán với nhà cung cấp
-phù hợp.
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2
+docker compose up -d db
+```
+
+### 6.2. Cài dependency và chuẩn bị database cho Backend
+
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2\apps\api
+npm.cmd ci
+$env:DATABASE_URL = "postgresql://brewlite:brewlite123@localhost:5433/brewlite?schema=public"
+$env:JWT_SECRET = "brewlite-local-secret-change-me"
+npx.cmd prisma generate --schema prisma/schema.prisma
+npx.cmd prisma migrate deploy --schema prisma/schema.prisma
+npm.cmd run db:seed
+npm.cmd run start:dev
+```
+
+Mở terminal khác để chạy Frontend:
+
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2\apps\web
+npm.cmd ci
+$env:NEXT_PUBLIC_API_URL = "http://localhost:3001"
+$env:NEXT_PUBLIC_USE_MOCK = "false"
+npm.cmd run dev
+```
+
+Khi phát triển schema mới, dùng `prisma migrate dev --name <ten-migration>`
+trên database local; không dùng lệnh này cho production.
+
+## 7. Migration, seed và dữ liệu mẫu
+
+- Migration nằm tại `apps/api/prisma/migrations/`.
+- Schema nằm tại `apps/api/prisma/schema.prisma`.
+- Seed nằm tại `apps/api/prisma/seed.ts`.
+- Topping `Trân châu` và `Kem` được seed như bản ghi `Topping` liên kết với
+  `Ingredient`; `amountRequired` chỉ được dùng khi đã có định lượng nghiệp vụ
+  được nhóm xác nhận.
+
+Lệnh thường dùng trong `apps/api`:
+
+```powershell
+npx.cmd prisma migrate status --schema prisma/schema.prisma
+npx.cmd prisma migrate deploy --schema prisma/schema.prisma
+npm.cmd run db:seed
+npx.cmd prisma studio --schema prisma/schema.prisma --port 5555
+```
+
+## 8. Kiểm thử và build
+
+### Backend
+
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2\apps\api
+npm.cmd test -- --runInBand
+npm.cmd run lint
+npm.cmd run build
+```
+
+E2E Backend cần PostgreSQL và biến môi trường kiểm thử:
+
+```powershell
+npm.cmd run test:e2e -- --runInBand
+```
+
+### Frontend
+
+```powershell
+Set-Location D:\CNPM\brewlite-assignment2\apps\web
+npm.cmd test
+npm.cmd test -- src/lib/pricing.test.ts src/lib/cart.test.ts
+npm.cmd run lint
+npm.cmd run build
+```
+
+E2E trình duyệt (sau khi đã cài browser của Playwright):
+
+```powershell
+npx.cmd playwright install chromium
+npm.cmd run test:e2e
+```
+
+Bài kiểm thử giá hiện có tại `apps/web/src/lib/pricing.test.ts`; bài kiểm thử
+giỏ hàng tại `apps/web/src/lib/cart.test.ts`.
+
+## 9. Luồng nghiệm thu Assignment 2
+
+1. Mở `/products/<id>` và xác nhận dữ liệu được lấy từ `GET /products/:id`.
+2. Chọn Size, topping khả dụng và nhập ghi chú.
+3. Xác nhận giá thay đổi theo Size/topping; topping hết hàng bị khóa.
+4. Thêm vào giỏ, kiểm tra dòng món giữ đúng Size/topping/ghi chú và giá.
+5. Xác nhận request cần đăng nhập gửi `Authorization: Bearer <JWT>` do cơ chế
+   Auth dùng chung cung cấp.
+6. Chạy unit test tính giá và build frontend/backend.
+
+## 10. Deploy và rollback
+
+Runbook production do TV1 cung cấp nằm tại
+[`docs/deploy-and-rollback.md`](docs/deploy-and-rollback.md); bản mô tả kiến
+trúc/ràng buộc tổng quát nằm tại [`docs/deployment.md`](docs/deployment.md).
+Tài liệu CD hiện dùng `.github/workflows/cd.yml` và
+`docker-compose.prod.yml`, với các nguyên tắc:
+
+- EC2 chạy Web/API bằng container, reverse proxy terminate HTTPS.
+- RDS nằm trong private network; chỉ EC2 Security Group được truy cập DB.
+- CD build image theo commit SHA, chạy migration, smoke test `/health`.
+- Rollback về image SHA ổn định gần nhất, không xóa dữ liệu RDS; migration không
+  tương thích phải dùng migration forward/rollback đã được review.
+
+URL production và quy trình smoke/rollback đã được ghi trong runbook TV1.
+Vẫn cần đính kèm log pipeline, image SHA và bằng chứng một lần deploy/rollback
+thành công trước khi đánh dấu phần production là nghiệm thu hoàn tất. Không
+đưa secret vào README.
+
+## 11. Tài liệu bàn giao
+
+- [`docs/api-contract.md`](docs/api-contract.md) – hợp đồng API.
+- [`docs/traceability-matrix.md`](docs/traceability-matrix.md) – truy vết
+  Requirement → Task/Issue → code → test → bằng chứng.
+- [`docs/release-notes.md`](docs/release-notes.md) – Release Notes.
+- [`docs/sprint2-review-retro.md`](docs/sprint2-review-retro.md) – biên bản
+  Sprint Review và Retrospective.
+- [`docs/deploy-and-rollback.md`](docs/deploy-and-rollback.md) – deploy/rollback
+  production do TV1 cung cấp.
+- [`docs/deployment.md`](docs/deployment.md) – nguyên tắc hạ tầng và checklist
+  bằng chứng.
+
+Trước khi nộp, thay mọi `TBD` bằng URL Issue/PR, commit SHA, test report và
+người xác nhận thực tế; không suy đoán số GitHub Issue hoặc kết quả deploy.
+
+## 12. Xử lý lỗi thường gặp
+
+- `npx.ps1 cannot be loaded`: dùng `npx.cmd`; tương tự dùng `npm.cmd`.
+- `P1000 Authentication failed`: kiểm tra Docker Desktop, container `db`,
+  cổng `5433` và `DATABASE_URL`.
+- Frontend gọi nhầm mock: đặt `NEXT_PUBLIC_USE_MOCK=false` và restart/build
+  lại frontend.
+- API trả `401`: đăng nhập lại và gửi `Authorization: Bearer <JWT>`.
+- Compose không build lại frontend sau khi đổi API URL: chạy lại
+  `docker compose up --build -d`.
