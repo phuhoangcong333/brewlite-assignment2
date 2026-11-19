@@ -1,3 +1,4 @@
+
 @startuml DeploymentDiagram
 !theme plain
 top to bottom direction
@@ -8,51 +9,56 @@ node "Client Device" {
   [Browser / Mobile App (PWA)] as ClientApp
 }
 
+node "GitHub Services" as GitHubCloud {
+  [GitHub Repository (Monorepo)] as Repo
+  [GitHub Actions (CI/CD Pipeline)] as Pipeline
+}
+
 node "AWS Cloud (ap-southeast-1)" {
-  
-  node "EC2 Instance (Ubuntu 24.04 LTS)" as EC2 {
+
+  node "EC2 Instance (Ubuntu 26.04.1 LTS)" as EC2 {
+    [Nginx Reverse Proxy + Let's Encrypt SSL\n(47.129.180.144.sslip.io - Port 80/443)] as Nginx
+
     folder "Docker Engine" {
       node "Container: apps/web" as WebContainer {
         [Next.js PWA (Port 3000)] as NextServer
       }
-      
+
       node "Container: apps/api" as ApiContainer {
         [NestJS API Server (Port 3001)] as NestApi
       }
     }
-    
-    [Security Group: Port 80, 443, 3001] as EC2SecGroup
+
+    [EC2 Security Group\nInbound: Port 80, 443 (0.0.0.0/0)\nChặn public Port 3000 & 3001] as EC2SecGroup
   }
 
-  node "Amazon RDS Service" as RDSNode {
+  node "Amazon RDS Service (Private Subnet)" as RDSNode {
     database "PostgreSQL Instance (Port 5432)" as DBInstance {
       [brewlite-db (Persistent Storage)] as PostgresDB
     }
-    [Security Group: Port 5432] as RDSSecGroup
-  }
-
-  node "GitHub Services" as GitHubCloud {
-    [GitHub Repository (Monorepo)] as Repo
-    [GitHub Actions (CI/CD Pipeline)] as Pipeline
+    [RDS Security Group\nInbound: Port 5432 (Chỉ từ EC2 SG)] as RDSSecGroup
   }
 }
 
-ClientApp --> NextServer : HTTP/HTTPS (Port 80/443)
-ClientApp --> NestApi : HTTP/REST API (Port 3001)
-NestApi --> PostgresDB : DATABASE_URL (Port 5432)
-Pipeline --> Repo : Trigger on PR/Push
-Pipeline ..> WebContainer : Build Check
-Pipeline ..> ApiContainer : Build Check
+ClientApp --> Nginx : HTTPS (Port 443)\n(HTTP 80 tự động redirect -> 443)
+Nginx --> NextServer : Proxy "/" -> localhost:3000
+Nginx --> NestApi : Proxy "/api/*" -> localhost:3001
+NestApi --> PostgresDB : DATABASE_URL (Port 5432 nội bộ)
+
+Pipeline --> Repo : Trigger on PR / Push to main
+Pipeline ..> WebContainer : Build & Test Check
+Pipeline ..> ApiContainer : Build & Test Check
+Pipeline ..> EC2 : SSH Deploy & Smoke Test / Rollback
 
 note right of EC2SecGroup
-  Đã cấu hình Inbound Rule:
-  Custom TCP 3001 cho phép Anywhere (0.0.0.0/0)
+  Chỉ mở công khai HTTP (80) & HTTPS (443) qua Nginx.
+  Container 3000 và 3001 chỉ lắng nghe nội bộ (localhost).
 end note
 
 note right of PostgresDB
-  Lưu trữ dữ liệu bền vững (Persistent)
-  Public Access: Yes (Cho phép EC2 truy cập)
+  Lưu trữ dữ liệu bền vững (Persistent).
+  Public Access: No (Tắt truy cập công khai,
+  chỉ nhận kết nối từ EC2 Security Group).
 end note
 
 @enduml
-
