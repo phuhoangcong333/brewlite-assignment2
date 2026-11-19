@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{baseUrl}}/payments"
+method: POST
+headers:
+  Content-Type: application/json
+  Idempotency-Key: tv5-card-ok-{{$timestamp}}
+body:
+  type: json
+  content: |-
+    {
+      "orderId": {{orderId2}},
+      "method": "CARD",
+      "cardNumber": "4111111111111111"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{access_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", () => pm.response.to.have.status(201));
+      const data = pm.response.json();
+      pm.expect(data.payment_status).to.eql("PAID");
+      pm.expect(data.order_status).to.eql("PAID");
+      pm.expect(data.replayed).to.eql(false);
+    language: text/javascript
+order: 8000

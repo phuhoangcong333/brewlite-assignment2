@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/ingredients"
+method: GET
+headers:
+  Authorization: Bearer {{staffToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('inventory baseline can be read', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const ingredients = pm.response.json();
+        const baseline = {};
+        ingredients.forEach((item) => { baseline[item.id] = item.stockQuantity; });
+        const pearl = ingredients.find((item) => item.name === 'Trân châu');
+        pm.test('topping ingredient is in the inventory list', function () { pm.expect(pearl).to.exist; });
+        pm.collectionVariables.set('inventoryBeforeOrder', JSON.stringify(baseline));
+        const deductions = JSON.parse(pm.collectionVariables.get('recipeDeductions') || '{}');
+        if (pearl) {
+          const pearlId = String(pearl.id);
+          deductions[pearlId] = (deductions[pearlId] || 0) + Number(pm.collectionVariables.get('toppingAmountPerPortion'));
+        }
+        pm.collectionVariables.set('expectedDeductions', JSON.stringify(deductions));
+      }
+    language: text/javascript
+order: 9000

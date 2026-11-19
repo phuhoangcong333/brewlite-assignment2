@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{baseUrl}}/orders"
+method: POST
+headers:
+  Authorization: Bearer {{customerToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": [
+        {
+          "productId": {{productId}},
+          "qty": 1,
+          "size": "{{orderSize}}",
+          "toppings": ["{{toppingId}}"]
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('order creation succeeds', function () { pm.response.to.have.status(201); });
+      if (pm.response.code === 201) {
+        const order = pm.response.json();
+        pm.test('backend order total matches server quote', function () { pm.expect(order.total).to.eql(Number(pm.collectionVariables.get('quoteTotal'))); });
+        pm.collectionVariables.set('orderId', String(order.id));
+        pm.collectionVariables.set('orderTotal', String(order.total));
+      }
+    language: text/javascript
+order: 12000

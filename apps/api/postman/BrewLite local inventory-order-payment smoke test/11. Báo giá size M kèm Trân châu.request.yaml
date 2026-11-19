@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{baseUrl}}/promotions/validate"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": [
+        {
+          "productId": {{productId}},
+          "sizeId": {{quoteSizeId}},
+          "toppingIds": ["{{toppingId}}"],
+          "quantity": 1
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('quote succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const quote = pm.response.json();
+        pm.test('quoted item is available', function () { pm.expect(quote.items[0].status).to.eql('AVAILABLE'); });
+        pm.collectionVariables.set('quoteTotal', String(quote.total));
+      }
+    language: text/javascript
+order: 11000

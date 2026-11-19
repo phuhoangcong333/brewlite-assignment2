@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/orders"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": [{"productId": {{productId}}, "qty": 1, "size": "M", "toppings": []}]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{access_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", () => pm.response.to.have.status(201));
+      const data = pm.response.json();
+      pm.expect(data.status).to.eql("PENDING");
+      pm.collectionVariables.set("orderId", String(data.id));
+    language: text/javascript
+order: 2000

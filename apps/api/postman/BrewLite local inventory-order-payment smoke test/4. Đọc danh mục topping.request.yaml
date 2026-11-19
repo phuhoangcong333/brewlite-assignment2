@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/toppings"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('toppings endpoint succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const topping = pm.response.json().find((item) => item.id === pm.collectionVariables.get('toppingId'));
+        pm.test('selected topping exists and is in stock', function () { pm.expect(topping).to.exist; if (topping) pm.expect(topping.availableQuantity).to.be.greaterThan(0); });
+        if (topping) pm.collectionVariables.set('toppingAmountPerPortion', String(topping.amountPerPortion));
+      }
+    language: text/javascript
+order: 4000

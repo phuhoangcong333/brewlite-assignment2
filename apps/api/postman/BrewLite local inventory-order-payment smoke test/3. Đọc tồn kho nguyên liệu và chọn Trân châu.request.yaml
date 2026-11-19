@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/ingredients"
+method: GET
+headers:
+  Authorization: Bearer {{staffToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('staff can read ingredient inventory', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const ingredients = pm.response.json();
+        const coffee = ingredients.find((item) => item.name === pm.collectionVariables.get('inventoryTestIngredientName'));
+        const pearlIngredient = ingredients.find((item) => item.name === 'Trân châu');
+        pm.test('ingredient used for stock endpoint test exists', function () { pm.expect(coffee).to.exist; });
+        pm.test('Trân châu ingredient exists', function () { pm.expect(pearlIngredient).to.exist; });
+        if (coffee) {
+          pm.collectionVariables.set('inventoryTestIngredientId', String(coffee.id));
+          pm.collectionVariables.set('inventoryTestIngredientInitialStock', String(coffee.stockQuantity));
+        }
+        if (pearlIngredient) pm.collectionVariables.set('pearlIngredientId', String(pearlIngredient.id));
+      }
+    language: text/javascript
+order: 3000

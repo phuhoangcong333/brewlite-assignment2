@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getToken: vi.fn(),
   getMyOrders: vi.fn(),
   getProducts: vi.fn(),
+  cancelOrder: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router }));
 vi.mock("@/lib/auth", () => ({ getToken: mocks.getToken }));
@@ -24,6 +25,7 @@ vi.mock("@/lib/auth-context", () => ({
 vi.mock("@/lib/orders-api", async (original) => ({
   ...(await original<typeof import("@/lib/orders-api")>()),
   getMyOrders: mocks.getMyOrders,
+  cancelOrder: mocks.cancelOrder,
 }));
 
 describe("Order history error recovery (Issue #28)", () => {
@@ -32,8 +34,13 @@ describe("Order history error recovery (Issue #28)", () => {
     mocks.getToken.mockReturnValue("test-token");
     mocks.getProducts.mockResolvedValue([]);
     mocks.getMyOrders.mockResolvedValue([]);
+    mocks.cancelOrder.mockResolvedValue(undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("shows a load error and lets the customer retry successfully", async () => {
     mocks.getMyOrders.mockRejectedValueOnce(
@@ -70,5 +77,88 @@ describe("Order history error recovery (Issue #28)", () => {
       expect(mocks.router.replace).toHaveBeenCalledWith("/login?next=/orders"),
     );
     expect(mocks.getMyOrders).not.toHaveBeenCalled();
+  });
+
+  it("shows cancellation only for customer-cancellable order statuses", async () => {
+    mocks.getMyOrders.mockResolvedValue([
+      "PENDING",
+      "PAYMENT_FAILED",
+      "PAID",
+      "PREPARING",
+      "READY",
+      "COMPLETED",
+      "CANCELLED",
+    ].map((status, index) => ({
+      id: index + 1,
+      status,
+      total: 25_000,
+      createdAt: "2026-11-14T01:00:00Z",
+      items: [],
+    })));
+
+    render(<OrderHistoryPage />);
+    await screen.findByText("Đơn #1");
+
+    expect(screen.getAllByRole("button", { name: "Hủy đơn" })).toHaveLength(2);
+  });
+
+  it("confirms cancellation and updates the order status", async () => {
+    mocks.getMyOrders.mockResolvedValue([
+      {
+        id: 123,
+        status: "PENDING",
+        total: 25_000,
+        createdAt: "2026-11-14T01:00:00Z",
+        items: [],
+      },
+    ]);
+
+    render(<OrderHistoryPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hủy đơn" }));
+
+    await waitFor(() => expect(mocks.cancelOrder).toHaveBeenCalledWith(123));
+    expect(window.confirm).toHaveBeenCalled();
+    expect(await screen.findByText("Đã hủy")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Hủy đơn" })).toBeNull();
+  });
+
+  it("does not cancel when confirmation is declined", async () => {
+    vi.mocked(window.confirm).mockReturnValue(false);
+    mocks.getMyOrders.mockResolvedValue([
+      {
+        id: 123,
+        status: "PENDING",
+        total: 25_000,
+        createdAt: "2026-11-14T01:00:00Z",
+        items: [],
+      },
+    ]);
+
+    render(<OrderHistoryPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hủy đơn" }));
+
+    expect(mocks.cancelOrder).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Hủy đơn" })).toBeTruthy();
+  });
+
+  it("reports cancellation failures and keeps the order cancellable", async () => {
+    mocks.cancelOrder.mockRejectedValueOnce(new Error("Đơn đã đổi trạng thái"));
+    mocks.getMyOrders.mockResolvedValue([
+      {
+        id: 123,
+        status: "PENDING",
+        total: 25_000,
+        createdAt: "2026-11-14T01:00:00Z",
+        items: [],
+      },
+    ]);
+
+    render(<OrderHistoryPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hủy đơn" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Đơn đã đổi trạng thái",
+    );
+    expect(screen.getByRole("button", { name: "Hủy đơn" })).toBeTruthy();
   });
 });

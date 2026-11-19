@@ -1,0 +1,20 @@
+$kind: http-request
+name: 7. Lưu lại công thức hiện tại (không đổi định lượng)
+url: "{{baseUrl}}/ingredients/recipes/{{productId}}"
+method: PUT
+headers:
+  Authorization: Bearer {{staffToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "items": {{recipeItemsJson}}
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('recipe update succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) pm.test('recipe response belongs to selected product', function () { pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('productId'))); });
+    language: text/javascript
+order: 7000

@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{staffEmail}}",
+      "password": "{{staffPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('STAFF login succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const body = pm.response.json();
+        pm.collectionVariables.set('staffToken', body.access_token);
+        pm.test('login account has STAFF role', function () { pm.expect(body.user.role).to.eql('STAFF'); });
+      }
+    language: text/javascript
+order: 1000

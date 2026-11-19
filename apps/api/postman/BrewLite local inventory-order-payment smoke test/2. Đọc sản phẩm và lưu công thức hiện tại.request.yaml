@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/products"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('products endpoint succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const products = pm.response.json();
+        const name = pm.collectionVariables.get('productName');
+        const product = products.find((item) => item.name === name);
+        pm.test('selected product exists', function () { pm.expect(product, name).to.exist; });
+        if (product) {
+          pm.collectionVariables.set('productId', String(product.id));
+          const recipe = (product.recipeItems || []).map(({ ingredientId, size, amountRequired }) => ({ ingredientId, size, amountRequired }));
+          const recipeForSize = recipe.filter((item) => item.size === pm.collectionVariables.get('orderSize'));
+          pm.test('selected size has a recipe', function () { pm.expect(recipeForSize.length).to.be.greaterThan(0); });
+          pm.test('selected size has available stock', function () { pm.expect(product.availableQuantityBySize[pm.collectionVariables.get('orderSize')]).to.be.greaterThan(0); });
+          pm.collectionVariables.set('recipeItemsJson', JSON.stringify(recipe));
+          const deductions = {};
+          recipeForSize.forEach((item) => { deductions[item.ingredientId] = (deductions[item.ingredientId] || 0) + item.amountRequired; });
+          pm.collectionVariables.set('recipeDeductions', JSON.stringify(deductions));
+        }
+      }
+    language: text/javascript
+order: 2000

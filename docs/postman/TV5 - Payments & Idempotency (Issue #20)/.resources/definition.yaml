@@ -1,0 +1,11 @@
+$kind: collection
+description: ""
+variables:
+  baseUrl: http://localhost:3001
+  customerEmail: admin@gmail.com
+  customerPassword: "123456"
+  productId: "1"
+  access_token: ""
+  orderId: ""
+  orderId2: ""
+  idemKeyWallet: ""

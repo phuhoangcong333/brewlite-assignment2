@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{baseUrl}}/payments"
+method: POST
+headers:
+  Content-Type: application/json
+  Idempotency-Key: "{{idemKeyWallet}}"
+body:
+  type: json
+  content: |-
+    {
+      "orderId": {{orderId}},
+      "method": "WALLET",
+      "walletId": "WALLET-1234"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{access_token}}"
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("idemKeyWallet", "tv5-wallet-" + Date.now());
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", () => pm.response.to.have.status(201));
+      const data = pm.response.json();
+      pm.expect(data.payment_status).to.eql("PAID");
+      pm.expect(data.order_status).to.eql("PAID");
+      pm.expect(data.replayed).to.eql(false);
+    language: text/javascript
+order: 3000

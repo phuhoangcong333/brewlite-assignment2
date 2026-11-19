@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/ingredients/{{inventoryTestIngredientId}}/adjust"
+method: PATCH
+headers:
+  Authorization: Bearer {{staffToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": -1
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('stock adjustment succeeds', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const body = pm.response.json();
+        pm.test('adjustment restores the original stock quantity', function () { pm.expect(body.stockQuantity).to.eql(Number(pm.collectionVariables.get('inventoryTestIngredientInitialStock'))); });
+      }
+    language: text/javascript
+order: 6000

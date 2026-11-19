@@ -7,6 +7,7 @@ import { getToken } from "@/lib/auth";
 import { getProducts } from "@/lib/api";
 import {
   ApiError,
+  cancelOrder,
   getMyOrders,
   type Order,
   type OrderStatus,
@@ -34,7 +35,34 @@ export default function OrderHistoryPage() {
   const [productMap, setProductMap] = useState<Record<number, Product>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(
+    null,
+  );
   const [retryCount, setRetryCount] = useState(0);
+
+  const handleCancelOrder = async (order: Order) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${order.id}?`)) {
+      return;
+    }
+
+    setCancellingOrderId(order.id);
+    setCancelError(null);
+    try {
+      await cancelOrder(order.id);
+      setOrders((currentOrders) =>
+        currentOrders.map((currentOrder) =>
+          currentOrder.id === order.id
+            ? { ...currentOrder, status: "CANCELLED" }
+            : currentOrder,
+        ),
+      );
+    } catch (e) {
+      setCancelError(e instanceof Error ? e.message : "Không thể hủy đơn hàng");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   useEffect(() => {
     if (!getToken()) {
@@ -131,6 +159,14 @@ export default function OrderHistoryPage() {
             >
               Thử lại
             </button>
+          </div>
+        )}
+        {cancelError && (
+          <div
+            role="alert"
+            style={{ color: "#b91c1c", marginBottom: "16px" }}
+          >
+            {cancelError}
           </div>
         )}
         {!error && orders.length === 0 && <p>Bạn chưa có đơn hàng nào.</p>}
@@ -345,20 +381,53 @@ export default function OrderHistoryPage() {
                       </strong>
                     </p>
                   </div>
-                  <Link
-                    href={`/orders/${order.id}`}
+                  <div
                     style={{
-                      padding: "10px 18px",
-                      border: "1px solid #d97706",
-                      borderRadius: "10px",
-                      color: "#d97706",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      textDecoration: "none",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "flex-end",
+                      gap: "8px",
                     }}
                   >
-                    Xem tiến trình
-                  </Link>
+                    <Link
+                      href={`/orders/${order.id}`}
+                      style={{
+                        padding: "10px 18px",
+                        border: "1px solid #d97706",
+                        borderRadius: "10px",
+                        color: "#d97706",
+                        fontWeight: 600,
+                        fontSize: "13px",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Xem tiến trình
+                    </Link>
+                    {(order.status === "PENDING" ||
+                      order.status === "PAYMENT_FAILED") && (
+                      <button
+                        type="button"
+                        onClick={() => void handleCancelOrder(order)}
+                        disabled={cancellingOrderId !== null}
+                        style={{
+                          padding: "10px 18px",
+                          border: "1px solid #fca5a5",
+                          borderRadius: "10px",
+                          background: "#fff",
+                          color: "#dc2626",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          cursor:
+                            cancellingOrderId !== null ? "wait" : "pointer",
+                          opacity: cancellingOrderId !== null ? 0.65 : 1,
+                        }}
+                      >
+                        {cancellingOrderId === order.id
+                          ? "Đang hủy..."
+                          : "Hủy đơn"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

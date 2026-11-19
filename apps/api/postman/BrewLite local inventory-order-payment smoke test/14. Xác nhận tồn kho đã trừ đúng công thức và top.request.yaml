@@ -1,0 +1,24 @@
+$kind: http-request
+name: 14. Xác nhận tồn kho đã trừ đúng công thức và topping
+url: "{{baseUrl}}/ingredients"
+method: GET
+headers:
+  Authorization: Bearer {{staffToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('can read inventory after payment', function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) {
+        const current = pm.response.json();
+        const before = JSON.parse(pm.collectionVariables.get('inventoryBeforeOrder') || '{}');
+        const deductions = JSON.parse(pm.collectionVariables.get('expectedDeductions') || '{}');
+        const mismatches = [];
+        Object.keys(before).forEach((id) => {
+          const row = current.find((item) => item.id === Number(id));
+          const expected = before[id] - (deductions[id] || 0);
+          if (!row || row.stockQuantity !== expected) mismatches.push({ id, expected, actual: row?.stockQuantity });
+        });
+        pm.test('only recipe and topping quantities were consumed', function () { pm.expect(mismatches, JSON.stringify(mismatches)).to.eql([]); });
+      }
+    language: text/javascript
+order: 14000

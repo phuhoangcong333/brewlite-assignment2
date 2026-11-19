@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{baseUrl}}/payments"
+method: POST
+headers:
+  Authorization: Bearer {{customerToken}}
+  Content-Type: application/json
+  Idempotency-Key: "{{$guid}}"
+body:
+  type: json
+  content: |-
+    {
+      "orderId": {{orderId}},
+      "method": "WALLET",
+      "walletId": "DEMO-WALLET-1234"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('payment request succeeds', function () { pm.response.to.have.status(201); });
+      if (pm.response.code === 201) {
+        const payment = pm.response.json();
+        pm.test('order and payment are PAID', function () {
+          pm.expect(payment.order_status).to.eql('PAID');
+          pm.expect(payment.payment_status).to.eql('PAID');
+        });
+        pm.test('payment uses the persisted order total', function () { pm.expect(payment.amount).to.eql(Number(pm.collectionVariables.get('orderTotal'))); });
+        pm.collectionVariables.set('paymentId', String(payment.paymentId));
+      }
+    language: text/javascript
+order: 13000

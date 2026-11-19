@@ -1,0 +1,28 @@
+$kind: collection
+description: "Chạy tuần tự trên API local. Trước khi chạy, sửa collection variables staffEmail/staffPassword theo apps/api/.env. Dùng test customer đã seed. Luồng kiểm tra: đăng nhập STAFF, đọc và cập nhật thử tồn kho (restock +1 rồi adjust -1 để hoàn tác), PUT lại công thức hiện tại, cập nhật topping giữ nguyên định lượng, lấy báo giá, tạo đơn size M có Trân châu, thanh toán WALLET demo, rồi đối chiếu tồn nguyên liệu. Lưu ý: tạo đơn sẽ tạo order PAID và trừ nguyên liệu thật trong DB; chỉ dùng database development/test. Mặc định chọn món Cà phê sữa và topping pearl."
+variables:
+  baseUrl: http://localhost:3001
+  staffEmail: ""
+  staffPassword: ""
+  customerEmail: test@gmail.com
+  customerPassword: password123
+  productName: Cà phê sữa
+  inventoryTestIngredientName: Cà phê hạt
+  toppingId: pearl
+  orderSize: M
+  quoteSizeId: "2"
+  staffToken: ""
+  customerToken: ""
+  productId: ""
+  recipeItemsJson: ""
+  recipeDeductions: "{}"
+  inventoryTestIngredientId: ""
+  inventoryTestIngredientInitialStock: ""
+  pearlIngredientId: ""
+  toppingAmountPerPortion: ""
+  inventoryBeforeOrder: "{}"
+  expectedDeductions: "{}"
+  quoteTotal: ""
+  orderId: ""
+  orderTotal: ""
+  paymentId: ""
