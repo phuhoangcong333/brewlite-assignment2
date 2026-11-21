@@ -75,12 +75,10 @@ describe('POST /promotions/validate – cấu hình giống main.ts', () => {
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       statusCode: 400,
+      error: 'Bad Request',
       message: expect.any(Array),
-      path: '/promotions/validate',
-      timestamp: expect.any(String),
+      requestId: expect.any(String),
     });
-    // Khác với test controller (không filter): body KHÔNG có trường "error"
-    expect(res.body).not.toHaveProperty('error');
     expect(res.body.message).toContain('items should not be empty');
   });
 
