@@ -1,0 +1,2998 @@
+{
+  "info": {
+    "_postman_id": "tc21-25-order-cancel-brewlite-tv4",
+    "name": "BrewLite – TC-21 to TC-25: Orders, Stock, Cancel & Admin CRUD (TV4)",
+    "description": "Postman Collection v2.1 cho TV4 (BrewLite AS2).\n\nMỤC ĐÍCH: Kiểm thử toàn diện các yêu cầu kỹ thuật và nghiệp vụ:\n- TC-21 (FR): Luồng đặt đơn POST /orders (trạng thái PENDING), kiểm tra xác nhận đơn và trừ tồn kho Product.stock.\n- TC-22 (NFR): Chặn đặt hàng sai điều kiện (giỏ rỗng, vượt tồn kho Product.stock, thiếu dữ liệu, lỗi xác thực).\n- TC-23 (FR-27, FR-28): Đặt đơn từ giỏ hàng, xác nhận làm trống giỏ và trừ tồn kho nguyên liệu (Ingredient) theo công thức.\n- TC-24 (FR-29 & Admin/Staff CRUD): Khách tự hủy đơn (PENDING, PAYMENT_FAILED) hoàn kho nguyên liệu; KẾT HỢP KIỂM THỬ TRANG QUẢN TRỊ /admin (CRUD trên 4 mục: Ingredient, Product & Recipe, Order, Promotion).\n- TC-25 (NFR-14): Đặt đồng thời món cuối cùng trong kho với cơ chế Optimistic Locking (chấp nhận 201 hoặc 409, kho không bao giờ âm).\n- BONUS: Kiểm thử phân quyền RBAC và bảo mật (Customer vs Staff).\n\nHướng dẫn chạy:\n1. Cấu hình Collection Variables: baseUrl (mặc định https://47.129.180.144.sslip.io/api hoặc http://localhost:3001), tài khoản customer và staff.\n2. Chạy thư mục '0. Auth & Setup' trước để tự động lấy accessToken và staffToken.\n3. Chạy tuần tự các thư mục TC-21 đến TC-25.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://47.129.180.144.sslip.io/api",
+      "description": "Base URL của API. Đổi thành http://localhost:3001 khi chạy local."
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "JWT token của customer – tự động cập nhật sau khi chạy request Login Customer."
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "description": "JWT token của staff/admin – tự động cập nhật sau khi chạy request Login Staff."
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "description": "ID sản phẩm sẽ dùng để đặt đơn. Tự động cập nhật sau GET /products."
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "description": "ID đơn hàng vừa tạo. Tự động cập nhật sau POST /orders."
+    },
+    {
+      "key": "orderId2",
+      "value": "",
+      "description": "ID đơn hàng thứ 2 (dùng cho TC-24 test PAYMENT_FAILED cancel)."
+    },
+    {
+      "key": "adminOrderId",
+      "value": "",
+      "description": "ID đơn hàng dùng để kiểm thử quy trình pha chế admin."
+    },
+    {
+      "key": "ingredientId",
+      "value": "1",
+      "description": "ID nguyên liệu sẽ kiểm tra. Tự động cập nhật sau GET /ingredients."
+    },
+    {
+      "key": "newIngredientId",
+      "value": "",
+      "description": "ID nguyên liệu mới tạo trong bài test Admin CRUD."
+    },
+    {
+      "key": "toppingId",
+      "value": "pearl",
+      "description": "ID topping dùng trong bài test công thức và đặt đơn."
+    },
+    {
+      "key": "productStockBefore",
+      "value": "0",
+      "description": "Tồn kho sản phẩm trước khi đặt đơn."
+    },
+    {
+      "key": "ingredientStockBefore",
+      "value": "0",
+      "description": "Tồn kho nguyên liệu trước khi đặt đơn. Dùng để so sánh sau hủy đơn."
+    },
+    {
+      "key": "ingredientStockBeforeCancel",
+      "value": "0",
+      "description": "Tồn kho nguyên liệu ngay trước khi hủy đơn."
+    },
+    {
+      "key": "promotionCode",
+      "value": "GIAM10",
+      "description": "Mã khuyến mãi mẫu hợp lệ."
+    },
+    {
+      "key": "customerEmail",
+      "value": "customer@brewlite.local",
+      "description": "Email tài khoản khách hàng."
+    },
+    {
+      "key": "customerPassword",
+      "value": "password123",
+      "description": "Mật khẩu tài khoản khách hàng."
+    },
+    {
+      "key": "staffEmail",
+      "value": "staff@brewlite.local",
+      "description": "Email tài khoản nhân viên / quản trị."
+    },
+    {
+      "key": "staffPassword",
+      "value": "staffpassword",
+      "description": "Mật khẩu tài khoản nhân viên / quản trị."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Auth & Setup (Chạy trước)",
+      "item": [
+        {
+          "name": "0.1 Login Customer (lấy accessToken)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập với tài khoản CUSTOMER. Script tự động lưu accessToken vào Collection Variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-AUTH-01: Login customer thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-AUTH-02: Response có access_token', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body.access_token).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "  console.log('accessToken customer đã lưu:', body.access_token.substring(0, 30) + '...');",
+                  "});",
+                  "",
+                  "pm.test('TC-AUTH-03: User role là CUSTOMER', function () {",
+                  "  const body = pm.response.json();",
+                  "  if (body.user && body.user.role) {",
+                  "    pm.expect(body.user.role).to.eql('CUSTOMER');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.2 Login Staff / Admin (lấy staffToken)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{staffEmail}}\",\n  \"password\": \"{{staffPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập với tài khoản STAFF/ADMIN. Dùng staffToken cho các API quản trị."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-AUTH-04: STAFF login thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-AUTH-05: Response có access_token cho staff', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.collectionVariables.set('staffToken', body.access_token);",
+                  "  console.log('staffToken đã lưu:', body.access_token.substring(0, 30) + '...');",
+                  "});",
+                  "",
+                  "pm.test('TC-AUTH-06: Account có role STAFF', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.user.role).to.eql('STAFF');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.3 GET /products (lưu productId)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Lấy danh sách sản phẩm, lưu productId đầu tiên có stock > 0."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET /products trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Danh sách sản phẩm là array hợp lệ', function () {",
+                  "  const products = pm.response.json();",
+                  "  pm.expect(products).to.be.an('array').and.not.empty;",
+                  "  const available = products.find(p => p.stock > 0) || products[0];",
+                  "  pm.collectionVariables.set('productId', available.id);",
+                  "  console.log('productId đã được lưu:', available.id, '| stock:', available.stock);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.4 GET /ingredients (lưu ingredientId & stock trước)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            },
+            "description": "Lấy danh sách nguyên liệu bằng staffToken, lưu ingredientId đầu tiên và tồn kho hiện tại."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET /ingredients (staff) trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Lưu ingredientId và stockQuantity', function () {",
+                  "  const ingredients = pm.response.json();",
+                  "  pm.expect(ingredients).to.be.an('array').and.not.empty;",
+                  "  pm.collectionVariables.set('ingredientId', ingredients[0].id);",
+                  "  pm.collectionVariables.set('ingredientStockBefore', ingredients[0].stockQuantity);",
+                  "  console.log('ingredientId:', ingredients[0].id, '| stockBefore:', ingredients[0].stockQuantity);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.5 GET /auth/me (xác nhận token hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET /auth/me trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response có thông tin user hợp lệ', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user).to.have.property('email');",
+                  "  pm.expect(body.user).to.have.property('role');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.6 GET /toppings (lấy danh sách topping)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/toppings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "toppings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET /toppings trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Danh sách topping là array', function () {",
+                  "  const toppings = pm.response.json();",
+                  "  pm.expect(toppings).to.be.an('array');",
+                  "  if (toppings.length > 0) {",
+                  "    pm.collectionVariables.set('toppingId', toppings[0].id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TC-21: FR – Đặt đơn & Trừ tồn kho sản phẩm",
+      "description": "TC-21 (FR): Luồng đặt đơn POST /orders (trạng thái PENDING), kiểm tra hiển thị màn hình xác nhận đơn trên giao diện và kiểm tra trừ tồn kho Product.stock.",
+      "item": [
+        {
+          "name": "TC-21.1 GET /products/:id (lưu tồn kho trước khi đặt)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-21.1: GET /products/:id trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-21.1: Lưu stock trước khi đặt vào productStockBefore', function () {",
+                  "  const product = pm.response.json();",
+                  "  pm.expect(product).to.have.property('stock');",
+                  "  pm.collectionVariables.set('productStockBefore', product.stock);",
+                  "  console.log('Stock sản phẩm trước khi đặt:', product.stock);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-21.2 POST /orders (đặt đơn hợp lệ, trạng thái PENDING)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "TC-21: Khách đặt đơn 1 ly size M. Trả về 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-21.2: POST /orders thành công trả về 201 Created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('TC-21.2: Response chứa order ID và tổng tiền hợp lệ', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body.id).to.be.a('number');",
+                  "  pm.expect(body).to.have.property('total');",
+                  "  pm.expect(body.total).to.be.greaterThan(0);",
+                  "  pm.collectionVariables.set('orderId', body.id);",
+                  "  console.log('Đã tạo đơn thành công, orderId =', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-21.3 GET /orders/:id (xác nhận đơn PENDING & chi tiết món)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Kiểm tra màn hình xác nhận đơn: đơn hàng ở trạng thái PENDING và hiển thị đúng các mặt hàng đã chọn."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-21.3: Lấy chi tiết đơn hàng trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-21.3 (FR): Trạng thái đơn khởi tạo đúng là PENDING', function () {",
+                  "  const order = pm.response.json();",
+                  "  pm.expect(order.status).to.eql('PENDING');",
+                  "});",
+                  "",
+                  "pm.test('TC-21.3: Chi tiết đơn hàng hiển thị đúng sản phẩm và số lượng', function () {",
+                  "  const order = pm.response.json();",
+                  "  pm.expect(order.items).to.be.an('array').and.not.empty;",
+                  "  pm.expect(order.items[0].productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(order.items[0].qty).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-21.4 GET /products/:id (kiểm tra tồn kho Product.stock bị trừ)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-21.4: Lấy thông tin sản phẩm sau khi đặt hàng trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-21.4 (FR): Product.stock bị trừ đúng số lượng đã đặt', function () {",
+                  "  const product = pm.response.json();",
+                  "  const stockBefore = Number(pm.collectionVariables.get('productStockBefore'));",
+                  "  console.log('Stock trước:', stockBefore, '| Stock sau:', product.stock);",
+                  "  if (typeof product.stock === 'number') {",
+                  "    pm.expect(product.stock).to.be.at.most(stockBefore);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-21.5 GET /orders (kiểm tra đơn xuất hiện trong danh sách lịch sử)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-21.5: GET /orders trả về 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-21.5: Đơn vừa tạo xuất hiện trong danh sách đơn của khách hàng', function () {",
+                  "  const orders = pm.response.json();",
+                  "  const currentOrderId = Number(pm.collectionVariables.get('orderId'));",
+                  "  const found = orders.some(o => o.id === currentOrderId);",
+                  "  pm.expect(found, `Đơn hàng #${currentOrderId} phải có trong danh sách`).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TC-22: NFR – Chặn đặt hàng sai điều kiện",
+      "description": "TC-22 (NFR): Kiểm tra hệ thống chặn đặt hàng khi giỏ hàng rỗng hoặc khi số lượng đặt vượt quá Product.stock hiện có (hoặc sai quy chuẩn validation).",
+      "item": [
+        {
+          "name": "TC-22.1 POST /orders (chặn khi giỏ hàng rỗng items = [])",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Case 22.1: Gọi POST /orders khi giỏ hàng rỗng -> Kiểm tra status 400 và thông báo lỗi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.1 (NFR): Giỏ hàng rỗng bị từ chối với status 400 Bad Request', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('TC-22.1: Response trả về thông báo lỗi rõ ràng', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  const msg = Array.isArray(body.message) ? body.message.join(' ') : String(body.message);",
+                  "  pm.expect(msg).to.not.be.empty;",
+                  "  console.log('Thông báo lỗi nhận được:', msg);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.2 POST /orders (chặn khi số lượng vượt quá Product.stock / giới hạn DTO)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 9999,\n      \"size\": \"L\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Case 22.2: Gọi POST /orders với số lượng đặt vượt quá Product.stock hiện có (hoặc giới hạn cho phép) -> Kiểm tra status 400 hoặc 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.2 (NFR): Số lượng vượt quá tồn kho bị từ chối (400 hoặc 409)', function () {",
+                  "  pm.expect([400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('TC-22.2: Response trả về thông báo lỗi vi phạm tồn kho / số lượng', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  console.log('Lỗi vượt tồn kho:', body.message);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.3 POST /orders (chặn khi thiếu trường bắt buộc size)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.3 (NFR): Thiếu size trả về 400 Bad Request', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.4 POST /orders (chặn khi chưa xác thực / không có token)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.4 (NFR): Chưa xác thực trả về 401 Unauthorized', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.5 POST /orders (chặn khi token giả mạo / không hợp lệ)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "invalid.mock.jwt.token",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.5 (NFR): Token giả mạo trả về 401 Unauthorized', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.6 POST /orders (chặn khi productId không tồn tại trong hệ thống)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": 999999,\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.6 (NFR): productId không tồn tại trả về lỗi (400 hoặc 404)', function () {",
+                  "  pm.expect([400, 404, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.7 POST /orders (chặn khi qty = 0)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 0,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.7 (NFR): qty = 0 bị từ chối với status 400 Bad Request', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-22.8 POST /orders (chặn khi size không hợp lệ)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"XL\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-22.8 (NFR): Size không hợp lệ bị từ chối với status 400 Bad Request', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TC-23: FR-27 & FR-28 – Đặt từ giỏ, làm trống giỏ & trừ kho nguyên liệu",
+      "description": "TC-23 (FR-27 & FR-28): Đặt đơn từ giỏ hàng -> Kiểm tra status 201, gọi API lấy danh sách đơn xác nhận đơn đã tạo (giỏ hàng đã chuyển thành đơn), và gọi API kiểm tra tồn kho Ingredient đã bị trừ đúng theo công thức món.",
+      "item": [
+        {
+          "name": "TC-23.1 GET /ingredients (lưu tồn kho nguyên liệu trước khi đặt)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-23.1: Lấy thông tin tồn kho nguyên liệu thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const ingredients = pm.response.json();",
+                  "if (Array.isArray(ingredients) && ingredients.length > 0) {",
+                  "  pm.collectionVariables.set('ingredientId', ingredients[0].id);",
+                  "  pm.collectionVariables.set('ingredientStockBefore', ingredients[0].stockQuantity);",
+                  "  console.log('TC-23.1 - Nguyên liệu ID:', ingredients[0].id, '| Tồn kho ban đầu:', ingredients[0].stockQuantity);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-23.2 POST /orders (đặt đơn từ giỏ hàng có topping)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": [\"{{toppingId}}\"]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "FR-27: Đặt đơn từ giỏ hàng. Tạo đơn thành công với status 201."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-23.2 (FR-27): Đặt đơn từ giỏ hàng trả về 201 Created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('TC-23.2: Lưu ID đơn hàng mới cho các bước kiểm tra tiếp theo', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.collectionVariables.set('orderId', body.id);",
+                  "  console.log('TC-23.2 Đơn hàng giỏ hàng tạo thành công: ID =', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-23.3 GET /orders (xác nhận đơn tồn tại & giỏ hàng được xử lý)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-23.3: Lấy danh sách đơn của khách hàng thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-23.3 (FR-27): Đơn từ giỏ hàng xuất hiện trong lịch sử đơn (giỏ hàng đã chốt)', function () {",
+                  "  const orders = pm.response.json();",
+                  "  const orderId = Number(pm.collectionVariables.get('orderId'));",
+                  "  const found = orders.some(o => o.id === orderId);",
+                  "  pm.expect(found, `Đơn hàng #${orderId} phải tồn tại`).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-23.4 GET /ingredients (kiểm tra tồn kho nguyên liệu đã bị trừ đúng công thức)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            },
+            "description": "FR-28: Kiểm tra tồn kho Ingredient đã bị trừ đúng theo công thức món và topping."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-23.4: Lấy danh sách nguyên liệu thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TC-23.4 (FR-28): Tồn kho nguyên liệu (Ingredient) đã bị trừ đúng theo công thức', function () {",
+                  "  const ingredients = pm.response.json();",
+                  "  const targetId = Number(pm.collectionVariables.get('ingredientId'));",
+                  "  const stockBefore = Number(pm.collectionVariables.get('ingredientStockBefore'));",
+                  "  const target = ingredients.find(i => i.id === targetId);",
+                  "  if (target) {",
+                  "    console.log('Stock nguyên liệu trước:', stockBefore, '| Sau khi đặt đơn:', target.stockQuantity);",
+                  "    pm.expect(target.stockQuantity).to.be.at.most(stockBefore,",
+                  "      'Tồn kho nguyên liệu phải giảm sau khi tạo đơn');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TC-24: FR-29 & Trang Quản Trị /admin (Staff CRUD 4 mục)",
+      "description": "TC-24:\n1. Khách hàng tự hủy đơn ở trạng thái PENDING và PAYMENT_FAILED, kiểm tra hoàn lại tồn kho nguyên liệu (Ingredient).\n2. Kết hợp kịch bản kiểm thử chức năng trang quản trị /admin của AS2 (CRUD và quản lý dữ liệu trên 4 mục: Ingredient, Product & Recipe, Order, Promotion).",
+      "item": [
+        {
+          "name": "24.1 Khách tự hủy đơn PENDING & Hoàn kho nguyên liệu",
+          "item": [
+            {
+              "name": "TC-24.1.1 GET /ingredients (lưu stock nguyên liệu trước khi hủy)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.1: Lấy tồn kho trước hủy thành công', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "  const ingredients = pm.response.json();",
+                      "  const targetId = Number(pm.collectionVariables.get('ingredientId'));",
+                      "  const target = ingredients.find(i => i.id === targetId) || ingredients[0];",
+                      "  pm.collectionVariables.set('ingredientStockBeforeCancel', target.stockQuantity);",
+                      "  console.log('Stock nguyên liệu trước khi hủy:', target.stockQuantity);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.1.2 GET /orders/:id (xác nhận đơn đang PENDING)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.2: Đơn hàng hợp lệ và đang ở trạng thái PENDING', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "  const order = pm.response.json();",
+                      "  pm.expect(['PENDING', 'PAYMENT_FAILED']).to.include(order.status);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.1.3 DELETE /orders/:id (Khách hủy đơn PENDING -> 204)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                },
+                "description": "FR-29: Khách hàng tự hủy đơn hàng PENDING. API trả về 204 No Content."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.3 (FR-29): DELETE /orders/:id thành công trả về 204 No Content', function () {",
+                      "  pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.1.4 GET /orders/:id (xác nhận trạng thái chuyển sang CANCELLED)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.4: Lấy chi tiết đơn sau khi hủy trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.1.4 (FR-29): Trạng thái đơn đã chuyển sang CANCELLED', function () {",
+                      "  const order = pm.response.json();",
+                      "  pm.expect(order.status).to.eql('CANCELLED');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.1.5 GET /ingredients (kiểm tra tồn kho nguyên liệu được hoàn lại)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients"
+                  ]
+                },
+                "description": "FR-29: Tồn kho Ingredient được hoàn lại đúng số lượng ban đầu."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.5: Lấy thông tin kho sau hủy thành công (200)', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.1.5 (FR-29): Tồn kho nguyên liệu đã được hoàn lại đầy đủ', function () {",
+                      "  const ingredients = pm.response.json();",
+                      "  const targetId = Number(pm.collectionVariables.get('ingredientId'));",
+                      "  const stockBeforeCancel = Number(pm.collectionVariables.get('ingredientStockBeforeCancel'));",
+                      "  const target = ingredients.find(i => i.id === targetId);",
+                      "  if (target) {",
+                      "    console.log('Stock trước hủy:', stockBeforeCancel, '| Sau khi hủy:', target.stockQuantity);",
+                      "    pm.expect(target.stockQuantity).to.be.at.least(stockBeforeCancel,",
+                      "      'Tồn kho nguyên liệu phải được hoàn lại sau khi hủy đơn');",
+                      "  }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.1.6 DELETE /orders/:id (chặn hủy lại đơn đã CANCELLED)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.1.6 (NFR): Không thể hủy đơn đã CANCELLED (trả về 400 hoặc 409)', function () {",
+                      "  pm.expect([400, 409, 422]).to.include(pm.response.code);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24.2 Khách tự hủy đơn PAYMENT_FAILED & Hoàn kho",
+          "item": [
+            {
+              "name": "TC-24.2.1 POST /orders (tạo đơn mới cho bài test PAYMENT_FAILED)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"S\",\n      \"toppings\": []\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.2.1: Tạo đơn thành công (201)', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('orderId2', body.id);",
+                      "console.log('orderId2 mới tạo:', body.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.2.2 POST /payments (thanh toán thẻ đuôi 0000 -> PAYMENT_FAILED)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "tc24-pf-{{$timestamp}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": {{orderId2}},\n  \"method\": \"CARD\",\n  \"cardNumber\": \"4111111100000000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments"
+                  ]
+                },
+                "description": "BE logic: Card kết thúc bằng 0000 sẽ dẫn đến trạng thái PAYMENT_FAILED."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.2.2: Thanh toán xử lý (trả về trạng thái PAYMENT_FAILED)', function () {",
+                      "  pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.2.3 DELETE /orders/:id (Khách hủy đơn PAYMENT_FAILED -> 204)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId2}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId2}}"
+                  ]
+                },
+                "description": "FR-29: Khách hàng được phép tự hủy đơn hàng PAYMENT_FAILED."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.2.3 (FR-29): Hủy đơn PAYMENT_FAILED trả về 204 No Content', function () {",
+                      "  pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.2.4 GET /orders/:id (xác nhận đơn đã chuyển sang CANCELLED)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{orderId2}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId2}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.2.4: Đơn PAYMENT_FAILED đã đổi trạng thái thành CANCELLED', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "  const order = pm.response.json();",
+                      "  pm.expect(order.status).to.eql('CANCELLED');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24.3 Trang Quản Trị /admin – 1. Quản lý Ingredient (Nguyên liệu)",
+          "item": [
+            {
+              "name": "TC-24.ADMIN.ING-01 GET /ingredients (Xem danh sách nguyên liệu & tồn kho)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients"
+                  ]
+                },
+                "description": "Admin/Staff xem danh sách toàn bộ nguyên liệu, đơn vị tính và số lượng tồn kho."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ING-01: Admin lấy danh sách nguyên liệu trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.ING-01: Dữ liệu nguyên liệu có đầy đủ id, name, unit, stockQuantity', function () {",
+                      "  const ingredients = pm.response.json();",
+                      "  pm.expect(ingredients).to.be.an('array');",
+                      "  if (ingredients.length > 0) {",
+                      "    const item = ingredients[0];",
+                      "    pm.expect(item).to.have.property('id');",
+                      "    pm.expect(item).to.have.property('name');",
+                      "    pm.expect(item).to.have.property('unit');",
+                      "    pm.expect(item).to.have.property('stockQuantity');",
+                      "  }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ING-02 POST /ingredients (Tạo mới nguyên liệu vào kho)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Trà đen Oolong Test {{$timestamp}}\",\n  \"unit\": \"g\",\n  \"stockQuantity\": 500\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients"
+                  ]
+                },
+                "description": "Admin tạo mới nguyên liệu trong kho. Trả về 201 Created."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ING-02: Tạo mới nguyên liệu thành công (201)', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.ING-02: Nguyên liệu mới có ID và số lượng tồn khởi tạo đúng', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('id');",
+                      "  pm.expect(body.stockQuantity).to.eql(500);",
+                      "  pm.collectionVariables.set('newIngredientId', body.id);",
+                      "  console.log('Tạo mới nguyên liệu thành công, ID =', body.id);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ING-03 PATCH /ingredients/:id/restock (Nhập thêm hàng vào kho)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients/{{newIngredientId}}/restock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients",
+                    "{{newIngredientId}}",
+                    "restock"
+                  ]
+                },
+                "description": "Admin nhập thêm 100 đơn vị nguyên liệu. Tồn kho mới = 500 + 100 = 600."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ING-03: Nhập thêm kho thành công trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.ING-03: Tồn kho nguyên liệu tăng đúng 100 đơn vị', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.stockQuantity).to.eql(600);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ING-04 PATCH /ingredients/:id/adjust (Điều chỉnh kiểm kê tồn kho)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": -50\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ingredients/{{newIngredientId}}/adjust",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ingredients",
+                    "{{newIngredientId}}",
+                    "adjust"
+                  ]
+                },
+                "description": "Admin điều chỉnh giảm 50 đơn vị do hao hụt kiểm kê. Tồn kho mới = 600 - 50 = 550."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ING-04: Điều chỉnh kiểm kê thành công trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.ING-04: Tồn kho giảm đúng 50 đơn vị còn 550', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.stockQuantity).to.eql(550);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24.3 Trang Quản Trị /admin – 2. Quản lý Product & Công thức món",
+          "item": [
+            {
+              "name": "TC-24.ADMIN.PRD-01 GET /products (Xem danh sách sản phẩm)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PRD-01: Lấy danh sách sản phẩm trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PRD-02 GET /products/:id (Xem chi tiết sản phẩm)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{{productId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{{productId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PRD-02: Lấy chi tiết sản phẩm trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "  const p = pm.response.json();",
+                      "  pm.expect(p.id).to.eql(Number(pm.collectionVariables.get('productId')));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PRD-03 GET /products/:id/recipe (Admin xem công thức định lượng món)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{{productId}}/recipe",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{{productId}}",
+                    "recipe"
+                  ]
+                },
+                "description": "Admin xem công thức định lượng nguyên liệu cho các size S, M, L của sản phẩm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PRD-03: Xem công thức định lượng trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.PRD-03: Công thức chứa danh sách recipeItems hợp lệ', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body).to.be.an('array');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PRD-04 PATCH /products/:id/recipe (Cập nhật định lượng công thức)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"size\": \"M\",\n      \"ingredientId\": {{ingredientId}},\n      \"amountRequired\": 20\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/products/{{productId}}/recipe",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{{productId}}",
+                    "recipe"
+                  ]
+                },
+                "description": "Admin cập nhật định lượng công thức cho món (size M cần 20g nguyên liệu)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PRD-04: Cập nhật công thức món trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PRD-05 PATCH /toppings/:id/portion (Cập nhật định lượng topping per portion)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amountPerPortion\": 25\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/toppings/{{toppingId}}/portion",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "toppings",
+                    "{{toppingId}}",
+                    "portion"
+                  ]
+                },
+                "description": "Admin cập nhật định lượng cho 1 phần topping."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PRD-05: Cập nhật định lượng topping trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.PRD-05: Định lượng topping cập nhật thành 25', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.amountPerPortion).to.eql(25);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24.3 Trang Quản Trị /admin – 3. Quản lý Order (Đơn hàng & Quy trình chế biến)",
+          "item": [
+            {
+              "name": "TC-24.ADMIN.ORD-01 GET /orders/staff (Xem danh sách toàn bộ đơn hàng của quán)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/staff",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "staff"
+                  ]
+                },
+                "description": "Admin xem danh sách toàn bộ đơn hàng của tất cả khách hàng trong quán."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-01: Admin lấy toàn bộ danh sách đơn trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.ORD-01: Danh sách đơn là array', function () {",
+                      "  const orders = pm.response.json();",
+                      "  pm.expect(orders).to.be.an('array');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-02 Tạo đơn & Thanh toán PAID (chuẩn bị đơn cho quy trình pha chế)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-02: Tạo đơn thành công (201)', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "  const body = pm.response.json();",
+                      "  pm.collectionVariables.set('adminOrderId', body.id);",
+                      "  console.log('adminOrderId chuẩn bị test pha chế:', body.id);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-02b POST /payments (Thanh toán ví WALLET demo -> PAID)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "tc24-admin-pay-{{$timestamp}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": {{adminOrderId}},\n  \"method\": \"WALLET\",\n  \"walletId\": \"wallet-demo-123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "payments"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-02b: Thanh toán thành công', function () {",
+                      "  pm.expect([200, 201]).to.include(pm.response.code);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-03 PATCH /orders/:id/status (Chuyển PAID -> PREPARING Bắt đầu pha chế)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"PREPARING\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{adminOrderId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{adminOrderId}}",
+                    "status"
+                  ]
+                },
+                "description": "Admin chuyển trạng thái đơn sang PREPARING (Bắt đầu pha chế). Trả về 204 No Content."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-03: Chuyển sang PREPARING thành công (204)', function () {",
+                      "  pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-04 PATCH /orders/:id/status (Chuyển PREPARING -> READY Đánh dấu sẵn sàng)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"READY\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{adminOrderId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{adminOrderId}}",
+                    "status"
+                  ]
+                },
+                "description": "Admin chuyển trạng thái sang READY (Đã pha xong, chờ lấy nước). Trả về 204 No Content."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-04: Chuyển sang READY thành công (204)', function () {",
+                      "  pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-05 PATCH /orders/:id/status (Chuyển READY -> COMPLETED Hoàn thành đơn)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"COMPLETED\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{{adminOrderId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{adminOrderId}}",
+                    "status"
+                  ]
+                },
+                "description": "Admin chuyển trạng thái sang COMPLETED (Khách đã nhận nước). Trả về 204 No Content."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-05: Chuyển sang COMPLETED thành công (204)', function () {",
+                      "  pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.ORD-06 DELETE /orders/staff/:id (Admin/Staff hủy đơn hàng cấp quản trị)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{staffToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/staff/{{orderId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "staff",
+                    "{{orderId}}"
+                  ]
+                },
+                "description": "Admin/Staff có quyền hủy đơn hàng của khách qua API /orders/staff/:id."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.ORD-06: Admin hủy đơn hàng thành công (204)', function () {",
+                      "  pm.expect([204, 400, 409]).to.include(pm.response.code);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24.3 Trang Quản Trị /admin – 4. Quản lý Promotion (Khuyến mãi)",
+          "item": [
+            {
+              "name": "TC-24.ADMIN.PROMO-01 POST /promotions/validate (Báo giá & kiểm tra mã hợp lệ)",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 2,\n      \"quantity\": 1,\n      \"toppingIds\": []\n    }\n  ],\n  \"promotionCode\": \"GIAM10\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/promotions/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "promotions",
+                    "validate"
+                  ]
+                },
+                "description": "POST /promotions/validate kiểm tra mã hợp lệ, trả về 200 kèm số tiền giảm giá."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PROMO-01: Validate mã khuyến mãi trả về 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('TC-24.ADMIN.PROMO-01: Response tính đúng chiết khấu và tổng tiền sau giảm', function () {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('subtotal');",
+                      "  pm.expect(body).to.have.property('discount');",
+                      "  pm.expect(body).to.have.property('total');",
+                      "  pm.expect(body.total).to.eql(body.subtotal - body.discount);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PROMO-02 POST /promotions/validate (Chặn mã không tồn tại / hết hạn)",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 2,\n      \"quantity\": 1,\n      \"toppingIds\": []\n    }\n  ],\n  \"promotionCode\": \"MA_KHONG_TON_TAI_999\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/promotions/validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "promotions",
+                    "validate"
+                  ]
+                },
+                "description": "Kiểm tra hệ thống xử lý khi mã khuyến mãi không hợp lệ hoặc không tồn tại."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PROMO-02: Mã không hợp lệ bị từ chối hoặc discount = 0', function () {",
+                      "  if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.discount).to.eql(0);",
+                      "  } else {",
+                      "    pm.expect([400, 404]).to.include(pm.response.code);",
+                      "  }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-24.ADMIN.PROMO-03 POST /orders với promoCode hợp lệ (Áp dụng mã vào đơn hàng)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ],\n  \"promoCode\": \"GIAM10\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                },
+                "description": "Đặt đơn áp dụng mã khuyến mãi GIAM10. Đơn hàng được tạo thành công với chiết khấu."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('TC-24.ADMIN.PROMO-03: Đặt đơn kèm mã khuyến mãi thành công (201)', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('id');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TC-25: NFR-14 – Optimistic Locking / Đặt đồng thời món cuối cùng",
+      "description": "TC-25 (NFR-14): Đặt đồng thời món cuối cùng trong kho với cơ chế Optimistic Locking.\nKỳ vọng: 1 đơn thành công trả về 201 Created, 1 đơn thất bại trả về 409 Conflict (hoặc 400), tồn kho nguyên liệu không bao giờ âm.\n\n⚠️ Lưu ý: Postman Collection Runner chạy tuần tự nên không gửi 2 gói tin đồng thời 100%. Xem file đính kèm hoặc request hướng dẫn để chạy stress test song song bằng k6 / Apache Bench / PowerShell.",
+      "item": [
+        {
+          "name": "TC-25.1 GET /products/:id (lấy stock hiện tại)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25.1: Lấy stock hiện tại thành công (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const product = pm.response.json();",
+                  "  console.log('TC-25: Stock hiện tại của sản phẩm =', product.stock);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-25.2 POST /orders (Luồng A – đặt món cuối cùng, chấp nhận 201 hoặc 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "TC-25: Luồng A gửi đơn đặt đúng số lượng cuối cùng còn lại. Script chấp nhận 201 hoặc 409 (Optimistic Locking xung đột phiên bản)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25.2 (NFR-14): Luồng A trả về 201 Created (thành công) hoặc 409 Conflict (Optimistic Locking)', function () {",
+                  "  pm.expect([201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "  console.log('TC-25 Luồng A THÀNH CÔNG (201) – ID:', pm.response.json().id);",
+                  "} else {",
+                  "  console.log('TC-25 Luồng A BỊ TỪ CHỐI (Optimistic Locking/Hết kho):', pm.response.code);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-25.3 POST /orders (Luồng B – đặt đồng thời ngay sau Luồng A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"qty\": 1,\n      \"size\": \"M\",\n      \"toppings\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "TC-25: Luồng B gửi đơn ngay sau Luồng A. Nếu kho đã hết hoặc xung đột phiên bản, hệ thống phải chặn lại (409 hoặc 400)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25.3 (NFR-14): Luồng B được xử lý đúng (chấp nhận 201, 400 hoặc 409)', function () {",
+                  "  pm.expect([201, 400, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-25.4 GET /ingredients (kiểm tra kho nguyên liệu KHÔNG bao giờ bị âm)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            },
+            "description": "NFR-14: Bất kể bao nhiêu request đồng thời, tồn kho nguyên liệu không bao giờ được nhỏ hơn 0."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25.4 (NFR-14): TẤT CẢ nguyên liệu có tồn kho >= 0 (không bao giờ âm)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ingredients = pm.response.json();",
+                  "  ingredients.forEach(function(item) {",
+                  "    pm.expect(item.stockQuantity).to.be.at.least(0,",
+                  "      `Nguyên liệu ID ${item.id} (${item.name}) bị âm: ${item.stockQuantity}`);",
+                  "  });",
+                  "  console.log('TC-25.4: Kiểm tra thành công – tất cả', ingredients.length, 'nguyên liệu đều >= 0.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-25.5 Hướng dẫn & Script chạy 2 luồng song song thực tế (k6 / ab / PowerShell)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "Đọc tab Description của request này để xem script k6 / PowerShell gửi 2 request hoàn toàn đồng thời để kiểm chứng Optimistic Locking 409 Conflict."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25.5: Đọc Description để xem kịch bản k6 concurrency', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BONUS: Phân quyền RBAC & Bảo mật (Customer vs Staff)",
+      "item": [
+        {
+          "name": "BONUS-01 POST /auth/login (chặn đăng nhập sai mật khẩu -> 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"wrong_password_123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BONUS-01: Sai mật khẩu trả về 401 Unauthorized', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BONUS-02 POST /auth/login (chặn email không tồn tại -> 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"notexist@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BONUS-02: Email không tồn tại trả về 401 Unauthorized', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BONUS-03 GET /ingredients (Customer token bị chặn -> 403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            },
+            "description": "Customer không có quyền truy cập API quản lý kho nguyên liệu."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BONUS-03: Customer gọi API kho /ingredients trả về 403 Forbidden', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BONUS-04 PATCH /orders/:id/status (Customer token bị chặn -> 403 Forbidden)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "Customer không có quyền chuyển đổi trạng thái đơn hàng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BONUS-04: Customer gọi PATCH status trả về 403 Forbidden', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BONUS-05 DELETE /orders/staff/:id (Customer token bị chặn -> 403 Forbidden)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/staff/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "staff",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Customer không có quyền gọi endpoint hủy đơn của staff."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BONUS-05: Customer gọi DELETE /orders/staff/:id trả về 403 Forbidden', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

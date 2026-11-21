@@ -85,6 +85,7 @@ export default function OrderConfirmationPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancelNotice, setCancelNotice] = useState<string | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
@@ -183,8 +184,15 @@ export default function OrderConfirmationPage() {
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
     setUpdating(true);
     setError(null);
+    setCancelNotice(null);
     try {
       await cancelOrder(order.id);
+      setOrder((current) =>
+        current ? { ...current, status: "CANCELLED" } : current,
+      );
+      setCancelNotice(
+        `Đơn hàng #${order.id} đã được hủy. Tồn kho đã được hoàn lại.`,
+      );
       setReloadCount((value) => value + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể hủy đơn hàng");
@@ -249,6 +257,20 @@ export default function OrderConfirmationPage() {
         {error && (
           <p role="alert" style={{ color: "#b91c1c" }}>
             {error}
+          </p>
+        )}
+        {cancelNotice && (
+          <p
+            role="status"
+            style={{
+              padding: "12px",
+              border: "1px solid #a7f3d0",
+              borderRadius: "10px",
+              background: "#ecfdf5",
+              color: "#047857",
+            }}
+          >
+            {cancelNotice}
           </p>
         )}
         {order.loyaltyTransaction && (
@@ -426,6 +448,7 @@ export default function OrderConfirmationPage() {
 
           {canCancel && (
             <button
+              type="button"
               disabled={updating}
               onClick={handleCancel}
               style={{
@@ -436,10 +459,11 @@ export default function OrderConfirmationPage() {
                 border: "1px solid #fca5a5",
                 borderRadius: "12px",
                 fontWeight: 500,
-                cursor: "pointer",
+                cursor: updating ? "wait" : "pointer",
+                opacity: updating ? 0.65 : 1,
               }}
             >
-              Hủy đơn hàng này
+              {updating ? "Đang hủy..." : "Hủy đơn hàng này"}
             </button>
           )}
 
