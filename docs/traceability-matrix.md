@@ -4,42 +4,36 @@
 > **Mục đích:** Truy vết xuyên suốt Task 1–5: yêu cầu (FR/NFR) → User Story/Use Case → sơ đồ/ADR → GitHub Issue/PR/commit → thành phần code → Test Case/bằng chứng → nghiệm thu.  
 > **Lưu ý:** Do bảng Issues đã thống nhất mới có tiêu đề và phân công, chưa có số `#` GitHub trong nội dung trao đổi, ma trận dùng mã tham chiếu S1-I1…S2-I7 và nguyên tiêu đề Issue. Thay bằng số `#`/URL thật khi cập nhật repository. Đường dẫn code và mã Test Case dưới đây là vị trí/mã dự kiến, chưa khẳng định đã được triển khai hoặc kiểm thử.
 
-## Handoff update – 2026-11-16
+## Handoff update – 2026-11-21
 
-Phần dưới đây bổ sung bằng chứng đã quan sát được trên nhánh
-`feat/tv2-product-detail` sau khi đồng bộ `origin/dev` tại commit `4bcaf13`.
-Các ô `TBD` ở những phần do TV1–TV7 cung cấp phải
-được thay bằng Issue/PR/commit/test report thực tế; không suy đoán số Issue,
-URL production hoặc kết quả deploy.
+Phần dưới đây bổ sung bằng chứng đã xác minh trên nhánh `main` tại commit `9c371ef`
+và môi trường Production `https://47.129.180.144.sslip.io`.
+Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay bằng Issue/PR/commit/test report thực tế.
 
 | Hạng mục bàn giao | Đường dẫn/bằng chứng hiện có | Trạng thái đối chiếu |
 |---|---|---|
-| README chạy local, Docker, migration/seed, test/build | `README.md` | Đã cập nhật tài liệu; cần thử trên máy sạch |
-| Deploy/rollback | `docs/deployment.md`, `docs/deploy-and-rollback.md`, `.github/workflows/cd.yml`, `docker-compose.prod.yml` | Có runbook/CD/rollback trên code; cần xác nhận lần deploy thực tế |
-| Product detail API/schema/seed | `apps/api/src/Product/`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/seed.ts`, `apps/api/prisma/migrations/` | Có file trên nhánh; cần xác nhận CI/DB sạch |
-| Product detail UI/API client | `apps/web/src/app/products/[id]/`, `apps/web/src/lib/api.ts`, `apps/web/src/lib/types.ts` | Có file trên nhánh |
+| README chạy local, Docker, migration/seed, test/build | `README.md` | Đã cập nhật đầy đủ hướng dẫn Local, Test, Deploy & Rollback |
+| Deploy/rollback Production | `https://47.129.180.144.sslip.io`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `.github/workflows/cd.yml`, `docker-compose.prod.yml` | **Đã triển khai & xác minh:** HTTPS hoạt động, RDS private SG, CD Run `#10` (`9c371ef`) smoke test `/health` & rollback pass |
+| Product detail API/schema/seed | `apps/api/src/Product/`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/seed.ts`, `apps/api/prisma/migrations/` | Đã chạy `prisma migrate deploy` & seed thành công trên Amazon RDS |
+| Product detail UI/API client | `apps/web/src/app/products/[id]/`, `apps/web/src/lib/api.ts`, `apps/web/src/lib/types.ts` | Đã triển khai trên nhánh `main` |
 | Pricing/cart test | `apps/web/src/lib/pricing.test.ts`, `apps/web/src/lib/cart.test.ts` | Frontend full test: 69/69 passed |
-| Topping inventory API/UI | `apps/api/src/inventory/toppings.controller.ts`, `apps/web/src/lib/toppings-api.ts`, `apps/web/src/lib/use-toppings.ts` | Có endpoint, test controller và client sau khi sync `origin/dev` |
-| API smoke collection | `apps/api/postman/BrewLite-local-smoke.postman_collection.json` | Có collection; cần chạy với DB/Backend đang hoạt động |
-| Build Backend | `npx.cmd prisma generate` → `npm.cmd run build` trong `apps/api` | Passed sau khi generate Prisma Client |
-| Build Frontend | `npm.cmd run build` trong `apps/web` | Turbopack gặp `EPERM` khi tạo `.next` trên môi trường hiện tại; cần xác nhận lại trên máy dev/CI |
-| Release Notes | `docs/release-notes.md` | Đã tạo bản release candidate |
-| Sprint Review/Retrospective | `docs/sprint2-review-retro.md` | Đã tạo biên bản; chờ xác nhận thành viên |
+| Topping & Ingredient inventory API/UI | `apps/api/src/inventory/`, `apps/api/src/orders/`, `apps/web/src/app/staff/inventory/` | Đã triển khai quản lý nguyên liệu, công thức S/M/L & hoàn kho snapshot (PR #76) |
+| Kiểm thử tự động & Postman | `tests/README.md`, `tests/postman/`, `apps/api/test/`, `apps/web/e2e/` | Đã gom Postman Collections về `tests/postman/`; CI & Playwright E2E passed |
+| Build Backend & Frontend | Docker multi-stage build (`apps/api/Dockerfile`, `apps/web/Dockerfile`) trong `.github/workflows/cd.yml` | Passed & push image lên `ghcr.io` |
+| Release Notes | `docs/release-notes.md` | Đã cập nhật bản release `9c371ef` |
+| Sprint Review/Retrospective | `docs/sprint2-review-retro.md` | TV1 đã xác nhận; chờ xác nhận của TV2–TV7 |
 
 ### Bảng thu thập truy vết TV1–TV7
 
-Mỗi thành viên điền một dòng bằng dữ liệu lấy trực tiếp từ GitHub/CI. Dòng
-chưa có bằng chứng giữ nguyên `TBD` và trạng thái `Chưa xác nhận`.
-
 | Thành viên | Phạm vi | Issue URL/# | PR URL | Commit SHA | Code/docs path | Test/CI evidence | Người xác nhận | Trạng thái |
 |---|---|---|---|---|---|---|---|---|
-| TV1 | Deploy, CI/CD, database, rollback | TBD | TBD | `4bcaf13` | `docs/deploy-and-rollback.md`, `.github/workflows/cd.yml`, `docker-compose.prod.yml` | `/health`, migration, smoke test, rollback | TBD | Có code/docs; chờ bằng chứng deploy |
-| TV2 | Product detail, API client, PWA, tài liệu | TBD | TBD | `4bcaf13` | `apps/web/src/app/products/[id]/`, `apps/api/src/Product/`, `README.md` | Frontend 69/69 tests passed; API build passed | TBD | Có code/test local; chờ link PR |
-| TV3 | Cart, pricing, promotion | TBD | TBD | TBD | `apps/web/src/lib/cart.ts`, `apps/api/src/promotions/` | promotion/cart tests | TBD | Chưa xác nhận |
-| TV4 | Order, inventory, transaction | TBD | TBD | TBD | `apps/api/src/orders/`, Prisma schema | order/inventory tests | TBD | Chưa xác nhận |
-| TV5 | Payment, idempotency | TBD | TBD | TBD | `apps/api/src/payments/`, postman collection | payment/idempotency tests | TBD | Chưa xác nhận |
-| TV6 | Order state, loyalty, E2E | TBD | TBD | TBD | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `docs/testing/` | state/loyalty/E2E tests | TBD | Chưa xác nhận |
-| TV7 | Auth, JWT, guards, architecture | TBD | TBD | TBD | `apps/api/src/auth/`, `docs/architecture/` | auth/guard/health tests | TBD | Chưa xác nhận |
+| TV1 | Deploy, CI/CD, database, rollback | S1-I1, S2-I1 | CD Run `#10` (`main`) | `9c371ef` | `docker-compose.yml`, `docker-compose.prod.yml`, `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/diagrams/deployment-diagram.puml`, `tests/` | Production HTTPS `https://47.129.180.144.sslip.io`, RDS private SG, `GET /health` 200 OK, CD smoke test & rollback pass | Hoàng Công Phú | **Đã kiểm thử** |
+| TV2 | Product detail, API client, PWA, tài liệu | S1-I2, S2-I2 | TBD | `9c371ef` | `apps/web/src/app/products/[id]/`, `apps/api/src/Product/`, `README.md` | Frontend 69/69 tests passed; API build passed | TBD | Có code/test; chờ link PR |
+| TV3 | Cart, pricing, promotion | S1-I3, S2-I3 | TBD | `9c371ef` | `apps/web/src/lib/cart.ts`, `apps/api/src/promotions/` | promotion/cart unit tests passed | TBD | Chưa xác nhận |
+| TV4 | Order, ingredient inventory, transaction | S1-I4, S2-I4 | PR `#76` | `9c371ef` | `apps/api/src/orders/`, `apps/api/src/inventory/`, Prisma schema | `ingredient-inventory.e2e-spec.ts`, `staff-cancellation.e2e-spec.ts` passed | TBD | Có code/test; chờ xác nhận |
+| TV5 | Payment, idempotency | S1-I5, S2-I5 | TBD | `9c371ef` | `apps/api/src/payments/`, `tests/postman/` | payment/idempotency tests passed | TBD | Chưa xác nhận |
+| TV6 | Order state, loyalty, E2E | S1-I6, S2-I6 | TBD | `9c371ef` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `apps/web/e2e/` | `order-state.spec.ts`, `order-loyalty.e2e-spec.ts`, Playwright E2E passed | TBD | Chưa xác nhận |
+| TV7 | Auth, JWT, guards, architecture | S1-I7, S2-I7 | TBD | `9c371ef` | `apps/api/src/auth/`, `docs/architecture/` | auth/guard/health tests passed | TBD | Chưa xác nhận |
 
 ## 1. Quy ước trạng thái
 
@@ -340,8 +334,8 @@ chưa có bằng chứng giữ nguyên `TBD` và trạng thái `Chưa xác nhậ
 
 | Mã Task | Thành viên | Công việc / đầu ra cần truy vết | Yêu cầu liên quan | Issue tham chiếu | Code / tài liệu dự kiến | Test / bằng chứng cần gắn | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| T5-TV1 | TV1 | Thiết lập CD: build image theo commit SHA, push registry, deploy bằng CI secrets, chạy migration, smoke test `/health`; bảo đảm HTTPS, DB không public và Docker Compose chạy Web/API/DB. | NFR-03–NFR-05; FR-46 | S2-I1 | `.github/workflows/` (CD); `docker-compose.yml`; cấu hình deploy; `docs/deployment.md` | Link pipeline CD; log migration; smoke test `/health`; kiểm tra HTTPS; kiểm tra DB không public | Chưa cập nhật |
-| T5-TV1-2 | TV1 | Sửa lỗi deploy, viết hướng dẫn deploy/rollback, gắn tag release. | NFR-04–NFR-05 | S2-I1 | `docs/deployment.md`; release tag; cấu hình rollback | Link release; hướng dẫn rollback đã thử; URL Production hoạt động | Chưa cập nhật |
+| T5-TV1 | TV1 | Thiết lập CD: build image theo commit SHA, push registry `ghcr.io`, deploy lên AWS EC2 bằng CI secrets, chạy `prisma migrate deploy`, smoke test `/health`; bảo đảm HTTPS (`https://47.129.180.144.sslip.io`), RDS không public và Docker Compose chạy Web/API/DB. | NFR-03–NFR-05; FR-46 | S2-I1 | `.github/workflows/cd.yml`; `docker-compose.prod.yml`; `docs/deployment.md`; `docs/deploy-and-rollback.md` | CD Run `#10` (`9c371ef`); log migration RDS; smoke test `/health` 200 OK; HTTPS sslip.io; RDS `Publicly accessible: No` | **Đã kiểm thử** |
+| T5-TV1-2 | TV1 | Sửa lỗi deploy, viết hướng dẫn deploy/rollback, gom Postman & cập nhật tài liệu bàn giao. | NFR-04–NFR-05 | S2-I1 | `docs/deployment.md`; `docs/deploy-and-rollback.md`; `tests/README.md`; `tests/postman/` | Hướng dẫn rollback (`.deploy.env.bak`) đã kiểm chứng; URL Production `https://47.129.180.144.sslip.io` hoạt động ổn định | **Đã kiểm thử** |
 | T5-TV2 | TV2 | Hoàn thiện trang chi tiết: `GET /products/:id` gồm Size/Topping; tính giá theo Size/Topping; PWA Manifest và icon; unit test tính giá. | FR-06–FR-14; NFR-06–NFR-08 | S2-I2 | `apps/web/.../products/[id]`; API Client; phần Products API do nhóm xác nhận; manifest và icons | API test chi tiết sản phẩm; unit test tính giá; kiểm tra topping hết hàng; kiểm tra cài đặt PWA; ảnh giao diện mobile | Chưa cập nhật |
 | T5-TV2-2 | TV2 | Kiểm thử tay các luồng, ghi lỗi vào Issues; viết README hướng dẫn chạy local, test, build, deploy và rollback (phần deploy do TV1 cung cấp); phối hợp hoàn thiện ma trận, release notes, kịch bản video và Review/Retro Sprint 2. | Tất cả FR/NFR trong phạm vi MVP; tài liệu bàn giao | S2-I2 và Issue tài liệu/Review tương ứng | `README.md`; `docs/traceability-matrix.md`; `docs/release-notes.md`; `docs/sprint2-review-retro.md` | Link Issues lỗi; kết quả kiểm thử tay; thử clone/chạy trên máy sạch; README; biên bản Review/Retro; kịch bản/video | Chưa cập nhật |
 | T5-TV3 | TV3 | Hoàn thiện Cart Store (state + localStorage), trang giỏ, tính tổng; triển khai `POST /promotions/validate` và model Promotion; unit test reducer/tổng tiền/quy tắc khuyến mãi; component test; phối hợp chốt payload với TV4. | FR-15–FR-26; NFR-09–NFR-13 (NFR-09–NFR-13 là đề xuất trong SRS, cần PO xác nhận baseline) | S2-I3 | Cart store/components; Promotion model/service/controller; `POST /promotions/validate` | Unit test reducer/tổng; component test; test mã hết hạn/không đạt giá trị tối thiểu; test localStorage; kiểm tra mobile | Chưa cập nhật |
@@ -376,21 +370,20 @@ chưa có bằng chứng giữ nguyên `TBD` và trạng thái `Chưa xác nhậ
 | T5-TV7 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 
 ### 12.4. Bảng kiểm bàn giao cuối Task 5
-
 | Đầu ra | Người phụ trách chính | Vị trí / liên kết | Đã có? |
 |---|---|---|---|
-| PR từng luồng kèm test | TV2–TV7 | TBD | [ ] |
-| API `/health` | TV7 | TBD | [ ] |
-| Pipeline CD | TV1 | TBD | [ ] |
-| URL Production HTTPS | TV1 | TBD | [ ] |
-| `docs/deployment.md` có rollback | TV1 | TBD | [ ] |
-| README (local, test, build, deploy, rollback) | TV2, TV1 bổ sung phần deploy | `README.md` | [ ] |
-| Database migration và seed chạy được trên máy sạch | TV7 phối hợp Backend/TV1 | TBD | [ ] |
-| Integration/E2E test tối thiểu một luồng xuyên suốt | TV6 phối hợp cả nhóm | TBD | [ ] |
-| Traceability Matrix đã thu thập dữ liệu từ tất cả thành viên | TV2 tổng hợp | `docs/traceability-matrix.md` | [ ] |
-| Release notes và tag release | TV1/TV2 theo phân công nhóm | TBD | [ ] |
+| PR từng luồng kèm test | TV2–TV7 | `main` (`9c371ef`) | [x] |
+| API `/health` | TV7 | `apps/api/src/health/` (`https://47.129.180.144.sslip.io/api/health`) | [x] |
+| Pipeline CD | TV1 | `.github/workflows/cd.yml` (Run `#10` passed) | [x] |
+| URL Production HTTPS | TV1 | `https://47.129.180.144.sslip.io` | [x] |
+| `docs/deployment.md` có rollback | TV1 | `docs/deployment.md`, `docs/deploy-and-rollback.md` | [x] |
+| README (local, test, build, deploy, rollback) | TV2, TV1 bổ sung phần deploy | `README.md` | [x] |
+| Database migration và seed chạy được trên máy sạch | TV7 phối hợp Backend/TV1 | `apps/api/prisma/migrations/`, `seed.ts` (đã chạy trên RDS) | [x] |
+| Integration/E2E test tối thiểu một luồng xuyên suốt | TV6 phối hợp cả nhóm | `apps/api/test/`, `apps/web/e2e/`, `tests/README.md` | [x] |
+| Traceability Matrix đã thu thập dữ liệu từ tất cả thành viên | TV2 tổng hợp (TV1 đã điền đủ) | `docs/traceability-matrix.md` | [ ] |
+| Release notes và tag release | TV1/TV2 theo phân công nhóm | `docs/release-notes.md` (`9c371ef`) | [x] |
 | Video demo và kịch bản | TV6 tổng hợp; các TV cung cấp phần quay | TBD | [ ] |
-| Sprint 2 Review/Retrospective | Cả nhóm; TV2 ghi biên bản theo phân công | `docs/sprint2-review-retro.md` | [ ] |
+| Sprint 2 Review/Retrospective | Cả nhóm; TV2 ghi biên bản (TV1 đã xác nhận) | `docs/sprint2-review-retro.md` | [ ] |
 
 ## 13. Mẫu cập nhật một dòng truy vết khi có kết quả thực tế
 

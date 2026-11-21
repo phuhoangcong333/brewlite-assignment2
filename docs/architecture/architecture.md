@@ -1,6 +1,6 @@
 # Kiến trúc hệ thống BrewLite
 
-> **Người tổng hợp:** TV7. **Phiên bản:** 1.0, 13/11/2026. **Task:** 3.1 – TV7.
+> **Người tổng hợp:** TV7. **Phiên bản:** 1.1, 21/11/2026. **Task:** 3.1 – TV7 (TV1 cập nhật trạng thái triển khai production).
 >
 > Tài liệu này tổng hợp các ADR và đối chiếu với mã nguồn trong repository tại thời điểm bàn giao.
 > Các nội dung chưa triển khai được đánh dấu **Mục tiêu** hoặc **Chưa triển khai**.
@@ -23,16 +23,15 @@ Xem [mã nguồn sơ đồ kiến trúc](../diagrams/architecture-diagram.puml).
 |---|---|---|
 | Giao diện | Next.js, React, TypeScript, PWA | Hiển thị, giỏ hàng, gọi API, giữ JWT và trạng thái đăng nhập |
 | Dịch vụ | NestJS (`apps/api`), theo module | Quy tắc nghiệp vụ, phân quyền, validate, ghi log |
-| Dữ liệu | PostgreSQL, Prisma ORM, migration | Lưu dữ liệu, transaction, ràng buộc unique; production dự kiến dùng Amazon RDS |
-| Hạ tầng | Docker Compose, GitHub Actions | Đóng gói và CI; production/CD, HTTPS và network boundary chưa có bằng chứng triển khai trong repo |
+| Dữ liệu | PostgreSQL, Prisma ORM, migration | Lưu dữ liệu, transaction, ràng buộc unique; production dùng Amazon RDS PostgreSQL |
+| Hạ tầng | Docker Compose, GitHub Actions, AWS EC2 | Đóng gói container, CI/CD tự động build/deploy, HTTPS (`https://47.129.180.144.sslip.io`), smoke test `/health` và auto-rollback |
 
-**Một request đi qua hệ thống như thế nào:** trình duyệt gọi API kèm header `Authorization: Bearer <JWT>` → `JwtAuthGuard` kiểm tra token (và `RolesGuard` kiểm tra vai trò) → `ValidationPipe` kiểm tra dữ liệu → controller → service → Prisma → PostgreSQL. Mọi lỗi đi qua `ExceptionFilter` chung; mọi dòng log của request mang cùng một `requestId`.
+**Một request đi qua hệ thống như thế nào:** trình duyệt gọi API qua HTTPS kèm header `Authorization: Bearer <JWT>` → `JwtAuthGuard` kiểm tra token (và `RolesGuard` kiểm tra vai trò) → `ValidationPipe` kiểm tra dữ liệu → controller → service → Prisma → PostgreSQL. Mọi lỗi đi qua `ExceptionFilter` chung; mọi dòng log của request mang cùng một `requestId`.
 
 ### 2.1. Ranh giới giữa hiện trạng và mục tiêu
 
-- **Hiện trạng đã có trong mã nguồn:** monorepo; frontend Next.js; backend NestJS modular monolith; PostgreSQL qua Prisma; xác thực JWT; tính giá ở server; transaction và optimistic locking cho tồn kho; state machine đơn hàng; thanh toán mock có idempotency key; kiểm tra input và exception filter.
-- **Đã triển khai sau đối chiếu:** PWA manifest/service worker và loyalty transaction khi `READY → COMPLETED`.
-- **Mục tiêu kiến trúc chưa hoàn tất:** UUIDv4 validation và replay lỗi thanh toán 422; reverse proxy/HTTPS, RDS private network và CD deploy/rollback.
+- **Hiện trạng đã có trong mã nguồn & hạ tầng:** monorepo; frontend Next.js; backend NestJS modular monolith; PostgreSQL qua Prisma; xác thực JWT; tính giá ở server; transaction và optimistic locking cho tồn kho; state machine đơn hàng; thanh toán mock có idempotency key; kiểm tra input và exception filter; PWA manifest/service worker; loyalty transaction khi `READY → COMPLETED`; production HTTPS (`https://47.129.180.144.sslip.io`), RDS private network/Security Group và pipeline CD deploy/smoke test/auto-rollback (`.github/workflows/cd.yml`).
+- **Mục tiêu kiến trúc chưa hoàn tất:** UUIDv4 validation và replay lỗi thanh toán 422 ở controller/filter.
 - Mô hình trong sơ đồ lớp mô tả thiết kế đích khi chưa khớp schema Prisma. Phần “Điểm còn tồn đọng” là danh sách việc cần làm, không phải hành vi hiện tại.
 
 ### 2.2. Các module backend
@@ -71,14 +70,13 @@ Các ràng buộc rút ra khi kết hợp với các quyết định khác:
 
 ### 3.2. Triển khai (TV1)
 
-> [TV7 tổng hợp từ ADR 001, 002, 005, TV1 xác nhận và bổ sung phần HTTPS, CD]
+> [TV7 tổng hợp từ ADR 001, 002, 005; TV1 đã triển khai và xác nhận]
 
-- **Cấu trúc mã nguồn:** một **monorepo** gồm `apps/web` (Next.js), `apps/api` (NestJS) và `docs/`, dùng chung `docker-compose.yml` và một pipeline CI.
-- **Container hóa:** đóng gói web và api bằng **Docker**, khởi chạy bằng Docker Compose.
-- **Hạ tầng mục tiêu:** **AWS EC2** (Ubuntu 24.04 LTS) chạy các container; **Amazon RDS PostgreSQL** lưu dữ liệu bền vững. Production phải đặt reverse proxy ở EC2, chỉ công khai 80/443 và để RDS trong private network/Security Group chỉ nhận 5432 từ Security Group của EC2. Không dùng trạng thái hiện tại của `docker-compose.yml` làm cấu hình production: file này còn chứa port DB/API công khai và endpoint HTTP mẫu.
-- **Cấu hình:** `DATABASE_URL` và các biến môi trường truyền vào container qua file `.env` trên EC2; repo chỉ chứa `.env.example` (ADR 010).
-- **CI/CD:** CI được mô tả là lint, typecheck, build hai container và test. CD vẫn là hạng mục cần hoàn thiện: build image theo commit SHA, push registry, deploy EC2, chạy migration, smoke test `GET /health`, và rollback về image stable nếu smoke test lỗi.
-- **Trạng thái cần xác nhận:** HTTPS production qua reverse proxy/chứng chỉ TLS, RDS private chỉ nhận kết nối từ EC2, secrets/môi trường trên EC2, và bằng chứng pipeline CD.
+- **Cấu trúc mã nguồn:** một **monorepo** gồm `apps/web` (Next.js), `apps/api` (NestJS), `docs/` và `tests/`, dùng chung `docker-compose.yml` (local) và `docker-compose.prod.yml` (production).
+- **Container hóa:** đóng gói web và api bằng **Docker**, đẩy image gắn thẻ theo `github.sha` lên GitHub Container Registry (`ghcr.io`), khởi chạy bằng Docker Compose.
+- **Hạ tầng production (Đã triển khai):** **AWS EC2** (Ubuntu 24.04 LTS) chạy các container sau reverse proxy Caddy/HTTPS tại địa chỉ `https://47.129.180.144.sslip.io`, chỉ công khai cổng 80/443; **Amazon RDS PostgreSQL** đặt ở chế độ private (`Publicly accessible: No`), Security Group chỉ cho phép kết nối cổng 5432 từ Security Group của EC2.
+- **Cấu hình:** `DATABASE_URL` và các biến môi trường truyền vào container qua file `.env` và `.deploy.env` trên EC2; repo chỉ chứa `.env.example` (ADR 010).
+- **CI/CD (Đã triển khai & kiểm chứng):** CI chạy lint, typecheck, build hai container và E2E test (`.github/workflows/ci.yml`, `.github/workflows/tv6-order-tests.yml`). CD (`.github/workflows/cd.yml`) tự động build image theo commit SHA, push lên `ghcr.io`, SSH vào EC2 deploy kèm `prisma migrate deploy`, chạy smoke test `GET http://localhost:3001/health` (tối đa 60 giây), và tự động rollback về `.deploy.env.bak` nếu smoke test thất bại. Chi tiết vận hành ghi tại `docs/deploy-and-rollback.md` và `docs/deployment.md`.
 
 ### 3.3. Giá và khuyến mãi (TV3)
 
@@ -106,7 +104,7 @@ Luồng ở backend:
 1. Thiếu header `Idempotency-Key` thì trả 400.
 2. Xác thực JWT, đọc đơn, kiểm tra đơn thuộc người dùng, trạng thái đơn là `PENDING` hoặc `PAYMENT_FAILED` và `amount` khớp `Order.total`.
 3. Tra `Payment` theo `idempotencyKey`. **Đã có:** nếu key thuộc đơn khác của cùng người dùng thì trả 409; nếu thuộc người dùng khác thì không tiết lộ bản ghi và trả 404; nếu đúng request thì replay, không gọi cổng thanh toán và không tạo `Payment` mới. Replay kết quả thất bại phải giữ semantics 422 của hợp đồng thanh toán, không biến thành thành công 200.
-4. **Chưa có:** gọi `MockPaymentGatewayService` (mô phỏng, không có cổng thật), rồi trong một transaction lưu `Payment` kèm key và cập nhật đơn. Thành công: `Payment` `PAID`, đơn `PAID` (201). Thất bại: `Payment` `FAILED`, đơn `PAYMENT_FAILED`, trả 422 kèm `canRetry`; **không hoàn kho** vì khách có thể thử lại.
+4. **Đã triển khai:** gọi `MockPaymentGatewayService` (mô phỏng, không có cổng thật), rồi trong một transaction lưu `Payment` kèm key và cập nhật đơn. Thành công: `Payment` `PAID`, đơn `PAID` (201). Thất bại: `Payment` `FAILED`, đơn `PAYMENT_FAILED`, trả 422 kèm `canRetry`; **không hoàn kho** vì khách có thể thử lại.
 
 **Thử lại:** sau khi thất bại, client phải sinh `Idempotency-Key` **mới**, nếu không sẽ nhận lại kết quả thất bại cũ với mã 422. Đơn quay về `PENDING` rồi mới nhận kết quả mới (ADR 008). `Payment.orderId` không unique vì một đơn có thể có nhiều lần thanh toán.
 
@@ -147,8 +145,8 @@ Chi tiết từng bước: sequence diagram checkout (Task 2.2) và activity dia
 | Quyết định (ADR) | Ưu điểm | Nhược điểm và đánh đổi |
 |---|---|---|
 | Monorepo (001) | Một nơi quản lý, dùng chung Docker Compose và CI, thuận tiện chấm bài | Phải cẩn thận đường dẫn build để không build nhầm ứng dụng |
-| AWS EC2 + RDS + Docker (002) | Môi trường local và production đồng nhất, dữ liệu bền vững | Cấu hình Security Group, IAM, biến môi trường và HTTPS cần bằng chứng triển khai; RDS không được public |
-| GitHub Actions CI/CD (005) | Phát hiện lỗi build sớm trước khi merge | CI đã mô tả; CD deploy, smoke test và rollback còn cần hoàn thiện |
+| AWS EC2 + RDS + Docker (002) | Môi trường local và production đồng nhất, dữ liệu bền vững, bảo mật qua HTTPS và RDS private SG | Cấu hình Security Group, IAM, biến môi trường và chứng chỉ TLS cần quản lý chặt |
+| GitHub Actions CI/CD (005) | Phát hiện lỗi build/test sớm; tự động deploy, smoke test `/health` và auto-rollback khi lỗi | Cần dọn image Docker cũ định kỳ trên EC2 để tránh đầy dung lượng ổ đĩa |
 | Next.js + PWA (006) | Responsive, nhiều chiến lược render, có hướng mở rộng thành PWA | Manifest và Service Worker đã có; chiến lược offline hiện chỉ ở mức cache cùng origin và không cache API có xác thực |
 | Giá tính ở server (003) | Không sửa được giá từ client; giá và mã luôn mới nhất | Mỗi lần giỏ đổi phải gọi API; xử lý mất mạng; giá có thể đổi giữa báo giá và đặt đơn |
 | Trừ kho có điều kiện trong transaction (004) | Không âm kho, đọc không khóa nên nhanh | Request đến sau món cuối bị 409 |
@@ -178,7 +176,7 @@ Các file ADR được giữ nguyên tên hiện có để không làm hỏng li
 ## 7. Điểm còn tồn đọng
 
 1. **TV5:** Code đã xử lý P2002/P2034 và key khác đơn; cần bổ sung UUIDv4 validation và ánh xạ replay thất bại thành HTTP 422 ở controller/filter. Hiện frontend tạo UUID bằng `crypto.randomUUID()`.
-2. **TV1:** Cần hoàn thiện HTTPS qua reverse proxy, RDS private chỉ nhận kết nối từ EC2, CD deploy/migration/smoke test `/health`/rollback và ghi bằng chứng.
+2. **TV1:** Đã hoàn tất triển khai HTTPS (`https://47.129.180.144.sslip.io`), RDS private SG và CD pipeline có smoke test `/health` + auto-rollback (`.github/workflows/cd.yml`).
 3. **TV4:** Đã xác nhận optimistic locking bằng `Product.version`, điều kiện stock và retry; cần giữ thuật ngữ này nhất quán trong ADR/sơ đồ.
 4. **TV2:** Manifest và Service Worker đã được bổ sung; cần kiểm thử offline trên các trình duyệt mục tiêu nếu mở rộng phạm vi PWA.
 5. **TV2, TV4:** SRS phải bỏ `PAID → CANCELLED`; state machine code và class diagram đã cấm chuyển đổi này.
@@ -187,4 +185,4 @@ Các file ADR được giữ nguyên tên hiện có để không làm hỏng li
 
 ## 8. Tài liệu liên quan
 
-[`docs/api-contract.md`](../api-contract.md), [`docs/srs.md`](../srs.md), [`class-diagram.puml`](../diagrams/class-diagram.puml), [`class-diagram.drawio.svg`](../diagrams/class-diagram.drawio.svg), [`activity-xac-thuc.puml`](../diagrams/activity-xac-thuc.puml), [`sequence-checkout.puml`](../diagrams/sequence-checkout.puml), [`sequence-checkout.svg`](../diagrams/sequence-checkout.svg), [`docs/architecture/adr/`](./adr/), [`docs/diagrams/`](../diagrams/).
+[`docs/api-contract.md`](../api-contract.md), [`docs/requirements/srs.md`](../requirements/srs.md), [`class-diagram.puml`](../diagrams/class-diagram.puml), [`class-diagram.drawio.svg`](../diagrams/class-diagram.drawio.svg), [`activity-xac-thuc.puml`](../diagrams/activity-xac-thuc.puml), [`sequence-checkout.puml`](../diagrams/sequence-checkout.puml), [`sequence-checkout.svg`](../diagrams/sequence-checkout.svg), [`docs/architecture/adr/`](./adr/), [`docs/diagrams/`](../diagrams/).
