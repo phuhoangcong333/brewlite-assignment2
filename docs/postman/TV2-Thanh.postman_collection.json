@@ -1,0 +1,1825 @@
+{
+  "info": {
+    "_postman_id": "867c5394-9564-4e7b-b915-083de7500385",
+    "name": "TV2-Thanh",
+    "description": "Nguyễn Thanh Thanh - 3124410321 - Nhóm 11. Nguồn Swagger: https://47.129.180.144.sslip.io/api/api-docs#/. baseUrl có tiền tố /api. Phần TV2 gồm FR-06..FR-14 (HTTP detail và báo giá), PWA manifest/icon (NFR-08) và mẫu hồi quy AS1. Bố cục mobile 360x640, cập nhật giá không reload, nút topping hết hàng và chuyển ghi chú sang giỏ cần kiểm tra UI. Mặc định chỉ chạy GET và báo giá POST /promotions/validate; không tạo tài khoản/đơn hoặc thanh toán trên production. Đặt runWriteTests=true nếu chủ động muốn chạy bộ hồi quy ghi dữ liệu; bật runStaffTests và điền tài khoản STAFF để kiểm tra tiến độ. Những request thiếu dữ liệu hoặc chưa bật được đánh dấu skipped. Test NFR-08 phải báo FAIL nếu manifest thiếu icons; không coi favicon HTML là icons của manifest. Không xuất JWT hay mật khẩu tài khoản thật.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "60283774"
+  },
+  "item": [
+    {
+      "name": "00 - Chuẩn bị dữ liệu thật từ Swagger Production",
+      "item": [
+        {
+          "name": "00.01 - Health của API production /api",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('email', 'tv2-as2-' + runId + '@example.test');",
+                  "for (const key of ['token', 'staffToken', 'userId', 'orderId', 'orderTotal', 'paymentId', 'cancelOrderId']) pm.collectionVariables.unset(key);",
+                  "for (const key of ['failureKey', 'successKey', 'conflictKey']) pm.collectionVariables.set(key, pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('API và database sẵn sàng', () => {",
+                  "  pm.expect(data.status).to.eql('ok'); pm.expect(data.database).to.eql('up');",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "00.02 - Lấy menu thật, tự chọn món còn đủ hàng",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Menu có dữ liệu mẫu AS2', () => {",
+                  "  const products = pm.response.json();",
+                  "  pm.expect(products).to.be.an('array').with.length.at.least(12);",
+                  "  const candidates = products.filter(p => ['S','M','L'].every(s => p.availableQuantityBySize?.[s] >= 3));",
+                  "  candidates.sort((a,b) => b.availableQuantityBySize.M-a.availableQuantityBySize.M);",
+                  "  pm.expect(candidates.length, 'Cần một món đủ nguyên liệu cho cả ba size').to.be.above(0);",
+                  "  const product = candidates[0];",
+                  "  pm.collectionVariables.set('productId', product.id);",
+                  "  pm.collectionVariables.set('basePrice', product.price);",
+                  "  const soldout = products.find(p => ['S','M','L'].every(s => p.availableQuantityBySize?.[s] === 0));",
+                  "  pm.collectionVariables.set('soldoutProductId', soldout ? soldout.id : '');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - TV2 / Chi tiết món, size, topping (TC-07)",
+      "item": [
+        {
+          "name": "TC-07.1 - Chi tiết món và các tùy chọn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.test('FR-06/07 - Chi tiết đúng món, giá, ảnh và mô tả', () => {",
+                  "    pm.expect(data.id).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "    pm.expect(data.name).to.be.a('string').and.not.empty;",
+                  "    pm.expect(data.price).to.eql(Number(pm.collectionVariables.get('basePrice')));",
+                  "    pm.expect(data.imageUrl).to.be.a('string').and.not.empty;",
+                  "    pm.expect(data).to.have.property('description');",
+                  "  });",
+                  "  pm.test('FR-08 - Size S/M/L, phụ thu 0/5000/10000', () => {",
+                  "    pm.expect(data.sizes.map(s=>s.code)).to.have.members(['S','M','L']);",
+                  "    for (const [code,id,extra] of [['S',1,0],['M',2,5000],['L',3,10000]]) {",
+                  "      const size = data.sizes.find(s=>s.code === code);",
+                  "      pm.expect(size.id).to.eql(id); pm.expect(size.additionalPrice).to.eql(extra);",
+                  "      pm.expect(data.availableQuantityBySize[code]).to.be.a('number').at.least(0);",
+                  "    }",
+                  "  });",
+                  "  pm.test('FR-09/13 - Topping có ID, giá và cờ khả dụng', () => {",
+                  "    pm.expect(data.toppings).to.be.an('array').and.not.empty;",
+                  "    for (const t of data.toppings) {",
+                  "      pm.expect(t.id).to.be.a('string').and.not.empty;",
+                  "      pm.expect(t.additionalPrice).to.be.a('number').at.least(0);",
+                  "      pm.expect(t.isAvailable).to.be.a('boolean');",
+                  "    }",
+                  "    const pearl = data.toppings.find(t=>t.id === 'pearl');",
+                  "    const cream = data.toppings.find(t=>t.id === 'cream');",
+                  "    pm.expect(pearl).to.exist; pm.expect(cream).to.exist;",
+                  "    pm.expect(pearl.additionalPrice).to.eql(5000); pm.expect(cream.additionalPrice).to.eql(5000);",
+                  "    pm.collectionVariables.set('pearlId', pearl.id);",
+                  "    pm.collectionVariables.set('creamId', cream.id);",
+                  "    const unavailable = data.toppings.find(t=>!t.isAvailable);",
+                  "    pm.collectionVariables.set('unavailableToppingId', unavailable ? unavailable.id : '');",
+                  "    pm.collectionVariables.set('toppingSnapshot', JSON.stringify(data.toppings));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-07.2 - Món không tồn tại trả 404",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/2147483647",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "2147483647"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-07.3 - ID không đúng định dạng trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "abc"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-07.4 - Món hết hàng vẫn xem được chi tiết",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!(Boolean(pm.collectionVariables.get('soldoutProductId')))) { pm.execution.skipRequest(); } else {",
+                  "",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}",
+                  "",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Tồn kho theo cả ba size bằng 0', () => {",
+                  "  pm.expect(data.availableQuantityBySize).to.eql({S:0, M:0, L:0});",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{soldoutProductId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{soldoutProductId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - TV2 / Báo giá, số lượng, ghi chú, hết hàng (TC-08..11)",
+      "item": [
+        {
+          "name": "TC-08.1 - Size S, không topping",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(1);",
+                  "  pm.expect(item.toppingIds).to.eql([]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 0;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-08.2 - Size M, không topping",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(2);",
+                  "  pm.expect(item.toppingIds).to.eql([]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 5000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 2,\n      \"toppingIds\": [],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-08.3 - Size L, không topping",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(3);",
+                  "  pm.expect(item.toppingIds).to.eql([]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 10000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 3,\n      \"toppingIds\": [],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-09.1 - Size L và topping Trân châu",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(3);",
+                  "  pm.expect(item.toppingIds).to.eql([pm.collectionVariables.get('pearlId')]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 15000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 3,\n      \"toppingIds\": [\n        \"{{pearlId}}\"\n      ],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-09.2 - Size L và topping Kem",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(3);",
+                  "  pm.expect(item.toppingIds).to.eql([pm.collectionVariables.get('creamId')]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 15000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 3,\n      \"toppingIds\": [\n        \"{{creamId}}\"\n      ],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-09.3 - Size L và topping Trân châu+Kem",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(3);",
+                  "  pm.expect(item.toppingIds).to.eql([pm.collectionVariables.get('pearlId'), pm.collectionVariables.get('creamId')]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 20000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 3,\n      \"toppingIds\": [\n        \"{{pearlId}}\",\n        \"{{creamId}}\"\n      ],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10.1 - Hai ly size M, hai topping và ghi chú",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(2);",
+                  "  pm.expect(item.toppingIds).to.eql([pm.collectionVariables.get('pearlId'), pm.collectionVariables.get('creamId')]);",
+                  "  pm.expect(item.quantity).to.eql(2);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 15000;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 2);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 2);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 2,\n      \"toppingIds\": [\n        \"{{pearlId}}\",\n        \"{{creamId}}\"\n      ],\n      \"quantity\": 2,\n      \"note\": \"Ít đá, ít ngọt\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            },
+            "description": "API chấp nhận note. Việc ghi chú chuyển sang giỏ trên UI phải kiểm tra thủ công; POST /orders hiện không nhận note."
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10.2 - Ghi chú không bắt buộc",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(1);",
+                  "  pm.expect(item.toppingIds).to.eql([]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 0;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 - Số lượng bằng 0 trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 - Số lượng âm trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": -1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 - Số lượng thập phân trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 - Số lượng vượt 10 trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 11\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 - Ghi chú quá 200 ký tự trả 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1,\n      \"note\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-11.1 - Topping hết hàng không được tính tiền [cần dữ liệu topping hết hàng]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!(Boolean(pm.collectionVariables.get('unavailableToppingId')))) { pm.execution.skipRequest(); } else {",
+                  "",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}",
+                  "",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Nhận TOPPING_OUT_OF_STOCK và tổng bằng 0', () => {",
+                  "  pm.expect(data.items[0].status).to.eql('TOPPING_OUT_OF_STOCK');",
+                  "  pm.expect(data.items[0].unavailableToppingIds).to.eql([pm.collectionVariables.get('unavailableToppingId')]);",
+                  "  pm.expect(data.items[0].lineTotal).to.eql(0); pm.expect(data.total).to.eql(0);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [\n        \"{{unavailableToppingId}}\"\n      ],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-11.2 - Món hết hàng không được tính tiền",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!(Boolean(pm.collectionVariables.get('soldoutProductId')))) { pm.execution.skipRequest(); } else {",
+                  "",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}",
+                  "",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Nhận OUT_OF_STOCK, không tính vào tổng', () => {",
+                  "  pm.expect(data.items[0].status).to.eql('OUT_OF_STOCK'); pm.expect(data.total).to.eql(0);",
+                  "});",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{soldoutProductId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-11.3 - Giá client giả bị tính lại từ server",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response là JSON\", () => { pm.response.to.be.json; });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test('Server tính đúng giá và giữ cấu hình đã chọn', () => {",
+                  "  const item = data.items[0];",
+                  "  pm.expect(item.status).to.eql('AVAILABLE');",
+                  "  pm.expect(item.productId).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "  pm.expect(item.sizeId).to.eql(1);",
+                  "  pm.expect(item.toppingIds).to.eql([]);",
+                  "  pm.expect(item.quantity).to.eql(1);",
+                  "  const expected = Number(pm.collectionVariables.get('basePrice')) + 0;",
+                  "  pm.expect(item.unitPrice).to.eql(expected);",
+                  "  pm.expect(item.lineTotal).to.eql(expected * 1);",
+                  "  pm.expect(data.subtotal).to.eql(expected * 1);",
+                  "  pm.expect(data.discount).to.eql(0); pm.expect(data.total).to.eql(data.subtotal);",
+                  "});",
+                  "pm.test('Báo giá đã thay đổi', () => pm.expect(data.items[0].priceChanged).to.eql(true));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"sizeId\": 1,\n      \"toppingIds\": [],\n      \"quantity\": 1,\n      \"clientUnitPrice\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-11.4 - Kiểm tra lại số lượng khả dụng",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tồn kho theo size là số nguyên không âm', () => {",
+                  "  const data = pm.response.json();",
+                  "  for(const code of ['S','M','L']) {",
+                  "    pm.expect(Number.isInteger(data.availableQuantityBySize[code])).to.eql(true);",
+                  "    pm.expect(data.availableQuantityBySize[code]).to.be.at.least(0);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - TV2 / PWA Manifest và icon (phần HTTP của TC-12)",
+      "item": [
+        {
+          "name": "TC-12.2 - Manifest và icon PWA theo NFR-08",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const manifest = pm.response.json();",
+                  "pm.test('Manifest có thông tin ứng dụng cơ bản', () => {",
+                  "  pm.expect(manifest.name).to.be.a('string').and.not.empty;",
+                  "  pm.expect(manifest.short_name).to.be.a('string').and.not.empty;",
+                  "  pm.expect(manifest.start_url).to.be.a('string').and.not.empty;",
+                  "  pm.expect(manifest.display).to.eql('standalone');",
+                  "});",
+                  "pm.test('NFR-08 - Manifest khai báo icons hợp lệ', () => {",
+                  "  pm.expect(manifest.icons, 'Manifest hiện thiếu icons; favicon trên HTML không thay thế icons trong manifest').to.be.an('array').and.not.empty;",
+                  "  for(const icon of manifest.icons) {",
+                  "    pm.expect(icon.src).to.be.a('string').and.not.empty;",
+                  "    pm.expect(icon.sizes).to.match(/^\\d+x\\d+( \\d+x\\d+)*$|^any$/);",
+                  "    pm.expect(icon.type).to.match(/^image\\//);",
+                  "  }",
+                  "});",
+                  "const firstIcon = (manifest.icons || [])[0];",
+                  "const src = firstIcon && firstIcon.src;",
+                  "const origin = pm.collectionVariables.get('webUrl').replace(/\\/$/,'');",
+                  "pm.collectionVariables.set('pwaIconUrl', src ? (/^https?:\\/\\//.test(src) ? src : origin + '/' + src.replace(/^\\.?\\//,'')) : '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{webUrl}}/manifest.webmanifest",
+              "host": [
+                "{{webUrl}}"
+              ],
+              "path": [
+                "manifest.webmanifest"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-12.1 - Trang web gắn Web App Manifest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Có link rel=manifest', () => pm.expect(pm.response.text()).to.match(/<link[^>]+rel=[\"']manifest[\"']/i));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{webUrl}}/",
+              "host": [
+                "{{webUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-12.3 - Tải icon được manifest khai báo [cần icons]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!(Boolean(pm.collectionVariables.get('pwaIconUrl')))) { pm.execution.skipRequest(); } else {",
+                  "",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') {",
+                  "  const resolved = pm.variables.replaceIn(pm.request.body.raw);",
+                  "  pm.request.body.update(JSON.stringify(JSON.parse(resolved)));",
+                  "  pm.request.headers.remove('Content-Length');",
+                  "}",
+                  "",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test('Icon trả nội dung ảnh', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{pwaIconUrl}}/",
+              "host": [
+                "{{pwaIconUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Không kiểm tra bố cục mobile hay khả năng cài đặt bằng Postman. Manifest thiếu icons phải là FAIL."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://47.129.180.144.sslip.io/api",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "TV2As2-Test123!",
+      "type": "string"
+    },
+    {
+      "key": "staffEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "soldoutProductId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "basePrice",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "failureKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "successKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "catalogCapacity",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loyaltySnapshot",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webUrl",
+      "value": "https://47.129.180.144.sslip.io",
+      "type": "string"
+    },
+    {
+      "key": "runWriteTests",
+      "value": "false",
+      "type": "string"
+    },
+    {
+      "key": "runStaffTests",
+      "value": "false",
+      "type": "string"
+    },
+    {
+      "key": "pearlId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "creamId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "unavailableToppingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pwaIconUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "toppingSnapshot",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
