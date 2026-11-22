@@ -75,10 +75,10 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Requirement ID | Nội dung yêu cầu | User Story | Issue Sprint 1 | Issue Sprint 2 | Chủ trì theo SRS | Thành phần code dự kiến | Test Case đề xuất | Trạng thái |
 |---|---|---|---|---|---|---|---|---|
-| FR-01 | Hiển thị danh sách sản phẩm | US-01 | S1-I2 (UI); **thiếu Issue Backend Menu riêng** | S2-I2 (tích hợp API) | TV1 | `apps/api/.../products`; `apps/web/.../menu` | TC-FR-01 | Chưa xác nhận |
-| FR-02 | Lọc sản phẩm theo danh mục | US-01 | S1-I2 (UI); **thiếu Issue Backend Menu riêng** | S2-I2 | TV1 | Products API / Menu UI | TC-FR-02 | Chưa xác nhận |
-| FR-03 | Hiển thị trạng thái hết hàng | US-01 | S1-I2 | S2-I2 | TV1 | Product stock / Menu UI | TC-FR-03 | Chưa xác nhận |
-| FR-04 | Loading, Empty, Error/Retry khi tải Menu | US-01 | S1-I2 | S2-I2 | TV1 | Menu page/components | TC-FR-04 | Chưa xác nhận |
+| FR-01 | Hiển thị danh sách sản phẩm | US-01 | S1-I2 (UI); S1-I1 (API/Seed) | S2-I2 (tích hợp API) | TV1 | `apps/api/src/Product/`, `apps/api/prisma/seed.ts`, `apps/web/src/app/page.tsx` | `TC-01` (`docs/postman/TV1-Phu.postman_collection.json` – `GET /products` ≥ 12 món, 200 OK) | **Đã kiểm thử** |
+| FR-02 | Lọc sản phẩm theo danh mục | US-01 | S1-I2 (UI); S1-I1 (API) | S2-I2 | TV1 | `apps/api/src/Product/`, `apps/web/src/app/page.tsx` | `TC-02`–`TC-04` (`docs/postman/TV1-Phu.postman_collection.json` – lọc `COFFEE`, `FRUIT_TEA`, `MILK_TEA`) | **Đã kiểm thử** |
+| FR-03 | Hiển thị trạng thái hết hàng | US-01 | S1-I2 | S2-I2 | TV1 | `apps/api/src/Product/`, `apps/web/src/app/page.tsx` | `TC-05` (kiểm tra `stock`/`availableQuantity` và khóa nút món hết hàng trên UI) | **Đã kiểm thử** |
+| FR-04 | Loading, Empty, Error/Retry khi tải Menu | US-01 | S1-I2 | S2-I2 | TV1 | `apps/web/src/app/page.tsx` | `TC-06` (kiểm tra skeleton loading, danh sách rỗng, thông báo lỗi/retry trên UI & Postman) | **Đã kiểm thử** |
 | FR-05 | Tìm kiếm sản phẩm (ngoài MVP) | US-01 | Không triển khai theo SRS | Không triển khai theo SRS | TV1 | Không áp dụng MVP | TC-FR-05 (N/A) | Won't Have |
 | FR-06 | Xem chi tiết sản phẩm | US-02 | S1-I2 | S2-I2 | TV2 | Product detail page | TC-FR-06 | Chưa xác nhận |
 | FR-07 | Lấy chi tiết sản phẩm qua `GET /products/:id` | US-02 | S1-I2 (API Client/mock); backend endpoint cần xác nhận | S2-I2 | TV2 | Products detail API / API client | TC-FR-07 | Chưa xác nhận |
@@ -127,11 +127,11 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Requirement ID | Nội dung yêu cầu | Issue Sprint 1 | Issue Sprint 2 | Chủ trì | Thành phần code/hạ tầng dự kiến | Test Case đề xuất | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| NFR-01 | `GET /products` phản hồi dưới 500 ms theo tiêu chí SRS | S1-I2 (API/menu cần xác nhận) | S2-I2 (tích hợp/đo API) | TV1 | Products API | TC-NFR-01 | Chưa xác nhận |
-| NFR-02 | Menu hiển thị dưới 3 giây trên mạng mobile/4G giả lập | S1-I2 | S2-I2 | TV1 | Menu page/assets | TC-NFR-02 | Chưa xác nhận |
-| NFR-03 | Khởi chạy Web, API, DB bằng Docker Compose | S1-I1; phối hợp S1-I2 | S2-I1 | TV1 | `docker-compose.yml` / workflows | TC-NFR-03 | Chưa xác nhận |
-| NFR-04 | Production HTTPS và health check hoạt động | S1-I1; phối hợp S1-I7 | S2-I1 | TV1 | AWS/EC2, reverse proxy, `/health` | TC-NFR-04 | Chưa xác nhận |
-| NFR-05 | Pipeline deploy và hướng dẫn rollback | S1-I1 | S2-I1 | TV1 | GitHub Actions / deployment docs | TC-NFR-05 | Chưa xác nhận |
+| NFR-01 | `GET /products` phản hồi dưới 500 ms theo tiêu chí SRS | S1-I1, S1-I2 | S2-I1, S2-I2 | TV1 | `apps/api/src/Product/` (`https://47.129.180.144.sslip.io/api/products`) | `TC-01` (`docs/postman/TV1-Phu.postman_collection.json` – đo thực tế ~49–228 ms < 500 ms) | **Đã kiểm thử** |
+| NFR-02 | Menu hiển thị dưới 3 giây trên mạng mobile/4G giả lập | S1-I2 | S2-I1, S2-I2 | TV1 | `apps/web/src/app/page.tsx` (`https://47.129.180.144.sslip.io`) | `TC-01` / Chrome DevTools Mobile `375×667` (Finish `635 ms`, Load `246 ms` < 3s) | **Đã kiểm thử** |
+| NFR-03 | Khởi chạy Web, API, DB bằng Docker Compose | S1-I1; phối hợp S1-I2 | S2-I1 | TV1 | `docker-compose.yml`, `docker-compose.prod.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile` | `TC-43` (build & chạy stack Web/API/DB trên local và EC2 thành công) | **Đã kiểm thử** |
+| NFR-04 | Production HTTPS và health check hoạt động | S1-I1; phối hợp S1-I7 | S2-I1 | TV1 | AWS EC2 (Ubuntu 24.04), reverse proxy HTTPS (`sslip.io`), `GET /api/health` | `TC-43`, `TC-44` (`https://47.129.180.144.sslip.io/api/health` trả `200 OK`, CD Run `#10`) | **Đã kiểm thử** |
+| NFR-05 | Pipeline deploy và hướng dẫn rollback | S1-I1 | S2-I1 | TV1 | `.github/workflows/cd.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md` | `TC-45` (CD Run `#10` deploy `ghcr.io` + smoke test + kiểm chứng rollback `.deploy.env.bak`) | **Đã kiểm thử** |
 | NFR-06 | Trang chi tiết và điều khiển ưu tiên mobile-first | S1-I2 | S2-I2 | TV2 | Product detail UI | TC-NFR-06 | Chưa xác nhận |
 | NFR-07 | Giao diện responsive, không chồng lấn/tràn ngang | S1-I2 | S2-I2 | TV2 | Frontend styles/components | TC-NFR-07 | Chưa xác nhận |
 | NFR-08 | PWA cơ bản: Manifest và icon hợp lệ | S1-I2 | S2-I2 | TV2 | `manifest`, icons, PWA config | TC-NFR-08 | Chưa xác nhận |
@@ -233,7 +233,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Mã Task | Luồng / sơ đồ | Chủ trì | Nhánh bắt buộc cần thể hiện | File nguồn | Requirement liên quan | Người đọc soát / duyệt | PR / commit | Trạng thái |
 |---|---|---|---|---|---|---|---|---|
-| T2.1-TV1 | Xem Menu | TV1 | Loading/lỗi tải; danh sách rỗng; sản phẩm hết hàng | `docs/diagrams/activity-xem-menu.puml` + `.svg` | FR-01–FR-04 | TV2 đọc soát; TV2 duyệt tổng | TBD | Chưa cập nhật |
+| T2.1-TV1 | Xem Menu | TV1 | Loading/lỗi tải; danh sách rỗng; sản phẩm hết hàng | `docs/diagrams/activity-xem-menu.puml` + `.svg` | FR-01–FR-04 | TV2 đọc soát; TV2 duyệt tổng | `main` (`9c371ef`) | **Đã hoàn thành** |
 | T2.1-TV2 | Chọn tùy chọn | TV2 | Topping hết hàng; lựa chọn Size/Topping; vượt giới hạn hợp lệ | `docs/diagrams/activity-chon-tuy-chon.puml` + `.svg` | FR-06–FR-14 | TV3 đọc soát; TV2 duyệt tổng | TBD | Chưa cập nhật |
 | T2.1-TV3 | Giỏ hàng | TV3 | Món hết hàng; mã khuyến mãi sai/hết hạn; giỏ rỗng | `docs/diagrams/activity-gio-hang.puml` + `.svg` | FR-15–FR-26 | TV2 đọc soát; TV2 duyệt tổng | TBD | Chưa cập nhật |
 | T2.1-TV4 | Đặt đơn | TV4 | Swimlane Khách/Next.js/NestJS/Database; chưa đăng nhập; hết hàng; transaction rollback | `docs/diagrams/activity-dat-don.puml` + `.svg` | FR-27–FR-29; FR-44 | TV5/TV7 đọc soát; TV2 duyệt tổng | TBD | Chưa cập nhật |
@@ -276,9 +276,9 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | Mã Task | Đầu việc | Chủ trì | Người đóng góp | Nội dung cần có | File / vị trí dự kiến | Người duyệt | Bằng chứng | Trạng thái |
 |---|---|---|---|---|---|---|---|---|
 | T3.1-ARCH | Mô tả kiến trúc tổng thể | TV7 | TV1–TV6, mỗi người một đoạn theo phần phụ trách | Next.js/PWA; NestJS theo module; PostgreSQL/Prisma Migration; thanh toán mô phỏng; logging; health; cấu hình; ưu/nhược điểm và trade-off | `docs/architecture.md` | TV1 | PR; sơ đồ kiến trúc; review từng phần | Chưa cập nhật |
-| T3.1-TV1 | ADR Monorepo | TV1 | TV7 góp ý kiến trúc | Lý do chọn Monorepo; cấu trúc `apps/web`, `apps/api`; ảnh hưởng đến build/test/deploy | `docs/adr/00x-monorepo.md` (tên thực tế TBD) | TV7 | ADR + PR | Chưa cập nhật |
-| T3.1-TV1-DEPLOY | ADR nền tảng deploy và Docker | TV1 | TV7 rà soát | Nền tảng thực tế; EC2/RDS hoặc dịch vụ đã chọn; Docker; HTTPS; DB/network; secrets; rủi ro và rollback | `docs/adr/00x-deployment-docker.md` | TV7 | ADR + bằng chứng thử deploy | Chưa cập nhật |
-| T3.1-TV1-CI | ADR CI/CD | TV1 | TV7 rà soát | Pipeline, trigger, build image, registry, deploy secret, migration, smoke test, rollback | `docs/adr/00x-ci-cd.md` | TV7 | ADR + workflow/pipeline | Chưa cập nhật |
+| T3.1-TV1 | ADR Monorepo | TV1 | TV7 góp ý kiến trúc | Lý do chọn Monorepo; cấu trúc `apps/web`, `apps/api`; ảnh hưởng đến build/test/deploy | `docs/architecture/adr/001-monorepo-structure.md` | TV7 | ADR đã đồng bộ & merge `main` | **Đã hoàn thành** |
+| T3.1-TV1-DEPLOY | ADR nền tảng deploy và Docker | TV1 | TV7 rà soát | Nền tảng thực tế; EC2/RDS; Docker; HTTPS; DB/network; secrets; rủi ro và rollback | `docs/architecture/adr/002-deployment-platform-and-docker.md` | TV7 | ADR + bằng chứng deploy EC2/RDS | **Đã hoàn thành** |
+| T3.1-TV1-CI | ADR CI/CD | TV1 | TV7 rà soát | Pipeline, trigger, build image, registry, deploy secret, migration, smoke test, rollback | `docs/architecture/adr/003-cicd-pipeline.md` | TV7 | ADR + CD Run `#10` | **Đã hoàn thành** |
 | T3.1-TV2 | ADR PWA và Next.js | TV2 | TV7 rà soát | Next.js rendering, mobile-first, manifest/icon; phạm vi offline nếu có | `docs/adr/00x-pwa-nextjs-mobile-first.md` | TV7 | ADR + PR | Chưa cập nhật |
 | T3.1-TV3 | ADR giá và khuyến mãi tính ở Server | TV3 | TV7 rà soát | Server là nguồn giá có thẩm quyền; client không tự quyết định giá; báo giá và khuyến mãi | `docs/adr/00x-server-side-pricing.md` | TV7 | ADR + API contract | Chưa cập nhật |
 | T3.1-TV4 | ADR Optimistic Locking tồn kho | TV4 | TV7 rà soát | Cơ chế chống race condition; transaction; xung đột cập nhật và trả 409 | `docs/adr/00x-optimistic-locking-inventory.md` | TV7 | ADR + test đồng thời | Chưa cập nhật |
@@ -290,7 +290,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Mã Task | Đầu việc | Chủ trì | Người đóng góp | Nội dung bắt buộc | File nguồn / bản xuất | Người duyệt | PR / commit | Trạng thái |
 |---|---|---|---|---|---|---|---|---|
-| T3.2 | Deployment Diagram | TV1 | TV7 đối chiếu với architecture | Thiết bị/PWA; CDN hoặc nơi phục vụ Next.js; container API; PostgreSQL bền vững; registry; HTTPS; secrets; health check; ranh giới local/CI/production; kết nối và port theo môi trường thực tế | `docs/diagrams/deployment-diagram.puml` + `.svg` | TV7 | TBD | Chưa cập nhật |
+|| T3.2 | Deployment Diagram | TV1 | TV7 đối chiếu với architecture | Thiết bị/PWA; Next.js; container API; PostgreSQL RDS; registry `ghcr.io`; HTTPS; secrets; health check; ranh giới local/CI/production; port thực tế | `docs/diagrams/deployment-diagram.puml` + `.svg` | TV7 | `main` (`fcf6d52`) | **Đã hoàn thành** |
 
 ### 10.3. Checklist nghiệm thu Task 3
 
@@ -309,10 +309,10 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Mã Task | Công việc / đầu ra cần truy vết | Phụ trách | Yêu cầu liên quan | Issue tham chiếu | Code / tài liệu / đầu ra | Test / bằng chứng cần gắn | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| T4.1 | Đóng băng code và chuyển cấu trúc repository thành Monorepo: `apps/web`, `apps/api`; cập nhật Docker Compose và Dockerfile; các thành viên đồng bộ nhánh `dev`. | TV1 phối hợp toàn nhóm | NFR-03; yêu cầu cấu trúc triển khai | S1-I1 / Issue hạ tầng của TV1 (cần ghi rõ phạm vi Task 4.1) | `apps/web/`; `apps/api/`; `docker-compose.yml`; `Dockerfile` (đường dẫn thực tế: TBD) | PR đổi cấu trúc; kết quả build Web/API; kết quả `docker compose up`; xác nhận các thành viên đã cập nhật nhánh | Chưa cập nhật |
+| T4.1 | Đóng băng code và chuyển cấu trúc repository thành Monorepo: `apps/web`, `apps/api`; cập nhật Docker Compose và Dockerfile; các thành viên đồng bộ nhánh `dev`. | TV1 phối hợp toàn nhóm | NFR-03; yêu cầu cấu trúc triển khai | S1-I1 / Issue hạ tầng của TV1 (cần ghi rõ phạm vi Task 4.1) | `apps/web/`; `apps/api/`; `docker-compose.yml`; `Dockerfile` (đường dẫn thực tế: TBD) | PR đổi cấu trúc; kết quả build Web/API; kết quả `docker compose up`; xác nhận các thành viên đã cập nhật nhánh | **Đã hoàn thành**|
 | T4.2 | Đưa tài liệu Task 1–3 vào `docs/` bằng PR có ghi lý do thay đổi; dựng sườn Traceability Matrix. | TV2 phối hợp TV7 và các chủ luồng | FR/NFR/US/AC của SRS; không gắn một FR đơn lẻ | S1-I2 / Issue tài liệu của TV2 (cần ghi rõ phạm vi Task 4.2) | `docs/SRS.md`; `docs/context-and-scope.md`; Use Case; sơ đồ; `docs/traceability-matrix.md` (tên file thực tế cần thống nhất) | PR tài liệu; danh sách tài liệu đã đưa vào `docs/`; kiểm tra link và mã yêu cầu | Sườn – chờ cập nhật |
-| T4.3 | Hoàn thiện MVP Menu: `GET /products` có lọc danh mục; seed tối thiểu 12 món, có một số món hết hàng; trang Menu có Loading/Skeleton, Empty, Error/Retry. | TV1 | FR-01–FR-04; NFR-01–NFR-02 | Issue TV1 hiện có: S1-I1 (cần bổ sung rõ phần Menu hoặc tạo Issue riêng nếu nhóm tách việc) | Products API/controller/service; seed; Menu page/components (đường dẫn thực tế: TBD) | API test `GET /products`; test lọc danh mục; test dữ liệu rỗng/lỗi; component test Loading/Empty/Error; kiểm tra sản phẩm hết hàng | Chưa cập nhật |
-| T4.4 | Tạo PR MVP Sprint 1 (Menu); thiết lập CI theo luồng Install → Lint → Test → Build; lưu bằng chứng một lần CI đỏ do lỗi lint và một lần CI xanh; chỉ gộp khi CI đạt. | TV1 phối hợp người tạo PR | NFR-03; quy trình kiểm tra chất lượng và tích hợp | S1-I1 | `.github/workflows/ci.yml` (hoặc workflow thực tế); PR MVP Menu | Link PR; link/run CI đỏ; link/run CI xanh; ảnh/log workflow; reviewer và kết quả review | Chưa cập nhật |
+| T4.3 | Hoàn thiện MVP Menu: `GET /products` có lọc danh mục; seed tối thiểu 12 món, có một số món hết hàng; trang Menu có Loading/Skeleton, Empty, Error/Retry. | TV1 | FR-01–FR-04; NFR-01–NFR-02 | Issue TV1 hiện có: S1-I1 (cần bổ sung rõ phần Menu hoặc tạo Issue riêng nếu nhóm tách việc) | Products API/controller/service; seed; Menu page/components (đường dẫn thực tế: TBD) | API test `GET /products`; test lọc danh mục; test dữ liệu rỗng/lỗi; component test Loading/Empty/Error; kiểm tra sản phẩm hết hàng | **Đã hoàn thành** |
+| T4.4 | Tạo PR MVP Sprint 1 (Menu); thiết lập CI theo luồng Install → Lint → Test → Build; lưu bằng chứng một lần CI đỏ do lỗi lint và một lần CI xanh; chỉ gộp khi CI đạt. | TV1 phối hợp người tạo PR | NFR-03; quy trình kiểm tra chất lượng và tích hợp | S1-I1 | `.github/workflows/ci.yml` (hoặc workflow thực tế); PR MVP Menu | Link PR; link/run CI đỏ; link/run CI xanh; ảnh/log workflow; reviewer và kết quả review | **Đã hoàn thành**|
 | T4.5 | Sprint 1 Review và Retrospective: ghi nhận nội dung demo, kết quả Sprint, điều làm tốt, vấn đề và hành động cải thiện. | TV2 ghi biên bản; cả nhóm tham gia | Không gắn FR riêng; đối chiếu mục tiêu Sprint 1 | Issue tài liệu/Review của TV2 nếu có | `docs/sprint1-review-retro.md` (nếu nhóm dùng file này) | Biên bản họp; danh sách việc hoàn thành/chưa hoàn thành; action items có người nhận | Chưa cập nhật |
 
 ### 11.1. Bảng đối chiếu đầu ra Task 4
@@ -348,20 +348,20 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 
 | Mã kiểm thử khung | Luồng kiểm thử | Yêu cầu liên quan | Người phối hợp | Kết quả mong đợi | Link Test/ảnh/log | Kết quả thực tế |
 |---|---|---|---|---|---|---|
-| T5-IT-01 | Menu → chi tiết sản phẩm | FR-01–FR-14 | TV1, TV2 | Hiển thị danh sách, lọc, chi tiết, Size/Topping và giá đúng | TBD | Chưa chạy |
+| T5-IT-01 | Menu → chi tiết sản phẩm | FR-01–FR-14 | TV1, TV2 | Hiển thị danh sách, lọc, chi tiết, Size/Topping và giá đúng | `docs/postman/TV1-Phu.postman_collection.json`, `https://47.129.180.144.sslip.io` | **Pass** |
 | T5-IT-02 | Chi tiết → giỏ hàng → báo giá/khuyến mãi | FR-14–FR-26 | TV2, TV3 | Lựa chọn chuyển đúng vào giỏ; server trả báo giá hợp lệ | TBD | Chưa chạy |
 | T5-IT-03 | Checkout và tạo đơn | FR-26–FR-29, FR-44 | TV3, TV4, TV7 | JWT hợp lệ tạo đơn; thiếu JWT bị yêu cầu đăng nhập; hết hàng trả 409 | TBD | Chưa chạy |
 | T5-IT-04 | Thanh toán Ví/Thẻ | FR-30–FR-33 | TV4, TV5 | Payment khớp tổng đơn; xử lý thành công/thất bại theo SRS | TBD | Chưa chạy |
 | T5-IT-05 | Theo dõi và cập nhật trạng thái đơn | FR-34–FR-38 | TV5, TV6, TV7 | Lịch sử đúng chủ sở hữu; chỉ STAFF cập nhật; state transition hợp lệ | TBD | Chưa chạy |
 | T5-IT-06 | Tích điểm khi đơn hoàn thành | FR-39 | TV6 | Ghi một LoyaltyTransaction cho một order đủ điều kiện; không cộng trùng | TBD | Chưa chạy |
 | T5-IT-07 | Đăng ký/đăng nhập và bảo vệ API | FR-40–FR-47 | TV2, TV7 | JWT cấp/xác minh đúng; 401/403 đúng; health check hoạt động | TBD | Chưa chạy |
-| T5-IT-08 | Triển khai Production và smoke test | NFR-03–NFR-05; FR-46 | TV1, TV7 | Deploy thành công; HTTPS hoạt động; `/health` kiểm tra được API/DB; có rollback | TBD | Chưa chạy |
+| T5-IT-08 | Triển khai Production và smoke test | NFR-03–NFR-05; FR-46 | TV1, TV7 | Deploy thành công; HTTPS hoạt động; `/health` kiểm tra được API/DB; có rollback | CD Run `#10` (`9c371ef`), `https://47.129.180.144.sslip.io/api/health` | **Pass** |
 
 ### 12.3. Theo dõi Pull Request và bằng chứng Task 5
 
 | Mã Task | PR URL | Commit SHA | Đường dẫn code đã merge | Test đã chạy | Reviewer | Ngày cập nhật | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| T5-TV1 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
+| T5-TV1 | CD Run `#10` / PR docs TV1 | `9c371ef` | `.github/workflows/cd.yml`, `docker-compose.prod.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/postman/TV1-Phu.postman_collection.json` | Postman Menu & Health (`TC-01`–`TC-06`, `TC-43`–`TC-45`), CD smoke test & rollback, DevTools Mobile `< 3s` | Hoàng Công Phú | 2026-11-22 | **Đã kiểm thử** |
 | T5-TV2 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV3 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV4 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
