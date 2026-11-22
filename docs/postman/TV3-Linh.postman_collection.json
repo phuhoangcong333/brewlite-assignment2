@@ -1,0 +1,369 @@
+{
+  "info": {
+    "_postman_id": "25d1301a-7721-47b7-b125-a4fc10e0876e",
+    "name": "BrewLite AS2 - TV3",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "60195408",
+    "_collection_link": "https://go.postman.co/collection/60195408-25d1301a-7721-47b7-b125-a4fc10e0876e?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "00 - Chuẩn bị",
+      "item": [
+        {
+          "name": "00 - Đăng nhập lấy token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login OK\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));\r\nconst j = pm.response.json();\r\nconst token = j.accessToken || j.access_token || j.token;\r\npm.test(\"Co access_token\", () => pm.expect(token).to.be.a(\"string\"));\r\nif (token) pm.collectionVariables.set(\"token\", token);\r\npm.test(\"Khong lo passwordHash\", () => pm.expect(JSON.stringify(j)).to.not.include(\"passwordHash\"));\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{email}}\", \"password\": \"{{password}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "00 - Lấy danh sách món",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));\r\nconst j = pm.response.json();\r\nconst list = Array.isArray(j) ? j : (j.data || j.items || []);\r\npm.test(\"Co danh sach san pham\", () => pm.expect(list).to.be.an(\"array\").that.is.not.empty);\r\npm.test(\"< 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "TC-14 đến TC-19 - Báo giá và khuyến mãi",
+      "item": [
+        {
+          "name": "TC-17.1 - Áp mã GIAM10 giảm 10%",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();\r\npm.test(\"TC-17 / FR-24 - Status 200\", () => pm.response.to.have.status(200));\r\npm.test(\"TC-17 / FR-24 - Mã GIAM10 hợp lệ\", () => {\r\n  pm.expect(j.promotion.code).to.eql(\"GIAM10\");\r\n  pm.expect(j.promotion.valid).to.eql(true);\r\n});\r\npm.test(\"TC-17 / FR-24 - Giảm đúng 10%\", () => pm.expect(j.discount).to.eql(Math.round(j.subtotal * 0.1)));\r\npm.test(\"TC-18 / FR-20 - total = subtotal - discount\", () => pm.expect(j.total).to.eql(j.subtotal - j.discount));\r\npm.test(\"TC-18 / NFR-09 - Báo giá < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": {{productId}}, \"sizeId\": {{sizeId}}, \"toppingIds\": [], \"quantity\": 2 }\r\n  ],\r\n  \"promotionCode\": \"GIAM10\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-17.2 - Áp mã BREW20 giảm 20%",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();\r\npm.test(\"TC-17 / FR-24 - Status 200\", () => pm.response.to.have.status(200));\r\npm.test(\"TC-17 / FR-24 - Mã BREW20 hợp lệ\", () => {\r\n  pm.expect(j.promotion.code).to.eql(\"BREW20\");\r\n  pm.expect(j.promotion.valid).to.eql(true);\r\n});\r\npm.test(\"TC-17 / FR-24 - Giảm đúng 20%\", () => pm.expect(j.discount).to.eql(Math.round(j.subtotal * 0.2)));\r\npm.test(\"TC-18 / FR-20 - total = subtotal - discount\", () => pm.expect(j.total).to.eql(j.subtotal - j.discount));\r\npm.test(\"TC-18 / NFR-09 - Báo giá < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": {{productId}}, \"sizeId\": {{sizeId}}, \"toppingIds\": [], \"quantity\": 2 }\r\n  ],\r\n  \"promotionCode\": \"BREW20\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-17.3 - Mã sai bị từ chối",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();\r\npm.test(\"TC-17 / FR-24 - Status 200\", () => pm.response.to.have.status(200));\r\npm.test(\"TC-17 / FR-24 - Mã sai: valid = false\", () => pm.expect(j.promotion.valid).to.eql(false));\r\npm.test(\"TC-17 / FR-24 - Lý do PROMO_NOT_FOUND\", () => pm.expect(j.promotion.reason).to.eql(\"PROMO_NOT_FOUND\"));\r\npm.test(\"TC-17 / FR-24 - Có thông báo tiếng Việt\", () => pm.expect(j.promotion.message).to.be.a(\"string\").that.is.not.empty);\r\npm.test(\"TC-17 / FR-24 - Không giảm giá\", () => {\r\n  pm.expect(j.discount).to.eql(0);\r\n  pm.expect(j.total).to.eql(j.subtotal);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": {{productId}}, \"sizeId\": {{sizeId}}, \"toppingIds\": [], \"quantity\": 2 }\r\n  ],\r\n  \"promotionCode\": \"KHONGCO\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-19.1 - Chống sửa giá từ payload (price)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();\r\npm.test(\"TC-19 / NFR-10 - Giá giả bị từ chối (400)\", () => pm.response.to.have.status(400));\r\npm.test(\"TC-19 / NFR-10 - Server báo price không được phép\", () => pm.expect(JSON.stringify(j.message)).to.include(\"price should not exist\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": {{productId}}, \"sizeId\": {{sizeId}}, \"toppingIds\": [], \"quantity\": 1, \"price\": 1 }\r\n  ],\r\n  \"promotionCode\": \"GIAM10\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-15.1 - Giới hạn 10 ly/dòng",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"TC-15 / FR-19 - quantity > 10 bị từ chối (400)\", () => pm.response.to.have.status(400));\r\npm.test(\"TC-15 / FR-19 - Thông báo nhắc giới hạn 10\", () => pm.expect(JSON.stringify(pm.response.json().message)).to.include(\"10\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": {{productId}}, \"sizeId\": {{sizeId}}, \"toppingIds\": [], \"quantity\": 11 }\r\n  ],\r\n  \"promotionCode\": \"GIAM10\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-14.3 - Món hết hàng không tính tiền",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();\r\npm.test(\"TC-14 / FR-23 - Status 200\", () => pm.response.to.have.status(200));\r\npm.test(\"TC-14 / FR-23 - Món báo OUT_OF_STOCK\", () => pm.expect(j.items[0].status).to.eql(\"OUT_OF_STOCK\"));\r\npm.test(\"TC-14 / FR-23 - Không tính tiền món hết hàng\", () => {\r\n  pm.expect(j.items[0].lineTotal).to.eql(0);\r\n  pm.expect(j.subtotal).to.eql(0);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"items\": [\r\n    { \"productId\": 10, \"sizeId\": 1, \"toppingIds\": [], \"quantity\": 1 }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "sizeId",
+      "value": ""
+    }
+  ]
+}
