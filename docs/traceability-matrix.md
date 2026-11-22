@@ -89,18 +89,18 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | FR-12 | Nhập ghi chú cho món | US-02 | S1-I2 | S2-I2 | TV2 | Product detail form | TC-FR-12 | Chưa xác nhận |
 | FR-13 | Không cho chọn topping hết hàng | US-02 | S1-I2 | S2-I2 | TV2 | Product detail / stock validation | TC-FR-13 | Chưa xác nhận |
 | FR-14 | Thêm sản phẩm kèm tùy chọn vào giỏ | US-02 | S1-I2 | S2-I2 | TV2 | Product detail → Cart state | TC-FR-14 | Chưa xác nhận |
-| FR-15 | Thêm món vào giỏ, gộp dòng trùng cấu hình | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/service | TC-FR-15 | Chưa xác nhận |
-| FR-16 | Tăng/giảm số lượng trong giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/components | TC-FR-16 | Chưa xác nhận |
-| FR-17 | Xóa dòng hoặc làm trống giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/components | TC-FR-17 | Chưa xác nhận |
+| FR-15 | Thêm món vào giỏ, gộp dòng trùng cấu hình | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/service | TC-FR-15 | Đã kiểm thử |
+| FR-16 | Tăng/giảm số lượng trong giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/components | TC-FR-16 | Đã kiểm thử |
+| FR-17 | Xóa dòng hoặc làm trống giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart store/components | TC-FR-17 | Đã kiểm thử |
 | FR-18 | Sửa Size/Topping/ghi chú trong giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart components/store | TC-FR-18 | Chưa xác nhận |
 | FR-19 | Giới hạn số lượng và số dòng giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart validation / DTO | TC-FR-19 | Chờ TV2 chốt giới hạn theo SRS |
-| FR-20 | Server báo giá và tính tổng tiền | US-03 | S1-I3 | S2-I3 | TV3 | Promotions/pricing service | TC-FR-20 | Chưa xác nhận |
-| FR-21 | Lưu và khôi phục giỏ bằng localStorage | US-03 | S1-I3 | S2-I3 | TV3 | Cart persistence | TC-FR-21 | Chưa xác nhận |
-| FR-22 | Hiển thị giỏ rỗng | US-03 | S1-I3 | S2-I3 | TV3 | Cart page | TC-FR-22 | Chưa xác nhận |
-| FR-23 | Kiểm tra hết hàng/thay đổi giá trong giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart validation / pricing API | TC-FR-23 | Chưa xác nhận |
-| FR-24 | Áp dụng mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | `POST /promotions/validate` | TC-FR-24 | Chưa xác nhận |
-| FR-25 | Gỡ mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | Cart / promotion state | TC-FR-25 | Chưa xác nhận |
-| FR-26 | Chuyển giỏ hợp lệ sang checkout | US-03 | S1-I3; phối hợp S1-I4 | S2-I3; phối hợp S2-I4 | TV3 | Cart → Checkout payload | TC-FR-26 | Chưa xác nhận |
+| FR-20 | Server báo giá và tính tổng tiền | US-03 | S1-I3 | S2-I3 | TV3 | Promotions/pricing service | TC-FR-20 | Đã kiểm thử |
+| FR-21 | Lưu và khôi phục giỏ bằng localStorage | US-03 | S1-I3 | S2-I3 | TV3 | Cart persistence | TC-FR-21 | Đã kiểm thử |
+| FR-22 | Hiển thị giỏ rỗng | US-03 | S1-I3 | S2-I3 | TV3 | Cart page | TC-FR-22 | Đã kiểm thử |
+| FR-23 | Kiểm tra hết hàng/thay đổi giá trong giỏ | US-03 | S1-I3 | S2-I3 | TV3 | Cart validation / pricing API | TC-FR-23 | Đã kiểm thửn |
+| FR-24 | Áp dụng mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | `POST /promotions/validate` | TC-FR-24 | Đã kiểm thử |
+| FR-25 | Gỡ mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | Cart / promotion state | TC-FR-25 | Đã kiểm thử |
+| FR-26 | Chuyển giỏ hợp lệ sang checkout | US-03 | S1-I3; phối hợp S1-I4 | S2-I3; phối hợp S2-I4 | TV3 | Cart → Checkout payload | TC-FR-26 | Đã kiểm thử |
 | FR-27 | Tạo Order và OrderItem từ giỏ | US-04 | S1-I4 | S2-I4 | TV4 | Orders module / `POST /orders` | TC-FR-27 | Chưa xác nhận |
 | FR-28 | Kiểm tra và trừ kho trong transaction, tránh kho âm | US-04 | S1-I4 | S2-I4 | TV4 | Orders service / Prisma transaction | TC-FR-28 | Chưa xác nhận |
 | FR-29 | Cung cấp hàm nội bộ hoàn kho khi hủy đơn chưa thanh toán | US-04, US-06.1 | S1-I4 | S2-I4; phối hợp S2-I6 | TV4 (hàm hoàn kho), TV6 (điều phối hủy) | Inventory/order service | TC-FR-29 | Chưa xác nhận |
@@ -135,11 +135,11 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | NFR-06 | Trang chi tiết và điều khiển ưu tiên mobile-first | S1-I2 | S2-I2 | TV2 | Product detail UI | TC-NFR-06 | Chưa xác nhận |
 | NFR-07 | Giao diện responsive, không chồng lấn/tràn ngang | S1-I2 | S2-I2 | TV2 | Frontend styles/components | TC-NFR-07 | Chưa xác nhận |
 | NFR-08 | PWA cơ bản: Manifest và icon hợp lệ | S1-I2 | S2-I2 | TV2 | `manifest`, icons, PWA config | TC-NFR-08 | Chưa xác nhận |
-| NFR-09 | API báo giá phản hồi dưới 500 ms theo tiêu chí SRS | S1-I3 | S2-I3 | TV3 | Promotions/pricing service | TC-NFR-09 | Chưa xác nhận |
-| NFR-10 | Server là nguồn tính giá có thẩm quyền, không tin giá Client | S1-I3 | S2-I3 | TV3 | Pricing service / DTO validation | TC-NFR-10 | Chưa xác nhận |
-| NFR-11 | localStorage lỗi/bị chặn không làm Frontend crash | S1-I3 | S2-I3 | TV3 | Cart persistence | TC-NFR-11 | Chưa xác nhận |
-| NFR-12 | Giỏ hàng usable trên mobile, không cuộn ngang tại 360×640 | S1-I3 | S2-I3 | TV3 | Cart UI/styles | TC-NFR-12 | Chưa xác nhận |
-| NFR-13 | Unit test logic giỏ và khuyến mãi chạy trong CI | S1-I3; phối hợp S1-I1 | S2-I3; phối hợp S2-I1 | TV3 | Cart/promotion tests, CI | TC-NFR-13 | Chưa xác nhận |
+| NFR-09 | API báo giá phản hồi dưới 500 ms theo tiêu chí SRS | S1-I3 | S2-I3 | TV3 | Promotions/pricing service | TC-NFR-09 | Đã kiểm thử |
+| NFR-10 | Server là nguồn tính giá có thẩm quyền, không tin giá Client | S1-I3 | S2-I3 | TV3 | Pricing service / DTO validation | TC-NFR-10 | Đã kiểm thử |
+| NFR-11 | localStorage lỗi/bị chặn không làm Frontend crash | S1-I3 | S2-I3 | TV3 | Cart persistence | TC-NFR-11 | Đã kiểm thửn |
+| NFR-12 | Giỏ hàng usable trên mobile, không cuộn ngang tại 360×640 | S1-I3 | S2-I3 | TV3 | Cart UI/styles | TC-NFR-12 | Đã kiểm thử |
+| NFR-13 | Unit test logic giỏ và khuyến mãi chạy trong CI | S1-I3; phối hợp S1-I1 | S2-I3; phối hợp S2-I1 | TV3 | Cart/promotion tests, CI | TC-NFR-13 | Đã kiểm thử |
 | NFR-14 | Xử lý đồng thời không làm tồn kho âm | S1-I4 | S2-I4 | TV4 | Order/inventory transaction | TC-NFR-14 | Chưa xác nhận |
 | NFR-15 | Nhiều request cùng Idempotency-Key chỉ tạo một Payment | S1-I5 | S2-I5 | TV5 | Payment/idempotency service | TC-NFR-15 | Chưa xác nhận |
 | NFR-16 | P95 `POST /payments` dưới 1.000 ms với 20 request local | S1-I5 | S2-I5 | TV5 | Payments API | TC-NFR-16 | Chưa xác nhận |
