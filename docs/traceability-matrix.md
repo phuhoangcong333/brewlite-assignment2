@@ -73,10 +73,10 @@
 | FR-27 | Tạo Order và OrderItem từ giỏ | US-04 | S1-I4 | S2-I4 | TV4 | Orders module / `POST /orders` | TC-FR-27 | Chưa xác nhận |
 | FR-28 | Kiểm tra và trừ kho trong transaction, tránh kho âm | US-04 | S1-I4 | S2-I4 | TV4 | Orders service / Prisma transaction | TC-FR-28 | Chưa xác nhận |
 | FR-29 | Cung cấp hàm nội bộ hoàn kho khi hủy đơn chưa thanh toán | US-04, US-06.1 | S1-I4 | S2-I4; phối hợp S2-I6 | TV4 (hàm hoàn kho), TV6 (điều phối hủy) | Inventory/order service | TC-FR-29 | Chưa xác nhận |
-| FR-30 | Thanh toán bằng Ví/Thẻ mô phỏng | US-05 | S1-I5 | S2-I5 | TV5 | Payments module / `POST /payments` | TC-FR-30 | Chưa xác nhận |
-| FR-31 | Chống thanh toán trùng bằng Idempotency-Key | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / idempotency storage | TC-FR-31 | Chưa xác nhận |
-| FR-32 | Xử lý thanh toán thất bại và cho thử lại | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / payment UI | TC-FR-32 | Chưa xác nhận |
-| FR-33 | Cập nhật đơn sang PAID khi thanh toán thành công | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / Order update | TC-FR-33 | Chưa xác nhận |
+| FR-30 | Thanh toán bằng Ví/Thẻ mô phỏng | US-05 | S1-I5 | S2-I5 | TV5 | Payments module / `POST /payments` | TC-FR-30 | PASS |
+| FR-31 | Chống thanh toán trùng bằng Idempotency-Key | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / idempotency storage | TC-FR-31 | PASS |
+| FR-32 | Xử lý thanh toán thất bại và cho thử lại | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / payment UI | TC-FR-32 | PASS |
+| FR-33 | Cập nhật đơn sang PAID khi thanh toán thành công | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / Order update | TC-FR-33 | PASS |
 | FR-34 | Hiển thị xác nhận đơn sau khi tạo thành công | US-06 | S1-I6 | S2-I6 | TV6 | Order confirmation page | TC-FR-34 | Chưa xác nhận |
 | FR-35 | Xem lịch sử đơn của người dùng hiện tại | US-06 | S1-I6 | S2-I6 | TV6 | `GET /orders` / Order history | TC-FR-35 | Chưa xác nhận |
 | FR-36 | Xem chi tiết đơn của chính người dùng | US-06 | S1-I6 | S2-I6 | TV6 | `GET /orders/:id` | TC-FR-36 | Chưa xác nhận |
@@ -110,8 +110,8 @@
 | NFR-12 | Giỏ hàng usable trên mobile, không cuộn ngang tại 360×640 | S1-I3 | S2-I3 | TV3 | Cart UI/styles | TC-NFR-12 | Chưa xác nhận |
 | NFR-13 | Unit test logic giỏ và khuyến mãi chạy trong CI | S1-I3; phối hợp S1-I1 | S2-I3; phối hợp S2-I1 | TV3 | Cart/promotion tests, CI | TC-NFR-13 | Chưa xác nhận |
 | NFR-14 | Xử lý đồng thời không làm tồn kho âm | S1-I4 | S2-I4 | TV4 | Order/inventory transaction | TC-NFR-14 | Chưa xác nhận |
-| NFR-15 | Nhiều request cùng Idempotency-Key chỉ tạo một Payment | S1-I5 | S2-I5 | TV5 | Payment/idempotency service | TC-NFR-15 | Chưa xác nhận |
-| NFR-16 | P95 `POST /payments` dưới 1.000 ms với 20 request local | S1-I5 | S2-I5 | TV5 | Payments API | TC-NFR-16 | Chưa xác nhận |
+| NFR-15 | Nhiều request cùng Idempotency-Key chỉ tạo một Payment | S1-I5 | S2-I5 | TV5 | Payment/idempotency service | TC-NFR-15 | PASS |
+| NFR-16 | P95 `POST /payments` dưới 1.000 ms với 20 request local | S1-I5 | S2-I5 | TV5 | Payments API | TC-NFR-16 | PASS |
 | NFR-17 | Password băm bcrypt có salt; không lộ password/passwordHash | S1-I7 | S2-I7 | TV7 | Auth service / User model | TC-NFR-17 | Chưa xác nhận |
 | NFR-18 | JWT có hạn dùng và ký bằng secret môi trường | S1-I7 | S2-I7 | TV7 | JWT strategy/config | TC-NFR-18 | Chưa xác nhận |
 | NFR-19 | Secret không commit vào repo hoặc log CI | S1-I1, S1-I7 | S2-I1, S2-I7 | TV1, TV7 | GitHub Secrets / `.gitignore` / CI | TC-NFR-19 | Chưa xác nhận |
