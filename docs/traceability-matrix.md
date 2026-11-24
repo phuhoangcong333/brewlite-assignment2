@@ -73,10 +73,10 @@
 | FR-27 | Tạo Order và OrderItem từ giỏ | US-04 | S1-I4 | S2-I4 | TV4 | Orders module / `POST /orders` | TC-FR-27 | Chưa xác nhận |
 | FR-28 | Kiểm tra và trừ kho trong transaction, tránh kho âm | US-04 | S1-I4 | S2-I4 | TV4 | Orders service / Prisma transaction | TC-FR-28 | Chưa xác nhận |
 | FR-29 | Cung cấp hàm nội bộ hoàn kho khi hủy đơn chưa thanh toán | US-04, US-06.1 | S1-I4 | S2-I4; phối hợp S2-I6 | TV4 (hàm hoàn kho), TV6 (điều phối hủy) | Inventory/order service | TC-FR-29 | Chưa xác nhận |
-| FR-30 | Thanh toán bằng Ví/Thẻ mô phỏng | US-05 | S1-I5 | S2-I5 | TV5 | Payments module / `POST /payments` | TC-FR-30 | PASS |
-| FR-31 | Chống thanh toán trùng bằng Idempotency-Key | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / idempotency storage | TC-FR-31 | PASS |
-| FR-32 | Xử lý thanh toán thất bại và cho thử lại | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / payment UI | TC-FR-32 | PASS |
-| FR-33 | Cập nhật đơn sang PAID khi thanh toán thành công | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / Order update | TC-FR-33 | PASS |
+| FR-30 | Thanh toán bằng Ví/Thẻ mô phỏng | US-05 | S1-I5 | S2-I5 | TV5 | Payments module / `POST /payments` | TC-FR-30 | Xác nhận |
+| FR-31 | Chống thanh toán trùng bằng Idempotency-Key | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / idempotency storage | TC-FR-31 | Xác nhận |
+| FR-32 | Xử lý thanh toán thất bại và cho thử lại | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / payment UI | TC-FR-32 | Xác nhận |
+| FR-33 | Cập nhật đơn sang PAID khi thanh toán thành công | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / Order update | TC-FR-33 | Xác nhận |
 | FR-34 | Hiển thị xác nhận đơn sau khi tạo thành công | US-06 | S1-I6 | S2-I6 | TV6 | Order confirmation page | TC-FR-34 | Chưa xác nhận |
 | FR-35 | Xem lịch sử đơn của người dùng hiện tại | US-06 | S1-I6 | S2-I6 | TV6 | `GET /orders` / Order history | TC-FR-35 | Chưa xác nhận |
 | FR-36 | Xem chi tiết đơn của chính người dùng | US-06 | S1-I6 | S2-I6 | TV6 | `GET /orders/:id` | TC-FR-36 | Chưa xác nhận |
