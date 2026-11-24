@@ -1,0 +1,575 @@
+{
+  "info": {
+    "_postman_id": "87eff7fd-8a27-4c97-bedf-f50c21bc1b7d",
+    "name": "BrewLite Auth FR-40 to FR-47 & NFR-17 to NFR-22",
+    "description": "Chạy từng request; không chạy Run Collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53892542",
+    "_collection_link": "https://go.postman.co/collection/53892542-87eff7fd-8a27-4c97-bedf-f50c21bc1b7d?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01 TC-39 Health and request ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Database up', function () { pm.expect(body.status).to.eql('ok'); pm.expect(body.database).to.eql('up'); });",
+              "pm.test('Health không cần requestId khi thành công', function () { pm.expect(body.requestId).to.not.exist; });",
+              "console.log('NFR-22: Request 200 chưa có x-request-id. Kiểm tra request ID ở các request lỗi 400/401/403.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Request-ID",
+            "value": "tc39-{{$timestamp}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02 FR-40 Dang ky hop le",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('registerEmail', 'demo_' + Date.now() + '@example.com');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('CUSTOMER va khong lo passwordHash', function () { pm.expect(body.user.role).to.eql('CUSTOMER'); pm.expect(JSON.stringify(body)).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 FR-40 Dang ky trung email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409', function () { pm.response.to.have.status(409); });",
+              "const body = pm.response.json();",
+              "pm.test('Loi dung format chung', function () { pm.expect(body.statusCode).to.eql(409); pm.expect(body.error).to.eql('Conflict'); pm.expect(body.requestId).to.exist; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 FR-40 NFR-20 Payload dang ky sai",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "const text = pm.response.text();",
+              "pm.test('Format loi chung', function () { pm.expect(body.statusCode).to.eql(400); pm.expect(body.error).to.eql('Bad Request'); pm.expect(body.requestId).to.exist; });",
+              "pm.test('Khong lo stack trace SQL', function () { pm.expect(text).not.to.include('stack'); pm.expect(text).not.to.match(/select|insert|update|delete/i); pm.expect(text).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"khong-phai-email\",\n  \"password\": \"123\",\n  \"role\": \"STAFF\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05 FR-41 Sai mat khau",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401', function () { pm.response.to.have.status(401); });",
+              "const body = pm.response.json();",
+              "pm.test('Thong bao chung', function () { pm.expect(body.message).to.eql('Email hoặc mật khẩu không đúng'); pm.expect(body.requestId).to.exist; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"mat-khau-sai\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "06 FR-41 NFR-18 Login CUSTOMER",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('customerToken', body.access_token);",
+              "pm.test('CUSTOMER va Bearer', function () { pm.expect(body.user.role).to.eql('CUSTOMER'); pm.expect(body.token_type).to.eql('Bearer'); });",
+              "const p = body.access_token.split('.');",
+              "if (p.length === 3) { const payload = JSON.parse(atob(p[1].replace(/-/g,'+').replace(/_/g,'/'))); pm.test('JWT co exp 3600 giay', function () { pm.expect(payload.exp - payload.iat).to.eql(3600); }); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 FR-41 Login STAFF",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('staffToken', body.access_token);",
+              "pm.test('STAFF', function () { pm.expect(body.user.role).to.eql('STAFF'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{staffEmail}}\",\n  \"password\": \"{{staffPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 FR-42 /auth/me khong token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401', function () { pm.response.to.have.status(401); });",
+              "const body = pm.response.json();",
+              "pm.test('Co requestId', function () { pm.expect(body.statusCode).to.eql(401); pm.expect(body.requestId).to.exist; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 FR-42 /auth/me token rac",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer abc.def.ghi"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10 FR-42 /auth/me CUSTOMER hop le",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Request user CUSTOMER', function () { pm.expect(body.user.email).to.eql(pm.collectionVariables.get('customerEmail')); pm.expect(body.user.role).to.eql('CUSTOMER'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{customerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11 TC-42 FR-43 CUSTOMER /orders/staff bi chan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('403', function () { pm.response.to.have.status(403); });",
+              "const body = pm.response.json();",
+              "pm.test('403 format chung', function () { pm.expect(body.statusCode).to.eql(403); pm.expect(body.error).to.eql('Forbidden'); pm.expect(body.requestId).to.exist; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{customerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/orders/staff",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            "staff"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 TC-42 FR-43 STAFF /orders/staff duoc phep",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/orders/staff",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            "staff"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "13 FR-43 STAFF /ingredients duoc phep",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/ingredients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ingredients"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "14 FR-43 CUSTOMER /ingredients bi chan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('403', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{customerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/ingredients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ingredients"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "customerEmail",
+      "value": "test@gmail.com"
+    },
+    {
+      "key": "customerPassword",
+      "value": "password123"
+    },
+    {
+      "key": "staffEmail",
+      "value": "admin@gmail.com"
+    },
+    {
+      "key": "staffPassword",
+      "value": "123456"
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "staffToken",
+      "value": ""
+    },
+    {
+      "key": "registerEmail",
+      "value": ""
+    }
+  ]
+}
