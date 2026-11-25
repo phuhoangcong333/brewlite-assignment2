@@ -9,7 +9,12 @@
     {
       "key": "baseUrl",
       "value": "https://47.129.180.144.sslip.io/api",
-      "description": "Base URL của API. Đổi thành http://localhost:3001 khi chạy local."
+      "description": "Base URL của API trên trang web công khai (Production HTTPS https://47.129.180.144.sslip.io/api)."
+    },
+    {
+      "key": "webUrl",
+      "value": "https://47.129.180.144.sslip.io",
+      "description": "Trang web công khai (Production Frontend https://47.129.180.144.sslip.io)."
     },
     {
       "key": "accessToken",
