@@ -88,12 +88,12 @@
     },
     {
       "key": "staffEmail",
-      "value": "admin@gmail.com",
+      "value": "hoangcongphu0999@gmail.com",
       "description": "Email tài khoản nhân viên / quản trị."
     },
     {
       "key": "staffPassword",
-      "value": "123456",
+      "value": "Phu2006@1",
       "description": "Mật khẩu tài khoản nhân viên / quản trị."
     }
   ],
