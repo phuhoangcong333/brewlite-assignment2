@@ -1,0 +1,201 @@
+{
+  "sourceRepository": "https://github.com/phuhoangcong333/brewlite-assignment2",
+  "sourceBranch": "main",
+  "sourceCommit": "7daadb255474700f9bc81be420fc4a4da4316ac6",
+  "date": "2026-11-25",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "environment": {
+    "database": "brewlite_tv6_postman_tests_20261125",
+    "api": "NestJS production build",
+    "web": "Next.js production build --webpack",
+    "browser": "Chromium desktop + Pixel 5 emulation",
+    "mock": false,
+    "payment": "AS2 demo only"
+  },
+  "primaryTests": {
+    "backend": 259,
+    "http": 165,
+    "frontend": 73,
+    "browser": 14,
+    "total": 511,
+    "failed": 0,
+    "todo": 1
+  },
+  "postman": {
+    "requests": 78,
+    "assertions": 109,
+    "failed": 0,
+    "databaseChecks": [
+      {
+        "name": "Owner earned exactly 9 points once",
+        "pass": true
+      },
+      {
+        "name": "Final ingredient stock 200",
+        "pass": true
+      },
+      {
+        "name": "Exactly one loyalty ledger",
+        "pass": true
+      },
+      {
+        "name": "Cancelled paid order preserves SUCCESS payment without loyalty",
+        "pass": true
+      },
+      {
+        "name": "Failed payment cancelled without points",
+        "pass": true
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "prisma-migrate",
+      "startedAt": "2026-11-25T05:11:20.629Z",
+      "finishedAt": "2026-11-25T05:11:23.559Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\prisma\\build\\index.js",
+        "migrate",
+        "deploy",
+        "--schema",
+        "prisma/schema.prisma"
+      ]
+    },
+    {
+      "name": "backend-unit",
+      "startedAt": "2026-11-25T05:11:35.791Z",
+      "finishedAt": "2026-11-25T05:12:16.800Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--experimental-vm-modules",
+        "<repo>\\apps\\api\\node_modules\\jest\\bin\\jest.js",
+        "--runInBand",
+        "--json",
+        "--outputFile=../../../TV6_Postman_20261125/backend-unit.json"
+      ]
+    },
+    {
+      "name": "backend-http",
+      "startedAt": "2026-11-25T05:14:11.898Z",
+      "finishedAt": "2026-11-25T05:14:44.643Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--experimental-vm-modules",
+        "<repo>\\apps\\api\\node_modules\\jest\\bin\\jest.js",
+        "--config",
+        "./test/jest-e2e.json",
+        "--runInBand",
+        "--json",
+        "--outputFile=../../../TV6_Postman_20261125/backend-http.json"
+      ]
+    },
+    {
+      "name": "frontend-vitest",
+      "startedAt": "2026-11-25T05:12:32.212Z",
+      "finishedAt": "2026-11-25T05:12:53.498Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\vitest\\vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--minWorkers=1",
+        "--reporter=json",
+        "--outputFile=../../../TV6_Postman_20261125/frontend-vitest.json"
+      ]
+    },
+    {
+      "name": "backend-build",
+      "startedAt": "2026-11-25T05:11:39.397Z",
+      "finishedAt": "2026-11-25T05:11:56.964Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\@nestjs\\cli\\bin\\nest.js",
+        "build"
+      ]
+    },
+    {
+      "name": "frontend-build",
+      "startedAt": "2026-11-25T05:13:59.577Z",
+      "finishedAt": "2026-11-25T05:14:36.090Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\next\\dist\\bin\\next",
+        "build",
+        "--webpack"
+      ]
+    },
+    {
+      "name": "backend-lint",
+      "startedAt": "2026-11-25T05:14:24.718Z",
+      "finishedAt": "2026-11-25T05:14:27.954Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\oxlint\\bin\\oxlint",
+        "--type-aware",
+        "src/",
+        "test/"
+      ]
+    },
+    {
+      "name": "frontend-lint",
+      "startedAt": "2026-11-25T05:14:32.453Z",
+      "finishedAt": "2026-11-25T05:14:46.373Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\eslint\\bin\\eslint.js"
+      ]
+    },
+    {
+      "name": "browser-e2e",
+      "startedAt": "2026-11-25T05:23:11.130Z",
+      "finishedAt": "2026-11-25T05:27:59.000Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config=../../../TV6_Postman_20261125/playwright.config.ts"
+      ]
+    },
+    {
+      "name": "postman",
+      "startedAt": "2026-11-25T05:17:19.262Z",
+      "finishedAt": "2026-11-25T05:17:36.501Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\docs\\postman\\run-tv6.mjs"
+      ]
+    }
+  ],
+  "warnings": {
+    "backendLint": 3,
+    "frontendLint": 1,
+    "notes": "Existing lint warnings; one existing promotions TODO excluded from passed count."
+  },
+  "collectionSha256": "bbfbbedfb97f4d734eb93e56845ee0d0be91e1efa26ae7c4ffc167f1fc8af5a7",
+  "cleanup": {
+    "finishedAt": "2026-11-25T05:17:36.437Z",
+    "remaining": {
+      "users": 0,
+      "orders": 0,
+      "products": 0,
+      "ingredients": 0
+    },
+    "passed": true
+  },
+  "screenshots": {
+    "api": 78,
+    "browser": 72
+  },
+  "passed": true
+}

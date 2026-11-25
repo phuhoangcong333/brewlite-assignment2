@@ -1,0 +1,186 @@
+{
+  "checks": [
+    {
+      "name": "Owner earned exactly 9 points once",
+      "pass": true
+    },
+    {
+      "name": "Final ingredient stock 200",
+      "pass": true
+    },
+    {
+      "name": "Exactly one loyalty ledger",
+      "pass": true
+    },
+    {
+      "name": "Cancelled paid order preserves SUCCESS payment without loyalty",
+      "pass": true
+    },
+    {
+      "name": "Failed payment cancelled without points",
+      "pass": true
+    }
+  ],
+  "state": {
+    "customer": {
+      "id": 64,
+      "loyaltyPoints": 9
+    },
+    "ingredient": {
+      "id": 144,
+      "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+      "unit": "ml",
+      "stockQuantity": 200,
+      "version": 12
+    },
+    "orders": [
+      {
+        "id": 168,
+        "userId": 64,
+        "status": "COMPLETED",
+        "total": 90000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:29.612Z",
+        "usesIngredientInventory": true,
+        "payments": [
+          {
+            "id": 22,
+            "orderId": 168,
+            "idempotencyKey": "tv6-95466950-8e6b-419a-813e-c0f30c1da0eb-orderId",
+            "amount": 90000,
+            "method": "CARD",
+            "status": "SUCCESS"
+          }
+        ],
+        "ingredients": [
+          {
+            "orderId": 168,
+            "ingredientId": 144,
+            "quantity": 40
+          }
+        ],
+        "loyaltyTransaction": {
+          "id": 12,
+          "userId": 64,
+          "orderId": 168,
+          "points": 9,
+          "createdAt": "2026-11-25T05:17:30.777Z"
+        }
+      },
+      {
+        "id": 169,
+        "userId": 64,
+        "status": "CANCELLED",
+        "total": 35000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:31.329Z",
+        "usesIngredientInventory": true,
+        "payments": [],
+        "ingredients": [
+          {
+            "orderId": 169,
+            "ingredientId": 144,
+            "quantity": 10
+          }
+        ],
+        "loyaltyTransaction": null
+      },
+      {
+        "id": 170,
+        "userId": 64,
+        "status": "CANCELLED",
+        "total": 40000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:32.031Z",
+        "usesIngredientInventory": true,
+        "payments": [],
+        "ingredients": [
+          {
+            "orderId": 170,
+            "ingredientId": 144,
+            "quantity": 15
+          }
+        ],
+        "loyaltyTransaction": null
+      },
+      {
+        "id": 171,
+        "userId": 64,
+        "status": "CANCELLED",
+        "total": 45000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:32.358Z",
+        "usesIngredientInventory": true,
+        "payments": [
+          {
+            "id": 23,
+            "orderId": 171,
+            "idempotencyKey": "tv6-95466950-8e6b-419a-813e-c0f30c1da0eb-preparingCancelId",
+            "amount": 45000,
+            "method": "CARD",
+            "status": "SUCCESS"
+          }
+        ],
+        "ingredients": [
+          {
+            "orderId": 171,
+            "ingredientId": 144,
+            "quantity": 20
+          }
+        ],
+        "loyaltyTransaction": null
+      },
+      {
+        "id": 172,
+        "userId": 64,
+        "status": "CANCELLED",
+        "total": 45000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:33.309Z",
+        "usesIngredientInventory": true,
+        "payments": [],
+        "ingredients": [
+          {
+            "orderId": 172,
+            "ingredientId": 144,
+            "quantity": 20
+          }
+        ],
+        "loyaltyTransaction": null
+      },
+      {
+        "id": 173,
+        "userId": 64,
+        "status": "CANCELLED",
+        "total": 45000,
+        "discount": 0,
+        "promoCode": null,
+        "createdAt": "2026-11-25T05:17:35.497Z",
+        "usesIngredientInventory": true,
+        "payments": [
+          {
+            "id": 24,
+            "orderId": 173,
+            "idempotencyKey": "tv6-95466950-8e6b-419a-813e-c0f30c1da0eb-failed-payment",
+            "amount": 45000,
+            "method": "CARD",
+            "status": "FAILED"
+          }
+        ],
+        "ingredients": [
+          {
+            "orderId": 173,
+            "ingredientId": 144,
+            "quantity": 25
+          }
+        ],
+        "loyaltyTransaction": null
+      }
+    ]
+  }
+}

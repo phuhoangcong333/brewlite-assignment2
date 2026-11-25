@@ -1,0 +1,5 @@
+{
+  "name": "brewlite-tv6-postman-tools",
+  "private": true,
+  "dependencies": { "newman": "6.2.3" }
+}

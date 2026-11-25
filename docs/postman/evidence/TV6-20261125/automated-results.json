@@ -1,0 +1,2423 @@
+{
+  "sourceCommit": "7daadb255474700f9bc81be420fc4a4da4316ac6",
+  "groups": [
+    {
+      "name": "Backend unit/integration",
+      "passed": 259,
+      "failed": 0,
+      "pending": 0,
+      "todo": 1,
+      "suites": [
+        {
+          "file": "apps/api/src/payments/payments.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "PaymentsService (unit, không DB) thiếu hoặc rỗng Idempotency-Key -> 400",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) Idempotency-Key dài hơn 200 ký tự -> 400",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) method CARD thiếu cardNumber / WALLET thiếu walletId -> 400",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) [sửa lỗi 3] serialization failure P2034 (2 thanh toán khác key cùng lúc) -> 409, không phải 500",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) lỗi hệ thống khác vẫn được ném nguyên bản (không bị nuốt thành 409)",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) cùng key chạy song song (P2002): bên thua nhận lại kết quả gốc với replayed=true",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) [sửa lỗi] user khác dùng lại key của người khác không đọc được kết quả -> 404",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) user khác không nhận được 409 khi key trùng cả đơn và method",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService (unit, không DB) cùng key nhưng nội dung khác (khác orderId) -> 409",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 8: thanh toán ví thành công -> payment PAID, đơn PAID, số tiền lấy từ đơn",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 8: thẻ có số cuối 0000 -> PAYMENT_FAILED, vẫn ghi 1 payment FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 8: sau khi thất bại, thử lại bằng key MỚI và thẻ hợp lệ -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 10 (idempotency): gửi 2 lần cùng Idempotency-Key -> chỉ có 1 payment, lần 2 trả kết quả cũ",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 10 (idempotency): thanh toán thất bại rồi gửi lại cùng key -> vẫn trả PAYMENT_FAILED, không tạo payment mới",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL Task 10 (idempotency): 5 request cùng key chạy đồng thời -> chỉ 1 payment, không có lỗi 500",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL [sửa lỗi 3] 5 request KHÁC key cho cùng 1 đơn chạy đồng thời -> đúng 1 thành công, còn lại 400/409, không có 500",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL cùng key nhưng đổi orderId -> 409, không đụng tới đơn thứ hai",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL đơn đã PAID, thanh toán lại bằng key mới -> 400 và không tạo payment thứ hai",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL đơn đã CANCELLED/COMPLETED -> không thanh toán được (409)",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL đơn của người khác -> 404 và đơn giữ nguyên trạng thái",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL user khác dùng lại Idempotency-Key của chủ đơn -> 404, không lộ kết quả",
+              "status": "passed"
+            },
+            {
+              "name": "PaymentsService with PostgreSQL đơn không tồn tại -> 404",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/order.service.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "OrderService with PostgreSQL restores inventory only once when two cancellations race",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL allows only cancellation or payment to win when both race",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL keeps reserved stock when retrying payment after PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL supports the PAID -> PREPARING -> READY -> COMPLETED lifecycle",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL records loyalty only when an order reaches COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL does not allow staff transitions to change payment-managed statuses",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL staff cancels PENDING and restores the saved consumption only once",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL staff cancels PREPARING and restores the saved consumption only once",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL staff cancellation still restores legacy product stock for a preparing order",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL restores inventory when cancelling from PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL restores inventory when cancelling from PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL restores ingredients using the size recipe when cancelling an order",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL restores topping ingredients using the stored topping ids when cancelling",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL rejects cancellation from PREPARING without changing inventory",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL rejects cancellation from READY without changing inventory",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL rejects cancellation from COMPLETED without changing inventory",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL rejects cancellation from CANCELLED without changing inventory",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService with PostgreSQL rejects PENDING -> READY without changing the order or inventory",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/order.create.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "OrderService.createOrder with PostgreSQL creates the order and reserves stock in the same transaction",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL reserves the ingredients for each ordered size",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL rejects an exhausted topping and rolls back all inventory reservations",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL uses the same topping portion for size S and size L",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL rolls back reserved stock if creating the order fails",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL retries concurrent order creation without reserving the same stock twice",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL applies a promotion and consumes its usage inside the order transaction",
+              "status": "passed"
+            },
+            {
+              "name": "OrderService.createOrder with PostgreSQL caps the promotion discount at the order subtotal",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/auth/auth.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Task 7 - POST /auth/register chuẩn hóa email, băm mật khẩu bằng bcrypt và không trả passwordHash",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/register email đã tồn tại -> 409",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/register hai request cùng email chạy song song: bên thua bị unique constraint (P2002) -> 409, không phải 500",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/register lỗi DB khác không bị nuốt thành 409",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/login đúng email/mật khẩu -> access_token (JWT) + thông tin user, không có passwordHash",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/login email không phân biệt hoa thường",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - POST /auth/login sai mật khẩu và email không tồn tại cùng trả 401 với cùng thông báo",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) thiếu header Authorization -> 401",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) sai scheme (Basic/không có \"Bearer\") hoặc thiếu token -> 401",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) token rác hoặc ký bằng secret khác -> 401",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) token hết hạn -> 401",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) token hợp lệ nhưng user đã bị xóa -> 401",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - JwtAuthGuard (không có token thì 401) token hợp lệ -> cho qua và gắn request.user = { id, email }",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - validate DTO RegisterDto hợp lệ",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - validate DTO RegisterDto: email sai, mật khẩu < 6 ký tự",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - validate DTO RegisterDto: field lạ (vd role) bị từ chối",
+              "status": "passed"
+            },
+            {
+              "name": "Task 7 - validate DTO LoginDto: thiếu field/sai định dạng bị từ chối",
+              "status": "passed"
+            },
+            {
+              "name": "getJwtSecret (sửa lỗi dùng secret mặc định) dùng JWT_SECRET khi hợp lệ",
+              "status": "passed"
+            },
+            {
+              "name": "getJwtSecret (sửa lỗi dùng secret mặc định) production mà thiếu hoặc quá ngắn -> báo lỗi, không chạy với secret mặc định",
+              "status": "passed"
+            },
+            {
+              "name": "getJwtSecret (sửa lỗi dùng secret mặc định) môi trường test/dev thiếu secret -> dùng secret dev, không throw",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/promotions.seed-flow.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) không có mã: 2 ly Cà phê sữa size M = 2 × (29.000 + 5.000) = 68.000",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) GIAM10 (10%): giảm 6.800, tổng 61.200",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) BREW20 (20%): giảm 13.600, tổng 54.400",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) có topping: (29.000 + 5.000 + 5.000) × 2 = 78.000, GIAM10 giảm 7.800, tổng 70.200",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) mã viết thường và có khoảng trắng vẫn nhận ra",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) mã không tồn tại: PROMO_NOT_FOUND, tổng không đổi",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) mã hết hạn (sau 31/12/2026): PROMO_EXPIRED",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) mã hết lượt (usageLeft = 0): PROMO_USAGE_LIMIT_REACHED",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) báo giá không trừ lượt dùng (không gọi update trên bảng Promotion)",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) sản phẩm hết hàng (stock 0, không công thức): OUT_OF_STOCK, tổng 0",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) topping không hỗ trợ hoặc sản phẩm/size không tồn tại: PRODUCT_NOT_FOUND",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) GIỚI HẠN CỦA DỮ LIỆU THẬT: bảng Promotion không có minOrderValue, nên đơn nhỏ vẫn được giảm",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService + Prisma adapters (dữ liệu giống seed) tổng số lượng của các dòng cùng sản phẩm + size không được vượt tồn kho",
+              "status": "todo"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/inventory/inventory.service.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "InventoryService with an in-memory repository allows only one of two concurrent reservations for the last item",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with an in-memory repository retries a stale version so both reservations succeed",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with an in-memory repository never makes in-memory stock negative under concurrent demand",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with PostgreSQL allows only one of two concurrent reservations for the last item",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with PostgreSQL retries a stale version so both reservations succeed with stock remaining",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with PostgreSQL never allows concurrent reservations to make stock negative",
+              "status": "passed"
+            },
+            {
+              "name": "InventoryService with PostgreSQL rolls back earlier product updates when a later product becomes unavailable",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/pricing.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "priceItem – công thức giá (BR-02) đơn giá = giá cơ bản + phụ thu size + tổng giá topping",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) size mặc định không phụ thu, không topping",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) hết hàng: giữ đơn giá nhưng thành tiền 0",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) tồn kho ít hơn số lượng đặt cũng coi là hết hàng",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) kiểm tra số lượng tồn kho riêng theo size đã chọn",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) topping hết hàng: TOPPING_OUT_OF_STOCK kèm danh sách topping hết",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) sản phẩm, size hoặc topping không tồn tại: PRODUCT_NOT_FOUND",
+              "status": "passed"
+            },
+            {
+              "name": "priceItem – công thức giá (BR-02) clientUnitPrice chỉ để phát hiện giá đổi, không ảnh hưởng giá tính",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) tạm tính là tổng thành tiền các dòng, tổng = tạm tính khi không có mã",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) dòng không AVAILABLE không tính vào tạm tính",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) mã hợp lệ: trừ giảm giá khỏi tạm tính",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) mã không hợp lệ: vẫn trả báo giá, tổng không đổi",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) mã đòi giá trị tối thiểu: tính trên tạm tính sau khi loại dòng hết hàng",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) giảm cố định lớn hơn tạm tính: tổng không âm",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) giỏ toàn dòng hết hàng: tạm tính 0, tổng 0",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuote – tổng tiền (FR-06) tiền là số nguyên",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/promotions.controller.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) 200 (không phải 201) và báo giá đúng theo hợp đồng",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) (chỉ pipe của controller) bỏ qua trường giá giả; thực tế theo main.ts bị 400, xem promotions.http-config.spec.ts",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) clientUnitPrice lệch giá thật thì priceChanged=true nhưng vẫn tính theo giá server",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) mã sai trả 200 với valid=false và lý do",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) món hết hàng trả 200 với status OUT_OF_STOCK, không tính vào tổng",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) 400 khi giỏ rỗng, thiếu items hoặc items không phải mảng",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) 400 khi số lượng ngoài 1..10 hoặc không phải số nguyên",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) 400 khi quá 20 dòng; đúng 20 dòng thì chấp nhận",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) 400 khi thiếu productId hoặc sizeId, topping trùng hoặc sai kiểu",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate (tích hợp, ValidationPipe thật) không cần JWT: không trả 401 hoặc 403",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/prisma-adapters.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "PrismaCatalogRepository uses the current recipe schema and computes stock from ingredients",
+              "status": "passed"
+            },
+            {
+              "name": "PrismaCatalogRepository uses product stock as a per-size fallback when no recipe exists",
+              "status": "passed"
+            },
+            {
+              "name": "PrismaCatalogRepository loads topping prices and available portions from ingredient stock",
+              "status": "passed"
+            },
+            {
+              "name": "PrismaPromotionRepository maps the current promotion fields to the quote rule model",
+              "status": "passed"
+            },
+            {
+              "name": "PrismaPromotionRepository maps exhausted promotions to the usage limit rule",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/Product/product.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Task 4.3 - GET /products & lọc danh mục trả về danh sách tất cả sản phẩm kèm số ly khả dụng và món hết hàng",
+              "status": "passed"
+            },
+            {
+              "name": "Task 4.3 - GET /products & lọc danh mục lọc đúng danh sách món theo query category (không phân biệt hoa thường)",
+              "status": "passed"
+            },
+            {
+              "name": "Task 4.3 - GET /products & lọc danh mục GET /products/:id trả về chi tiết món hoặc báo lỗi 404 nếu không tồn tại",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/promotions.http-config.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "POST /promotions/validate – cấu hình giống main.ts yêu cầu hợp lệ vẫn trả 200 và đúng báo giá",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate – cấu hình giống main.ts trường giá lạ trong dòng giỏ (price) bị từ chối 400, không bị bỏ qua âm thầm",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate – cấu hình giống main.ts trường lạ ở cấp ngoài cùng (total) bị từ chối 400",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate – cấu hình giống main.ts thông báo lỗi validate theo định dạng của HttpExceptionFilter",
+              "status": "passed"
+            },
+            {
+              "name": "POST /promotions/validate – cấu hình giống main.ts message là MẢNG chuỗi khi nhiều lỗi cùng lúc (frontend cần xử lý)",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/promotion-rules.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "normalizeCode cắt khoảng trắng và viết hoa; rỗng thì null",
+              "status": "passed"
+            },
+            {
+              "name": "computeDiscount (BR-08) PERCENT làm tròn xuống",
+              "status": "passed"
+            },
+            {
+              "name": "computeDiscount (BR-08) PERCENT không vượt mức giảm tối đa",
+              "status": "passed"
+            },
+            {
+              "name": "computeDiscount (BR-08) FIXED_AMOUNT dùng số tiền cố định",
+              "status": "passed"
+            },
+            {
+              "name": "computeDiscount (BR-08) giảm giá không bao giờ vượt tạm tính",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) mã hợp lệ trả số tiền giảm",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) không tìm thấy mã hoặc mã bị tắt: PROMO_NOT_FOUND",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) chưa đến hạn: PROMO_NOT_STARTED",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) quá hạn: PROMO_EXPIRED",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) đúng thời điểm bắt đầu và kết thúc vẫn hợp lệ (biên bao gồm)",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) thiếu giá trị tối thiểu: PROMO_MIN_ORDER_NOT_MET kèm mức tối thiểu",
+              "status": "passed"
+            },
+            {
+              "name": "evaluatePromotion (BR-07) hết lượt dùng: PROMO_USAGE_LIMIT_REACHED; chưa hết thì hợp lệ; null là không giới hạn",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/orders.controller.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "OrdersController uses the authenticated user instead of a body userId",
+              "status": "passed"
+            },
+            {
+              "name": "OrdersController rejects a body userId when the global whitelist policy is applied",
+              "status": "passed"
+            },
+            {
+              "name": "OrdersController rejects an empty item list",
+              "status": "passed"
+            },
+            {
+              "name": "OrdersController rejects quantities above the quote limit",
+              "status": "passed"
+            },
+            {
+              "name": "OrdersController rejects more order items than the quote limit",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/promotions/__tests__/promotions.service.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "PromotionsService.validate báo giá không có mã: không tra cứu mã khuyến mãi",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService.validate mã không phân biệt hoa/thường và cắt khoảng trắng",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService.validate mã chỉ chứa khoảng trắng được coi như không có mã",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService.validate mã không tồn tại: valid=false, tổng không đổi",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService.validate không thay đổi dữ liệu: usedCount giữ nguyên sau khi báo giá",
+              "status": "passed"
+            },
+            {
+              "name": "PromotionsService.validate nhiều dòng cùng sản phẩm khác size được báo giá riêng",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/order-state.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "assertTransition rejects the demo-invalid transition PENDING -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PENDING -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAID -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PREPARING -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition READY -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition COMPLETED -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition PAYMENT_FAILED -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> PAID",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> PREPARING",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> READY",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> COMPLETED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "assertTransition checks transition CANCELLED -> CANCELLED",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PENDING cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PENDING cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PAID cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PAID cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PREPARING cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PREPARING cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor READY cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor READY cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor COMPLETED cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor COMPLETED cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PAYMENT_FAILED cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor PAYMENT_FAILED cancellation by STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor CANCELLED cancellation by CUSTOMER",
+              "status": "passed"
+            },
+            {
+              "name": "cancellation by actor CANCELLED cancellation by STAFF",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/inventory/ingredients.controller.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "IngredientsController.adjustStock applies positive adjustments and increments the inventory version",
+              "status": "passed"
+            },
+            {
+              "name": "IngredientsController.adjustStock rejects reductions that would make stock negative",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/auth/staff.guard.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "StaffGuard rejects a request without an authenticated user",
+              "status": "passed"
+            },
+            {
+              "name": "StaffGuard rejects users without STAFF role",
+              "status": "passed"
+            },
+            {
+              "name": "StaffGuard rejects users without STAFF role",
+              "status": "passed"
+            },
+            {
+              "name": "StaffGuard allows current database STAFF using JWT identity {\"id\": 17}",
+              "status": "passed"
+            },
+            {
+              "name": "StaffGuard allows current database STAFF using JWT identity {\"sub\": 17}",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/inventory/toppings.controller.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "ToppingsController returns stock and available portions from the linked ingredient",
+              "status": "passed"
+            },
+            {
+              "name": "ToppingsController updates portion configuration and recalculates available portions",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/inventory/inventory.release.plan.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "planRelease restores requested quantities and increments each product version",
+              "status": "passed"
+            },
+            {
+              "name": "planRelease combines multiple order items for the same product",
+              "status": "passed"
+            },
+            {
+              "name": "planRelease does not mutate the current inventory snapshots",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/common/errors.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "domain conflict exceptions returns HTTP 409 and a descriptive message for invalid transitions",
+              "status": "passed"
+            },
+            {
+              "name": "domain conflict exceptions returns HTTP 409 and a descriptive message for insufficient stock",
+              "status": "passed"
+            },
+            {
+              "name": "domain conflict exceptions returns HTTP 409 when inventory keeps changing during retries",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/auth/roles.guard.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "RolesGuard allows routes without a role requirement",
+              "status": "passed"
+            },
+            {
+              "name": "RolesGuard allows a user with a required role",
+              "status": "passed"
+            },
+            {
+              "name": "RolesGuard rejects a user without a required role",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/inventory/inventory.plan.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "planReserve reserves stock when enough inventory is available",
+              "status": "passed"
+            },
+            {
+              "name": "planReserve throws OutOfStockException when inventory is insufficient",
+              "status": "passed"
+            },
+            {
+              "name": "planReserve plans multiple products all-or-nothing",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/order-cancel.plan.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "planCancel plans inventory release when cancelling PENDING",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel plans inventory release when cancelling PAYMENT_FAILED",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel rejects cancellation from PAID without producing inventory updates",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel rejects cancellation from PREPARING without producing inventory updates",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel rejects cancellation from READY without producing inventory updates",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel rejects cancellation from COMPLETED without producing inventory updates",
+              "status": "passed"
+            },
+            {
+              "name": "planCancel rejects cancellation from CANCELLED without producing inventory updates",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/helpers/describe-db.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "describeDb helper exports a Jest describe function for database-aware suites",
+              "status": "passed"
+            },
+            {
+              "name": "database-backed tests connects to the configured PostgreSQL database and finds the migrated Product table",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/Product/product.service.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "computeAvailableQuantities calculates independent recipe capacity for each size",
+              "status": "passed"
+            },
+            {
+              "name": "computeAvailableQuantities uses the legacy product stock for every size when no recipe exists",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/app.controller.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "AppController root should return \"Hello World!\"",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/src/orders/loyalty-points.spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 0 VND as 0 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 1 VND as 0 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 9999 VND as 0 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 10000 VND as 1 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 19999 VND as 1 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 20000 VND as 2 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 25000 VND as 2 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) awards 45000 VND as 4 whole points",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) rejects invalid payable total -1",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) rejects invalid payable total 1.5",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) rejects invalid payable total NaN",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) rejects invalid payable total Infinity",
+              "status": "passed"
+            },
+            {
+              "name": "Loyalty points (SRS BR-6.7) rejects invalid payable total 9007199254740992",
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HTTP E2E",
+      "passed": 165,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0,
+      "suites": [
+        {
+          "file": "apps/api/test/ingredient-inventory.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL returns the bottleneck quantity publicly on list and detail, independent of Product.stock",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL retains TV4 legacy product-stock behavior without a recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL deducts ingredients, snapshots consumption and leaves Product.stock unchanged",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL aggregates duplicate lines and shared ingredients across different products",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rolls back earlier ingredient deductions when a later ingredient is insufficient",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rolls back ingredients if promotion validation fails after deduction",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL prevents overselling when different products compete for the same last ingredients",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL uses TV4 whole ingredient units when dividing and deducting quantities",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL list requires JWT (401), denies CUSTOMER (403), and accepts STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL restock requires JWT (401), denies CUSTOMER (403), and accepts STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL readRecipe requires JWT (401), denies CUSTOMER (403), and accepts STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL updateRecipe requires JWT (401), denies CUSTOMER (403), and accepts STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rechecks the database role even when an old staff token is still valid",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL restocks atomically and reflects increased availability immediately",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects invalid restock quantity 0",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects invalid restock quantity -1",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects invalid restock quantity 0.0001",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects invalid restock quantity \"10\"",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects invalid restock quantity null",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects malformed recipes {\"ingredients\": [Array]} without deleting the current recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects unknown ingredient IDs and preserves the previous recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL replaces recipes and restores the original consumption exactly once on cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL returns 404 for missing ingredients and products",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 create endpoint requires JWT and STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 putRecipe endpoint requires JWT and STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 patchRecipe endpoint requires JWT and STAFF",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL TV4 recipe rejects invalid body {\"items\": [Array]} without losing the original recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL does not lose simultaneous refunds for different orders sharing an ingredient",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL restores new ingredient orders from snapshots even if their recipes were removed",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL restores legacy product-stock orders to product stock after staff adds a recipe",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL keeps the old TV4 refund contract for orders created before the snapshot migration",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL prevents Int32 overflow when two restocks compete for the last capacity",
+              "status": "passed"
+            },
+            {
+              "name": "Ingredient inventory HTTP + PostgreSQL rejects duplicate ingredient names and ambiguous restock aliases",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/order-status-history.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation returns only the owner history, newest first, ignoring client userId overrides",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation returns an empty history for an account with no orders",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation returns an owner detail including items and the earned loyalty ledger",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation hides another owner detail from CUSTOMER and STAFF with identical 404 responses",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation requires JWT on GET /orders",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation requires JWT on GET /orders/1",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation requires JWT on GET /orders/staff",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation keeps /orders/me compatible and does not treat /orders/staff as an ID",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation lists only PENDING/PAID/PREPARING/READY orders for staff",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PENDING -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAID -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PREPARING -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF READY -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF COMPLETED -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF PAYMENT_FAILED -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> PENDING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> PAID follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> PREPARING follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> READY follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> COMPLETED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> PAYMENT_FAILED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation PATCH STAFF CANCELLED -> CANCELLED follows the state machine and role contract",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects missing JWT, CUSTOMER and a downgraded old STAFF token without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation validates status bodies and path IDs, returning 400/404 before writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation lets only one of two simultaneous staff status changes succeed",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects invalid order id 0 on detail, status and cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects invalid order id -1 on detail, status and cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects invalid order id 2147483648 on detail, status and cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects invalid order id 99999999999999999999 on detail, status and cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation rejects invalid order id invalid on detail, status and cancellation",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation cancels PENDING and restores TV4 ingredient inventory exactly once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation cancels PAYMENT_FAILED and restores TV4 ingredient inventory exactly once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation forbids cancellation of PAID without changing status or stock",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation forbids cancellation of PREPARING without changing status or stock",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation forbids cancellation of READY without changing status or stock",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation forbids cancellation of COMPLETED without changing status or stock",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: order status, history, ownership and cancellation forbids cancellation of CANCELLED without changing status or stock",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/task10.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Task 10 HTTP integration C6: rejects POST /orders without JWT",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration TV5: GET /orders/me returns only the authenticated user orders",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration C5: concurrent HTTP orders cannot oversell stock",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration C9: repeated HTTP payment with one key replays one payment",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration C8a: a new payment key cannot pay an already PAID order",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration cancel: owner cancels an order and stock is released",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration cancel: requires JWT",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration cancel: another user receives 404 and cannot change the order",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration cancel: PREPARING orders return 409 and keep stock reserved",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration cancel: concurrent cancellation releases stock only once",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration C13: advances PAID orders through the barista lifecycle",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration C13: rejects an invalid status transition with 409",
+              "status": "passed"
+            },
+            {
+              "name": "Task 10 HTTP integration TV5: applies a promotion through POST /orders",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/staff-cancellation.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit staff cancels PENDING, restores size L consumption once and leaves payments untouched",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit staff cancels PREPARING, restores size L consumption once and leaves payments untouched",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit requires JWT and a current STAFF role before cancelling another owner order",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rejects STAFF cancellation from PAID without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rejects STAFF cancellation from READY without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rejects STAFF cancellation from COMPLETED without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rejects STAFF cancellation from CANCELLED without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rejects STAFF cancellation from PAYMENT_FAILED without writes",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit validates staff cancellation path 0",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit validates staff cancellation path -1",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit validates staff cancellation path 2147483648",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit validates staff cancellation path invalid",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit returns 404 for missing orders",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit concurrent PENDING staff cancellations restore once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit concurrent PREPARING staff cancellations restore once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit customer and staff cancellation racing restore once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit cancellation racing with READY has only one winner and consistent stock",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #28: staff cancellation, stock restoration and payment audit rolls back the status if ingredient restoration would overflow",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/order-loyalty.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL credits only at READY -> COMPLETED, using the discounted total and the customer owner",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL completes a 0 VND order without a zero-point transaction",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL completes a 9999 VND order without a zero-point transaction",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL credits exactly one point at the 10,000 VND boundary",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rejects PENDING -> COMPLETED and records no points",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rejects PAYMENT_FAILED -> COMPLETED and records no points",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rejects PAID -> COMPLETED and records no points",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rejects PREPARING -> COMPLETED and records no points",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rejects CANCELLED -> COMPLETED and records no points",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL does not credit twice on repeated completion requests",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL allows one of two concurrent completions and credits once",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL atomically accumulates points from two different orders completed concurrently",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL requires JWT and STAFF before completing an order",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL rolls back the status change when the unique ledger constraint prevents a second credit",
+              "status": "passed"
+            },
+            {
+              "name": "Issue #21/#28: loyalty HTTP + PostgreSQL does not award points on cancellation",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/inventory-migration.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Size migration with existing recipe data copies each original recipe to S/M/L exactly once and preserves amounts",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/api/test/app.e2e-spec.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "AppController (e2e) / (GET)",
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Frontend Vitest",
+      "passed": 73,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0,
+      "suites": [
+        {
+          "file": "apps/web/src/app/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Task 4.3 - MenuPage Component Test hiển thị trạng thái loading, sau đó render danh sách món và trạng thái hết hàng",
+              "status": "passed"
+            },
+            {
+              "name": "Task 4.3 - MenuPage Component Test gọi lại API lọc theo danh mục khi người dùng bấm chọn tab danh mục",
+              "status": "passed"
+            },
+            {
+              "name": "Task 4.3 - MenuPage Component Test hiển thị trạng thái empty khi không có món nào",
+              "status": "passed"
+            },
+            {
+              "name": "Task 4.3 - MenuPage Component Test hiển thị trạng thái error khi gọi API thất bại",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/lib/cart.test.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "addItem thêm dòng mới kèm key",
+              "status": "passed"
+            },
+            {
+              "name": "addItem gộp cùng món, size, topping dù khác thứ tự topping",
+              "status": "passed"
+            },
+            {
+              "name": "addItem khác size thì thành dòng riêng",
+              "status": "passed"
+            },
+            {
+              "name": "addItem ghi chú khác nhau là hai dòng riêng",
+              "status": "passed"
+            },
+            {
+              "name": "addItem từ chối khi gộp vượt giới hạn số lượng mỗi dòng",
+              "status": "passed"
+            },
+            {
+              "name": "addItem từ chối dòng thứ 21",
+              "status": "passed"
+            },
+            {
+              "name": "addItem từ chối số lượng không hợp lệ",
+              "status": "passed"
+            },
+            {
+              "name": "setItemQty và removeItem đổi số lượng",
+              "status": "passed"
+            },
+            {
+              "name": "setItemQty và removeItem số lượng 0 hoặc âm thì xóa dòng",
+              "status": "passed"
+            },
+            {
+              "name": "setItemQty và removeItem ép về giới hạn tối đa",
+              "status": "passed"
+            },
+            {
+              "name": "setItemQty và removeItem bỏ qua giá trị không phải số",
+              "status": "passed"
+            },
+            {
+              "name": "setItemQty và removeItem removeItem xóa đúng dòng",
+              "status": "passed"
+            },
+            {
+              "name": "tính tiền ước tính đơn giá = giá gốc + size + topping",
+              "status": "passed"
+            },
+            {
+              "name": "tính tiền ước tính tạm tính và tổng số ly",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizeItems không phải mảng thì trả về rỗng",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizeItems bỏ dòng hỏng, giữ dòng đúng",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizeItems chuyển topping ID số đã lưu sang ID chuỗi",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizeItems gộp dòng trùng và ép số lượng về giới hạn",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizePromotionCode viết hoa và bỏ khoảng trắng",
+              "status": "passed"
+            },
+            {
+              "name": "sanitizePromotionCode rỗng hoặc sai kiểu thì null",
+              "status": "passed"
+            },
+            {
+              "name": "store useCart add trả về lỗi khi vượt giới hạn và không đổi giỏ",
+              "status": "passed"
+            },
+            {
+              "name": "store useCart setPromotionCode chuẩn hóa mã và xóa thông báo cũ",
+              "status": "passed"
+            },
+            {
+              "name": "store useCart rejectPromotion gỡ mã và giữ lý do",
+              "status": "passed"
+            },
+            {
+              "name": "store useCart clear xóa cả giỏ lẫn mã",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/lib/inventory-api.test.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "inventory API loads ingredients and products from their collection endpoints",
+              "status": "passed"
+            },
+            {
+              "name": "inventory API restocks an ingredient through PATCH with the amount field",
+              "status": "passed"
+            },
+            {
+              "name": "inventory API updates a product recipe through PUT with the items payload",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/lib/pricing.test.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "calculateUnitPrice trả giá gốc khi không có phụ thu size và topping",
+              "status": "passed"
+            },
+            {
+              "name": "calculateUnitPrice cộng phụ thu của size",
+              "status": "passed"
+            },
+            {
+              "name": "calculateUnitPrice cộng giá của một topping",
+              "status": "passed"
+            },
+            {
+              "name": "calculateUnitPrice cộng giá size và nhiều topping",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/lib/quote-api.test.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "buildQuoteRequest đổi size, giữ topping id do backend cấp, đổi qty thành quantity",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuoteRequest không gửi tên hay giá cơ bản",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuoteRequest không gửi giá client có topping để tránh dùng giá catalog cũ",
+              "status": "passed"
+            },
+            {
+              "name": "buildQuoteRequest chỉ thêm promotionCode khi có mã",
+              "status": "passed"
+            },
+            {
+              "name": "fetchQuote gửi POST JSON tới /promotions/validate và trả về kết quả",
+              "status": "passed"
+            },
+            {
+              "name": "fetchQuote báo lỗi kèm mã trạng thái khi server trả lỗi",
+              "status": "passed"
+            },
+            {
+              "name": "fetchQuote báo lỗi dễ hiểu khi mất kết nối",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/lib/uuid.test.ts",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "createUuidV4 uses crypto.randomUUID when available",
+              "status": "passed"
+            },
+            {
+              "name": "createUuidV4 uses getRandomValues and sets UUID v4 bits when randomUUID is unavailable",
+              "status": "passed"
+            },
+            {
+              "name": "createUuidV4 falls back to Math.random when Web Crypto is unavailable",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/app/cart/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "trang giỏ hàng giỏ rỗng thì báo trống",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng hiển thị giá do server tính và cho thanh toán",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng món hết hàng thì báo lỗi và chặn thanh toán",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng đang tải giá thì chặn thanh toán",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng lỗi mạng thì hiện lỗi và nút thử lại",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng hiện số tiền giảm khi mã hợp lệ",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng mã bị từ chối thì tự gỡ và hiện lý do",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng nhập mã rồi bấm Áp dụng thì lưu mã đã chuẩn hóa",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng Xóa tất cả cần xác nhận",
+              "status": "passed"
+            },
+            {
+              "name": "trang giỏ hàng nút tăng bị khóa khi đạt giới hạn số lượng",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/app/orders/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "Order history error recovery (Issue #28) shows a load error and lets the customer retry successfully",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) shows the empty state after a successful empty history response",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) redirects a guest without requesting another account's history",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) shows cancellation only for customer-cancellable order statuses",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) confirms cancellation and updates the order status",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) does not cancel when confirmation is declined",
+              "status": "passed"
+            },
+            {
+              "name": "Order history error recovery (Issue #28) reports cancellation failures and keeps the order cancellable",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/app/staff/inventory/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "trang kho nguyên liệu nhập kho bằng lượng đã nhập và cập nhật tồn kho hiển thị",
+              "status": "passed"
+            },
+            {
+              "name": "trang kho nguyên liệu cho phép điều chỉnh âm tồn kho và cảnh báo đỏ khi còn ít",
+              "status": "passed"
+            },
+            {
+              "name": "trang kho nguyên liệu lưu định lượng công thức dưới dạng số nguyên",
+              "status": "passed"
+            },
+            {
+              "name": "trang kho nguyên liệu cập nhật định lượng cho mỗi phần topping",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/app/products/[id]/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "trang chi tiết sản phẩm hiển thị và giới hạn số lượng theo số ly có thể pha",
+              "status": "passed"
+            },
+            {
+              "name": "trang chi tiết sản phẩm chặn mua món không thể pha",
+              "status": "passed"
+            },
+            {
+              "name": "trang chi tiết sản phẩm uses backend topping prices and disables toppings with no portions left",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "apps/web/src/app/staff/orders/page.test.tsx",
+          "status": "passed",
+          "cases": [
+            {
+              "name": "STAFF cancellation (Issue #28) shows red cancel only for pending/preparing, alongside ready action",
+              "status": "passed"
+            },
+            {
+              "name": "STAFF cancellation (Issue #28) keeps an order when confirmation is declined",
+              "status": "passed"
+            },
+            {
+              "name": "STAFF cancellation (Issue #28) cancels with the staff API and refreshes the queue",
+              "status": "passed"
+            },
+            {
+              "name": "STAFF cancellation (Issue #28) shows cancellation conflicts and permits retry",
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "prisma-migrate",
+      "startedAt": "2026-11-25T05:11:20.629Z",
+      "finishedAt": "2026-11-25T05:11:23.559Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\prisma\\build\\index.js",
+        "migrate",
+        "deploy",
+        "--schema",
+        "prisma/schema.prisma"
+      ]
+    },
+    {
+      "name": "backend-unit",
+      "startedAt": "2026-11-25T05:11:35.791Z",
+      "finishedAt": "2026-11-25T05:12:16.800Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--experimental-vm-modules",
+        "<repo>\\apps\\api\\node_modules\\jest\\bin\\jest.js",
+        "--runInBand",
+        "--json",
+        "--outputFile=../../../TV6_Postman_20261125/backend-unit.json"
+      ]
+    },
+    {
+      "name": "backend-http",
+      "startedAt": "2026-11-25T05:14:11.898Z",
+      "finishedAt": "2026-11-25T05:14:44.643Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--experimental-vm-modules",
+        "<repo>\\apps\\api\\node_modules\\jest\\bin\\jest.js",
+        "--config",
+        "./test/jest-e2e.json",
+        "--runInBand",
+        "--json",
+        "--outputFile=../../../TV6_Postman_20261125/backend-http.json"
+      ]
+    },
+    {
+      "name": "frontend-vitest",
+      "startedAt": "2026-11-25T05:12:32.212Z",
+      "finishedAt": "2026-11-25T05:12:53.498Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\vitest\\vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--minWorkers=1",
+        "--reporter=json",
+        "--outputFile=../../../TV6_Postman_20261125/frontend-vitest.json"
+      ]
+    },
+    {
+      "name": "backend-build",
+      "startedAt": "2026-11-25T05:11:39.397Z",
+      "finishedAt": "2026-11-25T05:11:56.964Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\@nestjs\\cli\\bin\\nest.js",
+        "build"
+      ]
+    },
+    {
+      "name": "frontend-build",
+      "startedAt": "2026-11-25T05:13:59.577Z",
+      "finishedAt": "2026-11-25T05:14:36.090Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\next\\dist\\bin\\next",
+        "build",
+        "--webpack"
+      ]
+    },
+    {
+      "name": "backend-lint",
+      "startedAt": "2026-11-25T05:14:24.718Z",
+      "finishedAt": "2026-11-25T05:14:27.954Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\api\\node_modules\\oxlint\\bin\\oxlint",
+        "--type-aware",
+        "src/",
+        "test/"
+      ]
+    },
+    {
+      "name": "frontend-lint",
+      "startedAt": "2026-11-25T05:14:32.453Z",
+      "finishedAt": "2026-11-25T05:14:46.373Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\eslint\\bin\\eslint.js"
+      ]
+    },
+    {
+      "name": "browser-e2e",
+      "startedAt": "2026-11-25T05:23:11.130Z",
+      "finishedAt": "2026-11-25T05:27:59.000Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\apps\\web\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config=../../../TV6_Postman_20261125/playwright.config.ts"
+      ]
+    },
+    {
+      "name": "postman",
+      "startedAt": "2026-11-25T05:17:19.262Z",
+      "finishedAt": "2026-11-25T05:17:36.501Z",
+      "exitCode": 0,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "<repo>\\docs\\postman\\run-tv6.mjs"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,413 @@
+{
+  "sourceCommit": "7daadb255474700f9bc81be420fc4a4da4316ac6",
+  "stats": {
+    "startTime": "2026-11-25T05:23:11.794Z",
+    "duration": 286865.36299999995,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "name": "staff red cancel button for PENDING restores ingredients without a refund",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 13070,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/01-01-product-options-c5808ce54fc5b6b895525d0d47dcec2bb19aa530.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/01-02-cart-393c6adc4c0bf3022ca042c01331ca5f841ebb72.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/01-03-checkout-bfdd0ecb69c06d372a8ca3e4a3ac70ec76856406.png"
+        },
+        {
+          "label": "staff-pending-cancel-button",
+          "path": "screenshots/browser/01-staff-pending-cancel-button-63c68c4f2abbbffd016d519859398b4099fc249b.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/01-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/01-final-state-15d42f03357a067c56c4ed6951abf52f84379496.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/01-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "staff red cancel button for PENDING restores ingredients without a refund",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 12825,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/02-01-product-options-e9e04b9a08f6d10b188c5a9ceaa15f1b048e8f54.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/02-02-cart-82d324b30a3cec8ac44989ef5b95b469a9b11904.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/02-03-checkout-fe538893354669955a98d79ff235d6c272ec1902.png"
+        },
+        {
+          "label": "staff-pending-cancel-button",
+          "path": "screenshots/browser/02-staff-pending-cancel-button-4da53457e89b50b4332b8cb8d490d43f2cb58162.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/02-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/02-final-state-8e2f67e6b75c5dd9876aa68260006e3af23622c6.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/02-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "staff red cancel button for PREPARING restores ingredients without a refund",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 12337,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/03-01-product-options-9ac71473856425d0588d495431bccb7ad926c527.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/03-02-cart-4634ffcefc658d2c16bea3d8db84e124d123a340.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/03-03-checkout-bba2f8a3d983b6dd83a0059a415d9a353bbc50d9.png"
+        },
+        {
+          "label": "staff-preparing-cancel-button",
+          "path": "screenshots/browser/03-staff-preparing-cancel-button-2a4f74042ac14e83f8eda17e72921572cfd756fb.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/03-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/03-final-state-a233b5661cd455a320abedc14f459a536a805fd2.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/03-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "staff red cancel button for PREPARING restores ingredients without a refund",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 12331,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/04-01-product-options-93ac0ff8be390bfeb19c1e607e37a6a49f4ca183.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/04-02-cart-b0afdbb4abfbea5794296bb79791927318496e39.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/04-03-checkout-7a76fec4ea74e5fc46be2662a38c04eec36b51ab.png"
+        },
+        {
+          "label": "staff-preparing-cancel-button",
+          "path": "screenshots/browser/04-staff-preparing-cancel-button-cf36ee3012a648ff3389d2f4a5efc8764646169e.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/04-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/04-final-state-70c97c908f85104f5e8adf2db5889b1213cdb678.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/04-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "menu -> options -> cart -> payment -> live tracking -> completed loyalty",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 26071,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/05-01-product-options-ddad74d29b1479b25468caca76281a2363129667.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/05-02-cart-1fe46f49656cb7097ec8d94eab5f737826eb2400.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/05-03-checkout-57c2327c47ad343ce75e3f745e1f3debc8b378fb.png"
+        },
+        {
+          "label": "completed-10-loyalty-points",
+          "path": "screenshots/browser/05-completed-10-loyalty-points-a7195034956e228a08b5e737c27dc22ae5716c5b.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/05-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/05-final-state-b263ec543cc939808d65544d70e58887adcc3068.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/05-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "menu -> options -> cart -> payment -> live tracking -> completed loyalty",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 26333,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/06-01-product-options-7408577356793d3a979bafa588debc414f54c0f6.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/06-02-cart-af5b23ac1a6b15b8fdfae96165fb27655da32bb9.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/06-03-checkout-46bee96099d51cb875743fd70ac3a6a8420b0b3e.png"
+        },
+        {
+          "label": "completed-10-loyalty-points",
+          "path": "screenshots/browser/06-completed-10-loyalty-points-700ea5942da2a344adbb13d1f6bfdca93772b4ca.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/06-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/06-final-state-b193cdccc56039859e4c2bd8d40f60ce126c9b1a.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/06-test-finished-2.png"
+        }
+      ]
+    },
+    {
+      "name": "failed payment can be retried without duplicating orders, payments or deductions",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 4887,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/07-01-product-options-907cd6deef3b8db8144320af54488af8b5838a33.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/07-02-cart-5f8ac0b5a8efb6026383345ec69d50ee2f1748c4.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/07-03-checkout-4f8c66f60cd27026cbb822f7b2ade0e5814e886a.png"
+        },
+        {
+          "label": "payment-failed-before-retry",
+          "path": "screenshots/browser/07-payment-failed-before-retry-7621a1143e0c0924fa802ec7d9a44b2fe9dac3d9.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/07-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/07-final-state-6404c54b6e5489d0c0c09aeba360f5b3a391df87.png"
+        }
+      ]
+    },
+    {
+      "name": "failed payment can be retried without duplicating orders, payments or deductions",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 5083,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/08-01-product-options-7193f009f3de923e8933b019d46c4c76d8de1483.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/08-02-cart-274365dd76b1ac709bf276e0e45b1aad6a4c392c.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/08-03-checkout-565f392e27f29a9b81519d1b96d19c73b43b4f8f.png"
+        },
+        {
+          "label": "payment-failed-before-retry",
+          "path": "screenshots/browser/08-payment-failed-before-retry-5abf40a2e2fe023a119afabef50fa2f66439ae50.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/08-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/08-final-state-6b746dcc57626aea0e8abcd1c8796c1013d6dee1.png"
+        }
+      ]
+    },
+    {
+      "name": "an unpaid QR order can be cancelled from tracking and restores ingredients",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 4854,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/09-01-product-options-037a48fece1f0cc8a55596d064652f1feb5f7c06.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/09-02-cart-6db83295354386eec486a58fee478d84019d0455.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/09-03-checkout-60fb0b516e248e72f49aef3e31c710d0c5057e5a.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/09-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/09-final-state-1edc681f09024dacf02552d77b957bc8ab41c916.png"
+        }
+      ]
+    },
+    {
+      "name": "an unpaid QR order can be cancelled from tracking and restores ingredients",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 6156,
+      "screenshots": [
+        {
+          "label": "01-product-options",
+          "path": "screenshots/browser/10-01-product-options-6f7bd8e708efbb88dee8a9a71c555296fc2a46ab.png"
+        },
+        {
+          "label": "02-cart",
+          "path": "screenshots/browser/10-02-cart-93c9b0c3994f5c79b6d7316e0d595df657766ada.png"
+        },
+        {
+          "label": "03-checkout",
+          "path": "screenshots/browser/10-03-checkout-485cb939659d27fa060e4ff830eb2a9f5766e920.png"
+        },
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/10-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/10-final-state-28d9e24e65b04090f4997a9151627afcf2bad54e.png"
+        }
+      ]
+    },
+    {
+      "name": "a customer cannot open another customer order or the staff interface",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 3623,
+      "screenshots": [
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/11-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/11-final-state-30f1dcbb731b724d02954359ce6707cd1494dd22.png"
+        }
+      ]
+    },
+    {
+      "name": "a customer cannot open another customer order or the staff interface",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 3493,
+      "screenshots": [
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/12-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/12-final-state-283acfeac69ef365e7ef51ea345ab7fa9e90571d.png"
+        }
+      ]
+    },
+    {
+      "name": "guests and expired sessions are redirected to login before accessing orders",
+      "project": "chromium-desktop",
+      "status": "passed",
+      "durationMs": 3394,
+      "screenshots": [
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/13-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/13-final-state-e7192d3eef6d23295366634aef6c82d14a24e06e.png"
+        }
+      ]
+    },
+    {
+      "name": "guests and expired sessions are redirected to login before accessing orders",
+      "project": "chromium-mobile",
+      "status": "passed",
+      "durationMs": 3407,
+      "screenshots": [
+        {
+          "label": "screenshot",
+          "path": "screenshots/browser/14-test-finished-1.png"
+        },
+        {
+          "label": "final-state",
+          "path": "screenshots/browser/14-final-state-4a8153f3d6646b62b9fde81883b9ed7bb2232fdd.png"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3874 @@
+{
+  "sourceCommit": "7daadb255474700f9bc81be420fc4a4da4316ac6",
+  "startedAt": "2026-11-25T05:17:19.419Z",
+  "finishedAt": "2026-11-25T05:17:36.408Z",
+  "stats": {
+    "iterations": {
+      "total": 1,
+      "pending": 0,
+      "failed": 0
+    },
+    "items": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    },
+    "scripts": {
+      "total": 156,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequests": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    },
+    "requests": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    },
+    "tests": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    },
+    "assertions": {
+      "total": 109,
+      "pending": 0,
+      "failed": 0
+    },
+    "testScripts": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequestScripts": {
+      "total": 78,
+      "pending": 0,
+      "failed": 0
+    }
+  },
+  "failures": [],
+  "requests": [
+    {
+      "number": 1,
+      "name": "01 Health",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/health",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 67,
+        "body": {
+          "status": "ok",
+          "database": "up"
+        }
+      },
+      "assertions": [
+        {
+          "name": "01 Health / HTTP 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/01.png"
+    },
+    {
+      "number": 2,
+      "name": "Login customer",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/auth/login",
+      "requestBody": {
+        "email": "tv6-customer-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+        "password": "[REDACTED]"
+      },
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 553,
+        "body": {
+          "access_token": "[REDACTED]",
+          "token_type": "Bearer",
+          "user": {
+            "id": 64,
+            "email": "tv6-customer-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+            "role": "CUSTOMER"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "name": "Login customer / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "JWT returned",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/02.png"
+    },
+    {
+      "number": 3,
+      "name": "Login staff",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/auth/login",
+      "requestBody": {
+        "email": "tv6-staff-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+        "password": "[REDACTED]"
+      },
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 472,
+        "body": {
+          "access_token": "[REDACTED]",
+          "token_type": "Bearer",
+          "user": {
+            "id": 65,
+            "email": "tv6-staff-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+            "role": "STAFF"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "name": "Login staff / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "JWT returned",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/03.png"
+    },
+    {
+      "number": 4,
+      "name": "Login other",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/auth/login",
+      "requestBody": {
+        "email": "tv6-other-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+        "password": "[REDACTED]"
+      },
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 411,
+        "body": {
+          "access_token": "[REDACTED]",
+          "token_type": "Bearer",
+          "user": {
+            "id": 67,
+            "email": "tv6-other-95466950-8e6b-419a-813e-c0f30c1da0eb@example.test",
+            "role": "CUSTOMER"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "name": "Login other / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "JWT returned",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/04.png"
+    },
+    {
+      "number": 5,
+      "name": "Public dynamic stock by size",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/products/113",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 19,
+        "body": {
+          "id": 113,
+          "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+          "description": null,
+          "price": 35000,
+          "imageUrl": null,
+          "availableQuantity": 10,
+          "availableQuantityBySize": {
+            "S": 20,
+            "M": 13,
+            "L": 10
+          },
+          "stock": 10,
+          "sizes": [
+            {
+              "id": 1,
+              "code": "S",
+              "additionalPrice": 0
+            },
+            {
+              "id": 2,
+              "code": "M",
+              "additionalPrice": 5000
+            },
+            {
+              "id": 3,
+              "code": "L",
+              "additionalPrice": 10000
+            }
+          ],
+          "toppings": [
+            {
+              "id": "cream",
+              "name": "Kem / Kem cheese",
+              "additionalPrice": 5000,
+              "isAvailable": true
+            },
+            {
+              "id": "pearl",
+              "name": "Trân châu",
+              "additionalPrice": 5000,
+              "isAvailable": true
+            }
+          ]
+        }
+      },
+      "assertions": [
+        {
+          "name": "Public dynamic stock by size / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "S/M/L bottleneck",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/05.png"
+    },
+    {
+      "number": 6,
+      "name": "Guest history blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": null,
+      "response": {
+        "code": 401,
+        "status": "Unauthorized",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 401,
+          "error": "Unauthorized",
+          "message": "Thiếu access token",
+          "requestId": "d0629434-be94-4290-b526-bdc83ee6921f"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Guest history blocked / HTTP 401",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/06.png"
+    },
+    {
+      "number": 7,
+      "name": "Invalid JWT blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": null,
+      "response": {
+        "code": 401,
+        "status": "Unauthorized",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 401,
+          "error": "Unauthorized",
+          "message": "Token không hợp lệ hoặc đã hết hạn",
+          "requestId": "64702a67-842c-4c5e-bda4-5ba96edfdd50"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Invalid JWT blocked / HTTP 401",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/07.png"
+    },
+    {
+      "number": 8,
+      "name": "Customer inventory blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 403,
+        "status": "Forbidden",
+        "timeMs": 13,
+        "body": {
+          "statusCode": 403,
+          "error": "Forbidden",
+          "message": "Chỉ nhân viên mới được phép truy cập",
+          "requestId": "f4cc704b-9ba4-4f1d-9e4a-c521cfb85d60"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer inventory blocked / HTTP 403",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/08.png"
+    },
+    {
+      "number": 9,
+      "name": "Customer staff queue blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/staff",
+      "requestBody": null,
+      "response": {
+        "code": 403,
+        "status": "Forbidden",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 403,
+          "error": "Forbidden",
+          "message": "Bạn không có quyền truy cập tài nguyên này",
+          "requestId": "593e4c32-8fdc-4db4-8a7a-05af4341edac"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer staff queue blocked / HTTP 403",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/09.png"
+    },
+    {
+      "number": 10,
+      "name": "Invalid order ID blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/2147483648",
+      "requestBody": null,
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 11,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Order id must be a positive 32-bit integer",
+          "requestId": "4d6a48b5-9d69-4434-bcc1-f498238332f6"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Invalid order ID blocked / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/10.png"
+    },
+    {
+      "number": 11,
+      "name": "Empty cart blocked",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": []
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 10,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "items must contain at least 1 elements"
+          ],
+          "requestId": "a8fb7340-00cd-4e18-92fb-645b184d2b03"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Empty cart blocked / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/11.png"
+    },
+    {
+      "number": 12,
+      "name": "Insufficient shared stock rolls back",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "size": "L",
+            "qty": 10
+          },
+          {
+            "productId": 113,
+            "size": "L",
+            "qty": 1
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 20,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Không đủ nguyên liệu \"TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb\" (cần 220ml, còn 200ml)",
+          "requestId": "f40ed023-7560-4bc0-bf2e-6f167567ae95"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Insufficient shared stock rolls back / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/12.png"
+    },
+    {
+      "number": 13,
+      "name": "Stock unchanged after rejected order",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 15,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 200,
+            "version": 0,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Stock unchanged after rejected order / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/13.png"
+    },
+    {
+      "number": 14,
+      "name": "Create 2 size L drinks",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 2,
+            "size": "L"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 32,
+        "body": {
+          "id": 168,
+          "status": "PENDING",
+          "total": 90000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "Create 2 size L drinks / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial status PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/14.png"
+    },
+    {
+      "number": 15,
+      "name": "Stock deducted exactly 40",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 12,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Stock deducted exactly 40 / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 160",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/15.png"
+    },
+    {
+      "number": 16,
+      "name": "Foreign customer detail hidden",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/168",
+      "requestBody": null,
+      "response": {
+        "code": 404,
+        "status": "Not Found",
+        "timeMs": 13,
+        "body": {
+          "statusCode": 404,
+          "error": "Not Found",
+          "message": "Order 168 was not found",
+          "requestId": "4e3d2579-01ad-4ea3-acc3-164815e52419"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Foreign customer detail hidden / HTTP 404",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/16.png"
+    },
+    {
+      "number": 17,
+      "name": "Customer status update forbidden",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "COMPLETED"
+      },
+      "response": {
+        "code": 403,
+        "status": "Forbidden",
+        "timeMs": 10,
+        "body": {
+          "statusCode": 403,
+          "error": "Forbidden",
+          "message": "Bạn không có quyền truy cập tài nguyên này",
+          "requestId": "67b676ad-567c-4bdf-94b9-5937f4315755"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer status update forbidden / HTTP 403",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/17.png"
+    },
+    {
+      "number": 18,
+      "name": "PENDING cannot jump to READY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "READY"
+      },
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 23,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from PENDING to READY",
+          "requestId": "a66451f3-6052-4877-8343-915c22d82a54"
+        }
+      },
+      "assertions": [
+        {
+          "name": "PENDING cannot jump to READY / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/18.png"
+    },
+    {
+      "number": 19,
+      "name": "Payment succeeds",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/payments",
+      "requestBody": {
+        "orderId": 168,
+        "method": "CARD",
+        "cardNumber": "[REDACTED]"
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 25,
+        "body": {
+          "paymentId": 22,
+          "orderId": 168,
+          "amount": 90000,
+          "method": "CARD",
+          "payment_status": "PAID",
+          "order_status": "PAID",
+          "message": "Thanh toán thành công (mock)",
+          "replayed": false
+        }
+      },
+      "assertions": [
+        {
+          "name": "Payment succeeds / HTTP 201",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/19.png"
+    },
+    {
+      "number": 20,
+      "name": "Paid detail and exact total",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/168",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 13,
+        "body": {
+          "id": 168,
+          "userId": 64,
+          "status": "PAID",
+          "total": 90000,
+          "discount": 0,
+          "promoCode": null,
+          "createdAt": "2026-11-25T05:17:29.612Z",
+          "usesIngredientInventory": true,
+          "items": [
+            {
+              "id": 155,
+              "orderId": 168,
+              "productId": 113,
+              "size": "L",
+              "qty": 2,
+              "toppings": [],
+              "toppingIds": [],
+              "toppingAmounts": [],
+              "lineTotal": 90000,
+              "product": {
+                "id": 113,
+                "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "price": 35000,
+                "category": "COFFEE",
+                "imageUrl": null,
+                "stock": 0,
+                "version": 0,
+                "description": null
+              }
+            }
+          ],
+          "loyaltyTransaction": null
+        }
+      },
+      "assertions": [
+        {
+          "name": "Paid detail and exact total / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Paid 90000 VND",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/20.png"
+    },
+    {
+      "number": 21,
+      "name": "PAID cannot skip PREPARING",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "COMPLETED"
+      },
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 12,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from PAID to COMPLETED",
+          "requestId": "0fd142ed-2018-494c-804d-651abd8663fd"
+        }
+      },
+      "assertions": [
+        {
+          "name": "PAID cannot skip PREPARING / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/21.png"
+    },
+    {
+      "number": 22,
+      "name": "STAFF starts preparation",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "PREPARING"
+      },
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 17,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "STAFF starts preparation / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/22.png"
+    },
+    {
+      "number": 23,
+      "name": "Customer cannot cancel PREPARING",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/168",
+      "requestBody": null,
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 14,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from PREPARING to CANCELLED",
+          "requestId": "2c05713b-6900-4c93-9892-4dafff9b276f"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer cannot cancel PREPARING / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/23.png"
+    },
+    {
+      "number": 24,
+      "name": "STAFF marks READY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "READY"
+      },
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 20,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "STAFF marks READY / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/24.png"
+    },
+    {
+      "number": 25,
+      "name": "STAFF completes",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "COMPLETED"
+      },
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 25,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "STAFF completes / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/25.png"
+    },
+    {
+      "number": 26,
+      "name": "Duplicate COMPLETED rejected",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "COMPLETED"
+      },
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 17,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from COMPLETED to COMPLETED",
+          "requestId": "7e27ca22-ae00-4927-9336-b7b973a0b92c"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Duplicate COMPLETED rejected / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/26.png"
+    },
+    {
+      "number": 27,
+      "name": "COMPLETED has exactly 9 loyalty points",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/168",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 15,
+        "body": {
+          "id": 168,
+          "userId": 64,
+          "status": "COMPLETED",
+          "total": 90000,
+          "discount": 0,
+          "promoCode": null,
+          "createdAt": "2026-11-25T05:17:29.612Z",
+          "usesIngredientInventory": true,
+          "items": [
+            {
+              "id": 155,
+              "orderId": 168,
+              "productId": 113,
+              "size": "L",
+              "qty": 2,
+              "toppings": [],
+              "toppingIds": [],
+              "toppingAmounts": [],
+              "lineTotal": 90000,
+              "product": {
+                "id": 113,
+                "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "price": 35000,
+                "category": "COFFEE",
+                "imageUrl": null,
+                "stock": 0,
+                "version": 0,
+                "description": null
+              }
+            }
+          ],
+          "loyaltyTransaction": {
+            "points": 9,
+            "createdAt": "2026-11-25T05:17:30.777Z"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "name": "COMPLETED has exactly 9 loyalty points / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Completion ledger",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/27.png"
+    },
+    {
+      "number": 28,
+      "name": "Owner history contains order",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 13,
+        "body": [
+          {
+            "id": 168,
+            "userId": 64,
+            "status": "COMPLETED",
+            "total": 90000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:29.612Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 155,
+                "orderId": 168,
+                "productId": 113,
+                "size": "L",
+                "qty": 2,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 90000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Owner history contains order / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Owner sees order",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/28.png"
+    },
+    {
+      "number": 29,
+      "name": "Other customer history isolated",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 10,
+        "body": []
+      },
+      "assertions": [
+        {
+          "name": "Other customer history isolated / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Other history empty",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/29.png"
+    },
+    {
+      "number": 30,
+      "name": "New PENDING order for staff cancellation",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "S"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 47,
+        "body": {
+          "id": 169,
+          "status": "PENDING",
+          "total": 35000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "New PENDING order for staff cancellation / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial status PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/30.png"
+    },
+    {
+      "number": 31,
+      "name": "PENDING reservation deducted",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 50,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 150,
+            "version": 2,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "PENDING reservation deducted / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 150",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/31.png"
+    },
+    {
+      "number": 32,
+      "name": "STAFF cancels PENDING",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/staff/169",
+      "requestBody": null,
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 31,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "STAFF cancels PENDING / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/32.png"
+    },
+    {
+      "number": 33,
+      "name": "Staff cancellation refunds exactly once",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 18,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 3,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Staff cancellation refunds exactly once / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 160",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/33.png"
+    },
+    {
+      "number": 34,
+      "name": "Duplicate staff cancellation rejected",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/staff/169",
+      "requestBody": null,
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 16,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from CANCELLED to CANCELLED",
+          "requestId": "8a1e9061-21b9-4350-a6e0-8695bf43f304"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Duplicate staff cancellation rejected / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/34.png"
+    },
+    {
+      "number": 35,
+      "name": "No duplicate refund",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 13,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 3,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "No duplicate refund / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 160",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/35.png"
+    },
+    {
+      "number": 36,
+      "name": "New PENDING order for owner cancellation",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "M"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 36,
+        "body": {
+          "id": 170,
+          "status": "PENDING",
+          "total": 40000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "New PENDING order for owner cancellation / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial status PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/36.png"
+    },
+    {
+      "number": 37,
+      "name": "Owner cancels PENDING",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/170",
+      "requestBody": null,
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 30,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "Owner cancels PENDING / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/37.png"
+    },
+    {
+      "number": 38,
+      "name": "Owner cancellation restores stock",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 16,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 5,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Owner cancellation restores stock / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 160",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/38.png"
+    },
+    {
+      "number": 39,
+      "name": "New order for PREPARING staff cancellation",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "L"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 26,
+        "body": {
+          "id": 171,
+          "status": "PENDING",
+          "total": 45000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "New order for PREPARING staff cancellation / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial status PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/39.png"
+    },
+    {
+      "number": 40,
+      "name": "Pay order before preparing cancellation",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/payments",
+      "requestBody": {
+        "orderId": 171,
+        "method": "CARD",
+        "cardNumber": "[REDACTED]"
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 21,
+        "body": {
+          "paymentId": 23,
+          "orderId": 171,
+          "amount": 45000,
+          "method": "CARD",
+          "payment_status": "PAID",
+          "order_status": "PAID",
+          "message": "Thanh toán thành công (mock)",
+          "replayed": false
+        }
+      },
+      "assertions": [
+        {
+          "name": "Pay order before preparing cancellation / HTTP 201",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/40.png"
+    },
+    {
+      "number": 41,
+      "name": "Move paid order to PREPARING",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/171/status",
+      "requestBody": {
+        "status": "PREPARING"
+      },
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 21,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "Move paid order to PREPARING / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/41.png"
+    },
+    {
+      "number": 42,
+      "name": "STAFF cancels PREPARING",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/staff/171",
+      "requestBody": null,
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 35,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "STAFF cancels PREPARING / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/42.png"
+    },
+    {
+      "number": 43,
+      "name": "PREPARING cancellation restores stock",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 23,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 7,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "PREPARING cancellation restores stock / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 160",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/43.png"
+    },
+    {
+      "number": 44,
+      "name": "Restock +40 atomically",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": 40
+      },
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 18,
+        "body": {
+          "id": 144,
+          "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+          "unit": "ml",
+          "stockQuantity": 200,
+          "version": 8
+        }
+      },
+      "assertions": [
+        {
+          "name": "Restock +40 atomically / HTTP 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/44.png"
+    },
+    {
+      "number": 45,
+      "name": "Restocked quantity 200",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 11,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 200,
+            "version": 8,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Restocked quantity 200 / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/45.png"
+    },
+    {
+      "number": 46,
+      "name": "Reject negative restock",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": -1
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "amount must not be less than 1"
+          ],
+          "requestId": "39120410-7bea-47a5-b200-4e741aaef4f0"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject negative restock / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/46.png"
+    },
+    {
+      "number": 47,
+      "name": "Reject ambiguous restock aliases",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": 1,
+        "quantity": 1
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Provide exactly one of amount, quantity or stockQuantity",
+          "requestId": "5a9c34a7-0d57-41b3-9c7c-3eaa080c5ab2"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject ambiguous restock aliases / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/47.png"
+    },
+    {
+      "number": 48,
+      "name": "Order before recipe change",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "L"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 22,
+        "body": {
+          "id": 172,
+          "status": "PENDING",
+          "total": 45000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "Order before recipe change / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial status PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/48.png"
+    },
+    {
+      "number": 49,
+      "name": "Snapshot reservation 20",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 10,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 180,
+            "version": 9,
+            "recipeItems": [
+              {
+                "id": 423,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 10,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 424,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 15,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 425,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Snapshot reservation 20 / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 180",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/49.png"
+    },
+    {
+      "number": 50,
+      "name": "STAFF changes recipes after order",
+      "method": "PUT",
+      "url": "http://127.0.0.1:3201/ingredients/recipes/113",
+      "requestBody": {
+        "items": [
+          {
+            "size": "S",
+            "amountRequired": 11,
+            "ingredientId": 144
+          },
+          {
+            "size": "M",
+            "amountRequired": 16,
+            "ingredientId": 144
+          },
+          {
+            "size": "L",
+            "amountRequired": 25,
+            "ingredientId": 144
+          }
+        ]
+      },
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 27,
+        "body": {
+          "id": 113,
+          "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+          "price": 35000,
+          "category": "COFFEE",
+          "imageUrl": null,
+          "stock": 0,
+          "version": 0,
+          "description": null,
+          "recipeItems": [
+            {
+              "id": 429,
+              "productId": 113,
+              "ingredientId": 144,
+              "size": "S",
+              "amountRequired": 11,
+              "ingredient": {
+                "id": 144,
+                "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "unit": "ml",
+                "stockQuantity": 180,
+                "version": 9
+              }
+            },
+            {
+              "id": 430,
+              "productId": 113,
+              "ingredientId": 144,
+              "size": "M",
+              "amountRequired": 16,
+              "ingredient": {
+                "id": 144,
+                "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "unit": "ml",
+                "stockQuantity": 180,
+                "version": 9
+              }
+            },
+            {
+              "id": 431,
+              "productId": 113,
+              "ingredientId": 144,
+              "size": "L",
+              "amountRequired": 25,
+              "ingredient": {
+                "id": 144,
+                "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "unit": "ml",
+                "stockQuantity": 180,
+                "version": 9
+              }
+            }
+          ]
+        }
+      },
+      "assertions": [
+        {
+          "name": "STAFF changes recipes after order / HTTP 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/50.png"
+    },
+    {
+      "number": 51,
+      "name": "Owner cancellation uses original snapshot",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/172",
+      "requestBody": null,
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 17,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "Owner cancellation uses original snapshot / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/51.png"
+    },
+    {
+      "number": 52,
+      "name": "Refund original 20 despite new recipe 25",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 12,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 200,
+            "version": 10,
+            "recipeItems": [
+              {
+                "id": 429,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 11,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 430,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 16,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 431,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 25,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Refund original 20 despite new recipe 25 / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Ingredient stock = 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/52.png"
+    },
+    {
+      "number": 53,
+      "name": "STAFF queue excludes terminal orders",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/staff",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 11,
+        "body": [
+          {
+            "id": 167,
+            "userId": 62,
+            "status": "PREPARING",
+            "total": 100000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:26.692Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 154,
+                "orderId": 167,
+                "productId": 114,
+                "size": "L",
+                "qty": 2,
+                "toppings": [
+                  "Kem / Kem cheese"
+                ],
+                "toppingIds": [
+                  "cream"
+                ],
+                "toppingAmounts": [
+                  30
+                ],
+                "lineTotal": 100000,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": "/image/Picture1.png",
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "STAFF queue excludes terminal orders / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "No terminal orders in queue",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/53.png"
+    },
+    {
+      "number": 54,
+      "name": "GET /orders/me compatibility",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/me",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 11,
+        "body": [
+          {
+            "id": 172,
+            "userId": 64,
+            "status": "CANCELLED",
+            "total": 45000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:33.309Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 159,
+                "orderId": 172,
+                "productId": 113,
+                "size": "L",
+                "qty": 1,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 45000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          },
+          {
+            "id": 171,
+            "userId": 64,
+            "status": "CANCELLED",
+            "total": 45000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:32.358Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 158,
+                "orderId": 171,
+                "productId": 113,
+                "size": "L",
+                "qty": 1,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 45000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          },
+          {
+            "id": 170,
+            "userId": 64,
+            "status": "CANCELLED",
+            "total": 40000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:32.031Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 157,
+                "orderId": 170,
+                "productId": 113,
+                "size": "M",
+                "qty": 1,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 40000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          },
+          {
+            "id": 169,
+            "userId": 64,
+            "status": "CANCELLED",
+            "total": 35000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:31.329Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 156,
+                "orderId": 169,
+                "productId": 113,
+                "size": "S",
+                "qty": 1,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 35000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          },
+          {
+            "id": 168,
+            "userId": 64,
+            "status": "COMPLETED",
+            "total": 90000,
+            "discount": 0,
+            "promoCode": null,
+            "createdAt": "2026-11-25T05:17:29.612Z",
+            "usesIngredientInventory": true,
+            "items": [
+              {
+                "id": 155,
+                "orderId": 168,
+                "productId": 113,
+                "size": "L",
+                "qty": 2,
+                "toppings": [],
+                "toppingIds": [],
+                "toppingAmounts": [],
+                "lineTotal": 90000,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                  "price": 35000,
+                  "category": "COFFEE",
+                  "imageUrl": null,
+                  "stock": 0,
+                  "version": 0,
+                  "description": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "GET /orders/me compatibility / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Completed order in /me",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/54.png"
+    },
+    {
+      "number": 55,
+      "name": "Guest inventory blocked",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 401,
+        "status": "Unauthorized",
+        "timeMs": 3,
+        "body": {
+          "statusCode": 401,
+          "error": "Unauthorized",
+          "message": "Thiếu access token",
+          "requestId": "ce64dc3c-eeab-4136-8700-a16ce48f866c"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Guest inventory blocked / HTTP 401",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/55.png"
+    },
+    {
+      "number": 56,
+      "name": "Customer cannot restock",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": 1
+      },
+      "response": {
+        "code": 403,
+        "status": "Forbidden",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 403,
+          "error": "Forbidden",
+          "message": "Chỉ nhân viên mới được phép truy cập",
+          "requestId": "df93361c-7024-4270-9949-11af6e7bcabb"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer cannot restock / HTTP 403",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/56.png"
+    },
+    {
+      "number": 57,
+      "name": "Customer cannot edit recipes",
+      "method": "PUT",
+      "url": "http://127.0.0.1:3201/ingredients/recipes/113",
+      "requestBody": {
+        "items": [
+          {
+            "size": "L",
+            "ingredientId": 144,
+            "amountRequired": 1
+          }
+        ]
+      },
+      "response": {
+        "code": 403,
+        "status": "Forbidden",
+        "timeMs": 9,
+        "body": {
+          "statusCode": 403,
+          "error": "Forbidden",
+          "message": "Chỉ nhân viên mới được phép truy cập",
+          "requestId": "bfcd4f77-5736-45ee-abea-0ce3328d15d5"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Customer cannot edit recipes / HTTP 403",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/57.png"
+    },
+    {
+      "number": 58,
+      "name": "Reject fractional restock",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": 1.5
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 7,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "amount must be an integer number"
+          ],
+          "requestId": "76eff83b-9b18-4f7c-83a8-839e76e97671"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject fractional restock / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/58.png"
+    },
+    {
+      "number": 59,
+      "name": "Reject Int32 overflow restock",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/ingredients/144/restock",
+      "requestBody": {
+        "amount": 2147483647
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 14,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Ingredient quantity exceeds storage capacity",
+          "requestId": "de5ef308-e333-46c6-a335-5706f54c7c83"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject Int32 overflow restock / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/59.png"
+    },
+    {
+      "number": 60,
+      "name": "Overflow did not change stock",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 11,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 200,
+            "version": 10,
+            "recipeItems": [
+              {
+                "id": 429,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 11,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 430,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 16,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 431,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 25,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Overflow did not change stock / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Stock remains 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/60.png"
+    },
+    {
+      "number": 61,
+      "name": "Reject quantity zero",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 0,
+            "size": "S"
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "items.0.qty must not be less than 1"
+          ],
+          "requestId": "b8e7c740-3bd7-4245-ba41-724f1d2ec53d"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject quantity zero / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/61.png"
+    },
+    {
+      "number": 62,
+      "name": "Reject negative quantity",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": -1,
+            "size": "S"
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "items.0.qty must not be less than 1"
+          ],
+          "requestId": "f1c6da3d-c760-4ef2-8da4-9656384ea198"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject negative quantity / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/62.png"
+    },
+    {
+      "number": 63,
+      "name": "Reject fractional quantity",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1.5,
+            "size": "S"
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 5,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "items.0.qty must be an integer number"
+          ],
+          "requestId": "e81d66cd-c8ae-4589-b97b-177087c02e58"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject fractional quantity / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/63.png"
+    },
+    {
+      "number": 64,
+      "name": "Reject invalid size",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "XL"
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "items.0.size must be one of the following values: S, M, L"
+          ],
+          "requestId": "2a3ee9c3-84bf-4119-9107-1ff498cd7eac"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject invalid size / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/64.png"
+    },
+    {
+      "number": 65,
+      "name": "Reject unknown transition status",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "DELIVERED"
+      },
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 5,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "status must be one of the following values: PENDING, PAID, PREPARING, READY, COMPLETED, PAYMENT_FAILED, CANCELLED"
+          ],
+          "requestId": "f0dffb44-d8e2-4ada-870a-d4d2648e211e"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject unknown transition status / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/65.png"
+    },
+    {
+      "number": 66,
+      "name": "Reject missing transition status",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {},
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": [
+            "status must be one of the following values: PENDING, PAID, PREPARING, READY, COMPLETED, PAYMENT_FAILED, CANCELLED"
+          ],
+          "requestId": "abd7326d-632c-4563-8600-68a1f0e530bf"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject missing transition status / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/66.png"
+    },
+    {
+      "number": 67,
+      "name": "Reject zero order ID",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/0",
+      "requestBody": null,
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Order id must be a positive 32-bit integer",
+          "requestId": "e7cdc357-9a38-48f9-b75c-0b403069589b"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject zero order ID / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/67.png"
+    },
+    {
+      "number": 68,
+      "name": "Reject negative order ID",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/-1",
+      "requestBody": null,
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Order id must be a positive 32-bit integer",
+          "requestId": "ff09e544-1ec0-483d-bcb7-e9cc8381c77d"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject negative order ID / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/68.png"
+    },
+    {
+      "number": 69,
+      "name": "Reject nonnumeric order ID",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/abc",
+      "requestBody": null,
+      "response": {
+        "code": 400,
+        "status": "Bad Request",
+        "timeMs": 5,
+        "body": {
+          "statusCode": 400,
+          "error": "Bad Request",
+          "message": "Order id must be a positive 32-bit integer",
+          "requestId": "9c15fce2-9e5b-42c0-bdaf-c2e91f81aa8e"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Reject nonnumeric order ID / HTTP 400",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/69.png"
+    },
+    {
+      "number": 70,
+      "name": "Create order for failed payment",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/orders",
+      "requestBody": {
+        "items": [
+          {
+            "productId": 113,
+            "qty": 1,
+            "size": "L"
+          }
+        ]
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 24,
+        "body": {
+          "id": 173,
+          "status": "PENDING",
+          "total": 45000,
+          "discount": 0
+        }
+      },
+      "assertions": [
+        {
+          "name": "Create order for failed payment / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Initial PENDING",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/70.png"
+    },
+    {
+      "number": 71,
+      "name": "Demo payment fails",
+      "method": "POST",
+      "url": "http://127.0.0.1:3201/payments",
+      "requestBody": {
+        "orderId": 173,
+        "method": "CARD",
+        "cardNumber": "[REDACTED]"
+      },
+      "response": {
+        "code": 201,
+        "status": "Created",
+        "timeMs": 15,
+        "body": {
+          "paymentId": 24,
+          "orderId": 173,
+          "amount": 45000,
+          "method": "CARD",
+          "payment_status": "PAYMENT_FAILED",
+          "order_status": "PAYMENT_FAILED",
+          "message": "Thanh toán thất bại (mock)",
+          "replayed": false
+        }
+      },
+      "assertions": [
+        {
+          "name": "Demo payment fails / HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Payment failed",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/71.png"
+    },
+    {
+      "number": 72,
+      "name": "PAYMENT_FAILED detail",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/173",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 10,
+        "body": {
+          "id": 173,
+          "userId": 64,
+          "status": "PAYMENT_FAILED",
+          "total": 45000,
+          "discount": 0,
+          "promoCode": null,
+          "createdAt": "2026-11-25T05:17:35.497Z",
+          "usesIngredientInventory": true,
+          "items": [
+            {
+              "id": 160,
+              "orderId": 173,
+              "productId": 113,
+              "size": "L",
+              "qty": 1,
+              "toppings": [],
+              "toppingIds": [],
+              "toppingAmounts": [],
+              "lineTotal": 45000,
+              "product": {
+                "id": 113,
+                "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "price": 35000,
+                "category": "COFFEE",
+                "imageUrl": null,
+                "stock": 0,
+                "version": 0,
+                "description": null
+              }
+            }
+          ],
+          "loyaltyTransaction": null
+        }
+      },
+      "assertions": [
+        {
+          "name": "PAYMENT_FAILED detail / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Failed state persisted",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/72.png"
+    },
+    {
+      "number": 73,
+      "name": "Other customer cannot cancel",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/173",
+      "requestBody": null,
+      "response": {
+        "code": 404,
+        "status": "Not Found",
+        "timeMs": 6,
+        "body": {
+          "statusCode": 404,
+          "error": "Not Found",
+          "message": "Order 173 was not found",
+          "requestId": "69f746ce-e4dd-404c-a9b8-16fefe2d1678"
+        }
+      },
+      "assertions": [
+        {
+          "name": "Other customer cannot cancel / HTTP 404",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/73.png"
+    },
+    {
+      "number": 74,
+      "name": "Owner cancels PAYMENT_FAILED",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/173",
+      "requestBody": null,
+      "response": {
+        "code": 204,
+        "status": "No Content",
+        "timeMs": 24,
+        "body": ""
+      },
+      "assertions": [
+        {
+          "name": "Owner cancels PAYMENT_FAILED / HTTP 204",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/74.png"
+    },
+    {
+      "number": 75,
+      "name": "Final stock restored after failed payment",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/ingredients",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 10,
+        "body": [
+          {
+            "id": 1,
+            "name": "Trân châu",
+            "unit": "g",
+            "stockQuantity": 1000,
+            "version": 0,
+            "recipeItems": []
+          },
+          {
+            "id": 2,
+            "name": "Kem / Kem cheese",
+            "unit": "ml",
+            "stockQuantity": 940,
+            "version": 5,
+            "recipeItems": []
+          },
+          {
+            "id": 144,
+            "name": "TV6 milk 95466950-8e6b-419a-813e-c0f30c1da0eb",
+            "unit": "ml",
+            "stockQuantity": 200,
+            "version": 12,
+            "recipeItems": [
+              {
+                "id": 429,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "S",
+                "amountRequired": 11,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 430,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "M",
+                "amountRequired": 16,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              },
+              {
+                "id": 431,
+                "productId": 113,
+                "ingredientId": 144,
+                "size": "L",
+                "amountRequired": 25,
+                "product": {
+                  "id": 113,
+                  "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb"
+                }
+              }
+            ]
+          },
+          {
+            "id": 146,
+            "name": "pw-milk-1795583841884-regqt06nh6s",
+            "unit": "ml",
+            "stockQuantity": 160,
+            "version": 1,
+            "recipeItems": [
+              {
+                "id": 426,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "S",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 427,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "M",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              },
+              {
+                "id": 428,
+                "productId": 114,
+                "ingredientId": 146,
+                "size": "L",
+                "amountRequired": 20,
+                "product": {
+                  "id": 114,
+                  "name": "PW Cà phê 1795583841884-regqt06nh6s"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "name": "Final stock restored after failed payment / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Final stock = 200",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/75.png"
+    },
+    {
+      "number": 76,
+      "name": "COMPLETED cannot be cancelled by STAFF",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3201/orders/staff/168",
+      "requestBody": null,
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 11,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from COMPLETED to CANCELLED",
+          "requestId": "45ebaf47-d461-404d-9a86-7efd67cd6ba1"
+        }
+      },
+      "assertions": [
+        {
+          "name": "COMPLETED cannot be cancelled by STAFF / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/76.png"
+    },
+    {
+      "number": 77,
+      "name": "COMPLETED cannot transition to CANCELLED",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:3201/orders/168/status",
+      "requestBody": {
+        "status": "CANCELLED"
+      },
+      "response": {
+        "code": 409,
+        "status": "Conflict",
+        "timeMs": 12,
+        "body": {
+          "statusCode": 409,
+          "error": "Conflict",
+          "message": "Cannot transition order from COMPLETED to CANCELLED",
+          "requestId": "d7918029-d516-4187-b005-596260e4524e"
+        }
+      },
+      "assertions": [
+        {
+          "name": "COMPLETED cannot transition to CANCELLED / HTTP 409",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/77.png"
+    },
+    {
+      "number": 78,
+      "name": "Final completed loyalty remains 9",
+      "method": "GET",
+      "url": "http://127.0.0.1:3201/orders/168",
+      "requestBody": null,
+      "response": {
+        "code": 200,
+        "status": "OK",
+        "timeMs": 10,
+        "body": {
+          "id": 168,
+          "userId": 64,
+          "status": "COMPLETED",
+          "total": 90000,
+          "discount": 0,
+          "promoCode": null,
+          "createdAt": "2026-11-25T05:17:29.612Z",
+          "usesIngredientInventory": true,
+          "items": [
+            {
+              "id": 155,
+              "orderId": 168,
+              "productId": 113,
+              "size": "L",
+              "qty": 2,
+              "toppings": [],
+              "toppingIds": [],
+              "toppingAmounts": [],
+              "lineTotal": 90000,
+              "product": {
+                "id": 113,
+                "name": "TV6 coffee 95466950-8e6b-419a-813e-c0f30c1da0eb",
+                "price": 35000,
+                "category": "COFFEE",
+                "imageUrl": null,
+                "stock": 0,
+                "version": 0,
+                "description": null
+              }
+            }
+          ],
+          "loyaltyTransaction": {
+            "points": 9,
+            "createdAt": "2026-11-25T05:17:30.777Z"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "name": "Final completed loyalty remains 9 / HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "No duplicate points",
+          "passed": true
+        }
+      ],
+      "screenshot": "screenshots/api/78.png"
+    }
+  ]
+}
