@@ -1,4 +1,4 @@
-﻿# Traceability Matrix – BrewLite
+# Traceability Matrix – BrewLite
 
 > **Nguồn:** SRS BrewLite v0.6 và bảng 14 GitHub Issues Sprint 1–2 đã thống nhất trong nhóm.  
 > **Mục đích:** Truy vết xuyên suốt Task 1–5: yêu cầu (FR/NFR) → User Story/Use Case → sơ đồ/ADR → GitHub Issue/PR/commit → thành phần code → Test Case/bằng chứng → nghiệm thu.  
@@ -30,7 +30,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | TV1 | Deploy, CI/CD, database, rollback | S1-I1, S2-I1 | CD Run `#10` (`main`) | `9c371ef` | `docker-compose.yml`, `docker-compose.prod.yml`, `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/diagrams/deployment-diagram.puml`, `tests/` | Production HTTPS `https://47.129.180.144.sslip.io`, RDS private SG, `GET /health` 200 OK, CD smoke test & rollback pass | Hoàng Công Phú | **Đã kiểm thử** |
 | TV2 | Product detail, API client, PWA, tài liệu | S1-I2, S2-I2 | TBD | `9c371ef` | `apps/web/src/app/products/[id]/`, `apps/api/src/Product/`, `README.md` | Frontend 69/69 tests passed; API build passed | TBD | Có code/test; chờ link PR |
 | TV3 | Cart, pricing, promotion | S1-I3, S2-I3 | TBD | `9c371ef` | `apps/web/src/lib/cart.ts`, `apps/api/src/promotions/` | promotion/cart unit tests passed | TBD | Chưa xác nhận |
-| TV4 | Order, ingredient inventory, transaction | S1-I4, S2-I4 | PR `#76` | `9c371ef` | `apps/api/src/orders/`, `apps/api/src/inventory/`, Prisma schema | `ingredient-inventory.e2e-spec.ts`, `staff-cancellation.e2e-spec.ts` passed | TBD | Có code/test; chờ xác nhận |
+| TV4 | Order, ingredient inventory, transaction | S1-I4, S2-I4 | PR `#76` | `9c371ef` | `apps/api/src/orders/`, `apps/api/src/inventory/`, Prisma schema | `ingredient-inventory.e2e-spec.ts`, `staff-cancellation.e2e-spec.ts` passed, `TV4-Quynh.postman_collection.json` (TC-21–TC-25) | TV4 | **PASS** |
 | TV5 | Payment, idempotency | S1-I5, S2-I5 | TBD | `9c371ef` | `apps/api/src/payments/`, `tests/postman/` | payment/idempotency tests passed | TBD | Chưa xác nhận |
 | TV6 | Order state, loyalty, E2E | S1-I6, S2-I6 | TBD | `9c371ef` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `apps/web/e2e/` | `order-state.spec.ts`, `order-loyalty.e2e-spec.ts`, Playwright E2E passed | TBD | Chưa xác nhận |
 | TV7 | Auth, JWT, guards, architecture | S1-I7, S2-I7 | TBD | `9c371ef` | `apps/api/src/auth/`, `docs/architecture/` | auth/guard/health tests passed | TBD | Chưa xác nhận |
@@ -101,9 +101,9 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | FR-24 | Áp dụng mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | `POST /promotions/validate` | TC-FR-24 | Đã kiểm thử |
 | FR-25 | Gỡ mã khuyến mãi | US-03 | S1-I3 | S2-I3 | TV3 | Cart / promotion state | TC-FR-25 | Đã kiểm thử |
 | FR-26 | Chuyển giỏ hợp lệ sang checkout | US-03 | S1-I3; phối hợp S1-I4 | S2-I3; phối hợp S2-I4 | TV3 | Cart → Checkout payload | TC-FR-26 | Đã kiểm thử |
-| FR-27 | Tạo Order và OrderItem từ giỏ | US-04 | S1-I4 | S2-I4 | TV4 | Orders module / `POST /orders` | TC-FR-27 | Chưa xác nhận |
-| FR-28 | Kiểm tra và trừ kho trong transaction, tránh kho âm | US-04 | S1-I4 | S2-I4 | TV4 | Orders service / Prisma transaction | TC-FR-28 | Chưa xác nhận |
-| FR-29 | Cung cấp hàm nội bộ hoàn kho khi hủy đơn chưa thanh toán | US-04, US-06.1 | S1-I4 | S2-I4; phối hợp S2-I6 | TV4 (hàm hoàn kho), TV6 (điều phối hủy) | Inventory/order service | TC-FR-29 | Chưa xác nhận |
+| FR-27 | Tạo Order và OrderItem từ giỏ | US-04 | S1-I4 | S2-I4 | TV4 | Orders module / `POST /orders` | TC-FR-27 (TC-21, TC-23) | PASS |
+| FR-28 | Kiểm tra và trừ kho trong transaction, tránh kho âm | US-04 | S1-I4 | S2-I4 | TV4 | Orders service / Prisma transaction | TC-FR-28 (TC-21, TC-23) | PASS |
+| FR-29 | Cung cấp hàm nội bộ hoàn kho khi hủy đơn chưa thanh toán | US-04, US-06.1 | S1-I4 | S2-I4; phối hợp S2-I6 | TV4 (hàm hoàn kho), TV6 (điều phối hủy) | Inventory/order service | TC-FR-29 (TC-24) | PASS |
 | FR-30 | Thanh toán bằng Ví/Thẻ mô phỏng | US-05 | S1-I5 | S2-I5 | TV5 | Payments module / `POST /payments` | TC-FR-30 | PASS |
 | FR-31 | Chống thanh toán trùng bằng Idempotency-Key | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / idempotency storage | TC-FR-31 | PASS |
 | FR-32 | Xử lý thanh toán thất bại và cho thử lại | US-05 | S1-I5 | S2-I5 | TV5 | Payment service / payment UI | TC-FR-32 | PASS |
@@ -140,7 +140,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | NFR-11 | localStorage lỗi/bị chặn không làm Frontend crash | S1-I3 | S2-I3 | TV3 | Cart persistence | TC-NFR-11 | Đã kiểm thửn |
 | NFR-12 | Giỏ hàng usable trên mobile, không cuộn ngang tại 360×640 | S1-I3 | S2-I3 | TV3 | Cart UI/styles | TC-NFR-12 | Đã kiểm thử |
 | NFR-13 | Unit test logic giỏ và khuyến mãi chạy trong CI | S1-I3; phối hợp S1-I1 | S2-I3; phối hợp S2-I1 | TV3 | Cart/promotion tests, CI | TC-NFR-13 | Đã kiểm thử |
-| NFR-14 | Xử lý đồng thời không làm tồn kho âm | S1-I4 | S2-I4 | TV4 | Order/inventory transaction | TC-NFR-14 | Chưa xác nhận |
+| NFR-14 | Xử lý đồng thời không làm tồn kho âm | S1-I4 | S2-I4 | TV4 | Order/inventory transaction | TC-NFR-14 (TC-25) | PASS |
 | NFR-15 | Nhiều request cùng Idempotency-Key chỉ tạo một Payment | S1-I5 | S2-I5 | TV5 | Payment/idempotency service | TC-NFR-15 | Chưa xác nhận |
 | NFR-16 | P95 `POST /payments` dưới 1.000 ms với 20 request local | S1-I5 | S2-I5 | TV5 | Payments API | TC-NFR-16 | Chưa xác nhận |
 | NFR-17 | Password băm bcrypt có salt; không lộ password/passwordHash | S1-I7 | S2-I7 | TV7 | [`auth.service.ts`](../apps/api/src/auth/auth.service.ts); User model | [`auth.spec.ts`](../apps/api/src/auth/auth.spec.ts): bcrypt compare, response không có passwordHash; Postman đăng ký không có `passwordHash` | Đã triển khai; Jest và Postman đã kiểm thử |
@@ -350,7 +350,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 |---|---|---|---|---|---|---|
 | T5-IT-01 | Menu → chi tiết sản phẩm | FR-01–FR-14 | TV1, TV2 | Hiển thị danh sách, lọc, chi tiết, Size/Topping và giá đúng | `docs/postman/TV1-Phu.postman_collection.json`, `https://47.129.180.144.sslip.io` | **Pass** |
 | T5-IT-02 | Chi tiết → giỏ hàng → báo giá/khuyến mãi | FR-14–FR-26 | TV2, TV3 | Lựa chọn chuyển đúng vào giỏ; server trả báo giá hợp lệ | TBD | Chưa chạy |
-| T5-IT-03 | Checkout và tạo đơn | FR-26–FR-29, FR-44 | TV3, TV4, TV7 | JWT hợp lệ tạo đơn; thiếu JWT bị yêu cầu đăng nhập; hết hàng trả 409 | TBD | Chưa chạy |
+| T5-IT-03 | Checkout và tạo đơn | FR-26–FR-29, FR-44 | TV3, TV4, TV7 | JWT hợp lệ tạo đơn; thiếu JWT bị yêu cầu đăng nhập; hết hàng trả 409 | `docs/postman/TV4-Quynh.postman_collection.json` (`TC-21`–`TC-24`) | **Pass** |
 | T5-IT-04 | Thanh toán Ví/Thẻ | FR-30–FR-33 | TV4, TV5 | Payment khớp tổng đơn; xử lý thành công/thất bại theo SRS | TBD | Chưa chạy |
 | T5-IT-05 | Theo dõi và cập nhật trạng thái đơn | FR-34–FR-38 | TV5, TV6, TV7 | Lịch sử đúng chủ sở hữu; chỉ STAFF cập nhật; state transition hợp lệ | TBD | Chưa chạy |
 | T5-IT-06 | Tích điểm khi đơn hoàn thành | FR-39 | TV6 | Ghi một LoyaltyTransaction cho một order đủ điều kiện; không cộng trùng | TBD | Chưa chạy |
@@ -364,7 +364,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | T5-TV1 | CD Run `#10` / PR docs TV1 | `9c371ef` | `.github/workflows/cd.yml`, `docker-compose.prod.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/postman/TV1-Phu.postman_collection.json` | Postman Menu & Health (`TC-01`–`TC-06`, `TC-43`–`TC-45`), CD smoke test & rollback, DevTools Mobile `< 3s` | Hoàng Công Phú | 2026-11-22 | **Đã kiểm thử** |
 | T5-TV2 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV3 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
-| T5-TV4 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
+| T5-TV4 | PR TV4 | `f055972` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `docs/postman/TV4-Quynh.postman_collection.json` | Postman Collection TV4 (`TC-21`–`TC-25`), Vitest UI | TV4 | 2026-11-25 | **PASS** |
 | T5-TV5 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV6 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV7 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
