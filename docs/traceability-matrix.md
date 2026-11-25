@@ -30,7 +30,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | TV1 | Deploy, CI/CD, database, rollback | S1-I1, S2-I1 | CD Run `#10` (`main`) | `9c371ef` | `docker-compose.yml`, `docker-compose.prod.yml`, `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/diagrams/deployment-diagram.puml`, `tests/` | Production HTTPS `https://47.129.180.144.sslip.io`, RDS private SG, `GET /health` 200 OK, CD smoke test & rollback pass | Hoàng Công Phú | **Đã kiểm thử** |
 | TV2 | Product detail, API client, PWA, tài liệu | S1-I2, S2-I2 | TBD | `9c371ef` | `apps/web/src/app/products/[id]/`, `apps/api/src/Product/`, `README.md` | Frontend 69/69 tests passed; API build passed | TBD | Có code/test; chờ link PR |
 | TV3 | Cart, pricing, promotion | S1-I3, S2-I3 | TBD | `9c371ef` | `apps/web/src/lib/cart.ts`, `apps/api/src/promotions/` | promotion/cart unit tests passed | TBD | Chưa xác nhận |
-| TV4 | Order, ingredient inventory, transaction | S1-I4, S2-I4 | PR `#76` | `9c371ef` | `apps/api/src/orders/`, `apps/api/src/inventory/`, Prisma schema | `ingredient-inventory.e2e-spec.ts`, `staff-cancellation.e2e-spec.ts` passed, `TV4-Quynh.postman_collection.json` (TC-21–TC-25 trên web công khai `https://47.129.180.144.sslip.io`) | TV4 | **PASS** |
+| TV4 | Order, ingredient inventory, transaction | S1-I4, S2-I4 | PR `#76` | `9c371ef` | `apps/api/src/orders/`, `apps/api/src/inventory/`, Prisma schema | `ingredient-inventory.e2e-spec.ts`, `staff-cancellation.e2e-spec.ts` passed, `TV4-Quynh.postman_collection.json` (TC-21–TC-25) | TV4 | **PASS** |
 | TV5 | Payment, idempotency | S1-I5, S2-I5 | TBD | `9c371ef` | `apps/api/src/payments/`, `tests/postman/` | payment/idempotency tests passed | TBD | Chưa xác nhận |
 | TV6 | Order state, loyalty, E2E | S1-I6, S2-I6 | TBD | `9c371ef` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `apps/web/e2e/` | `order-state.spec.ts`, `order-loyalty.e2e-spec.ts`, Playwright E2E passed | TBD | Chưa xác nhận |
 | TV7 | Auth, JWT, guards, architecture | S1-I7, S2-I7 | TBD | `9c371ef` | `apps/api/src/auth/`, `docs/architecture/` | auth/guard/health tests passed | TBD | Chưa xác nhận |
@@ -350,7 +350,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 |---|---|---|---|---|---|---|
 | T5-IT-01 | Menu → chi tiết sản phẩm | FR-01–FR-14 | TV1, TV2 | Hiển thị danh sách, lọc, chi tiết, Size/Topping và giá đúng | `docs/postman/TV1-Phu.postman_collection.json`, `https://47.129.180.144.sslip.io` | **Pass** |
 | T5-IT-02 | Chi tiết → giỏ hàng → báo giá/khuyến mãi | FR-14–FR-26 | TV2, TV3 | Lựa chọn chuyển đúng vào giỏ; server trả báo giá hợp lệ | TBD | Chưa chạy |
-| T5-IT-03 | Checkout và tạo đơn | FR-26–FR-29, FR-44 | TV3, TV4, TV7 | JWT hợp lệ tạo đơn; thiếu JWT bị yêu cầu đăng nhập; hết hàng trả 409 | `docs/postman/TV4-Quynh.postman_collection.json` (`TC-21`–`TC-24`), trang web công khai `https://47.129.180.144.sslip.io` | **Pass** |
+| T5-IT-03 | Checkout và tạo đơn | FR-26–FR-29, FR-44 | TV3, TV4, TV7 | JWT hợp lệ tạo đơn; thiếu JWT bị yêu cầu đăng nhập; hết hàng trả 409 | `docs/postman/TV4-Quynh.postman_collection.json` (`TC-21`–`TC-24`) | **Pass** |
 | T5-IT-04 | Thanh toán Ví/Thẻ | FR-30–FR-33 | TV4, TV5 | Payment khớp tổng đơn; xử lý thành công/thất bại theo SRS | TBD | Chưa chạy |
 | T5-IT-05 | Theo dõi và cập nhật trạng thái đơn | FR-34–FR-38 | TV5, TV6, TV7 | Lịch sử đúng chủ sở hữu; chỉ STAFF cập nhật; state transition hợp lệ | TBD | Chưa chạy |
 | T5-IT-06 | Tích điểm khi đơn hoàn thành | FR-39 | TV6 | Ghi một LoyaltyTransaction cho một order đủ điều kiện; không cộng trùng | TBD | Chưa chạy |
@@ -364,7 +364,7 @@ Các ô `TBD` ở những phần do TV2–TV7 cung cấp phải được thay b�
 | T5-TV1 | CD Run `#10` / PR docs TV1 | `9c371ef` | `.github/workflows/cd.yml`, `docker-compose.prod.yml`, `docs/deployment.md`, `docs/deploy-and-rollback.md`, `docs/postman/TV1-Phu.postman_collection.json` | Postman Menu & Health (`TC-01`–`TC-06`, `TC-43`–`TC-45`), CD smoke test & rollback, DevTools Mobile `< 3s` | Hoàng Công Phú | 2026-11-22 | **Đã kiểm thử** |
 | T5-TV2 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV3 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
-| T5-TV4 | PR TV4 | `f055972` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `docs/postman/TV4-Quynh.postman_collection.json` | Postman Collection TV4 (`TC-21`–`TC-25`) kiểm thử trên web công khai `https://47.129.180.144.sslip.io`, Vitest UI | TV4 | 2026-11-25 | **PASS** |
+| T5-TV4 | PR TV4 | `f055972` | `apps/api/src/orders/`, `apps/web/src/app/orders/`, `docs/postman/TV4-Quynh.postman_collection.json` | Postman Collection TV4 (`TC-21`–`TC-25`), Vitest UI | TV4 | 2026-11-25 | **PASS** |
 | T5-TV5 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV6 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
 | T5-TV7 | TBD | TBD | TBD | TBD | TBD | TBD | Chưa cập nhật |
