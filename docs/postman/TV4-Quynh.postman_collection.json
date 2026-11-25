@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "tc21-25-order-cancel-brewlite-tv4",
-    "name": "BrewLite – TC-21 to TC-25: Orders, Stock, Cancel & Admin CRUD (TV4)",
+    "name": "TV4-Quynh: Orders, Stock, Cancel & Admin CRUD (TC-21 đến TC-25)",
     "description": "Postman Collection v2.1 cho TV4 (BrewLite AS2).\n\nMỤC ĐÍCH: Kiểm thử toàn diện các yêu cầu kỹ thuật và nghiệp vụ:\n- TC-21 (FR): Luồng đặt đơn POST /orders (trạng thái PENDING), kiểm tra xác nhận đơn và trừ tồn kho Product.stock.\n- TC-22 (NFR): Chặn đặt hàng sai điều kiện (giỏ rỗng, vượt tồn kho Product.stock, thiếu dữ liệu, lỗi xác thực).\n- TC-23 (FR-27, FR-28): Đặt đơn từ giỏ hàng, xác nhận làm trống giỏ và trừ tồn kho nguyên liệu (Ingredient) theo công thức.\n- TC-24 (FR-29 & Admin/Staff CRUD): Khách tự hủy đơn (PENDING, PAYMENT_FAILED) hoàn kho nguyên liệu; KẾT HỢP KIỂM THỬ TRANG QUẢN TRỊ /admin (CRUD trên 4 mục: Ingredient, Product & Recipe, Order, Promotion).\n- TC-25 (NFR-14): Đặt đồng thời món cuối cùng trong kho với cơ chế Optimistic Locking (chấp nhận 201 hoặc 409, kho không bao giờ âm).\n- BONUS: Kiểm thử phân quyền RBAC và bảo mật (Customer vs Staff).\n\nHướng dẫn chạy:\n1. Cấu hình Collection Variables: baseUrl (mặc định https://47.129.180.144.sslip.io/api hoặc http://localhost:3001), tài khoản customer và staff.\n2. Chạy thư mục '0. Auth & Setup' trước để tự động lấy accessToken và staffToken.\n3. Chạy tuần tự các thư mục TC-21 đến TC-25.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -78,7 +78,7 @@
     },
     {
       "key": "customerEmail",
-      "value": "customer@brewlite.local",
+      "value": "test@gmail.com",
       "description": "Email tài khoản khách hàng."
     },
     {
@@ -88,12 +88,12 @@
     },
     {
       "key": "staffEmail",
-      "value": "staff@brewlite.local",
+      "value": "hoangcongphu0999@gmail.com",
       "description": "Email tài khoản nhân viên / quản trị."
     },
     {
       "key": "staffPassword",
-      "value": "staffpassword",
+      "value": "Phu2006@1",
       "description": "Mật khẩu tài khoản nhân viên / quản trị."
     }
   ],
@@ -1962,7 +1962,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    {\n      \"size\": \"M\",\n      \"ingredientId\": {{ingredientId}},\n      \"amountRequired\": 20\n    }\n  ]\n}",
+                  "raw": "{\n  \"ingredients\": [\n    {\n      \"ingredientId\": {{ingredientId}},\n      \"quantity\": 20\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
