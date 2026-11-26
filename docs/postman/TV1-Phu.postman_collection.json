@@ -1,43 +1,477 @@
 {
   "info": {
-    "_postman_id": "130cd54e-04ec-476b-affa-4a5d9ea9e2a9",
-    "name": "TV1-Phu.postman_collection.json",
+    "_postman_id": "670cbadc-e59f-49b5-af63-ea897c6e618a",
+    "name": "[TV1 - Phú] Hạ tầng & Menu",
+    "description": "Hoàng Công Phú (TV1) - Nhóm 11. Kiểm thử hạ tầng Production HTTPS/Nginx/RDS (TC-43..TC-45) và chức năng hiển thị/lọc thực đơn Menu (TC-01..TC-06). Toàn bộ request chỉ đọc dữ liệu (safe read-only), không làm thay đổi trạng thái hệ thống.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "60275835",
-    "_collection_link": "https://go.postman.co/collection/60275835-130cd54e-04ec-476b-affa-4a5d9ea9e2a9?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/60275835-670cbadc-e59f-49b5-af63-ea897c6e618a?source=collection_link"
   },
   "item": [
     {
-      "name": "New Request",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "",
-          "options": {
-            "raw": {
-              "language": "text"
+      "name": "01 - TV1 / Hạ tầng, Healthcheck & Bảo mật (TC-43..TC-45)",
+      "item": [
+        {
+          "name": "TC-43.1 - Healthcheck API và kết nối PostgreSQL RDS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response trả về định dạng JSON', () => pm.response.to.be.json);",
+                  "pm.test('API và Database RDS hoạt động bình thường', () => {",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data.status).to.eql('ok');",
+                  "  pm.expect(data.database).to.eql('up');",
+                  "});",
+                  "pm.test('Thời gian phản hồi Healthcheck dưới 1000ms', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});"
+                ]
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/products",
-          "host": [
-            "{{baseUrl}}"
           ],
-          "path": [
-            "products"
-          ]
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-43.2 - Truy cập Web Frontend qua HTTPS Reverse Proxy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Kết nối sử dụng giao thức HTTPS', () => {",
+                  "  pm.expect(pm.request.url.protocol).to.eql('https');",
+                  "});",
+                  "pm.test('Trả về nội dung trang HTML hợp lệ', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{webUrl}}/",
+              "host": [
+                "{{webUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-44.1 - Kiểm tra tài liệu API Swagger trên Production",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Trang Swagger UI tải thành công', () => {",
+                  "  pm.expect(pm.response.text()).to.include('Swagger');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api-docs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-44.2 - Gọi endpoint không tồn tại trả 404 chuẩn JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('Lỗi 404 được format chuẩn JSON (không lộ stacktrace)', () => {",
+                  "  pm.response.to.be.json;",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data.statusCode).to.eql(404);",
+                  "  pm.expect(data).to.not.have.property('stack');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/endpoint-khong-ton-tai-tv1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "endpoint-khong-ton-tai-tv1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-45.1 - Hiệu năng phản hồi API Menu dưới 1500ms (NFR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('NFR - Thời gian phản hồi danh sách món < 1500ms', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(1500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-45.2 - Kiểm tra cấu hình CORS Preflight (OPTIONS /products)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS Preflight trả về 200 hoặc 204', () => {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://47.129.180.144.sslip.io",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
+    },
+    {
+      "name": "02 - TV1 / Hiển thị Menu, Danh mục & Biên lỗi (TC-01..TC-06)",
+      "item": [
+        {
+          "name": "TC-01.1 - Lấy toàn bộ danh sách thực đơn (FR-01)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response là JSON Array', () => {",
+                  "  pm.response.to.be.json;",
+                  "  const products = pm.response.json();",
+                  "  pm.expect(products).to.be.an('array').with.length.at.least(12);",
+                  "});",
+                  "pm.test('Mỗi món có đủ trường bắt buộc (id, name, price, imageUrl)', () => {",
+                  "  const products = pm.response.json();",
+                  "  for (const item of products) {",
+                  "    pm.expect(item.id).to.be.a('number');",
+                  "    pm.expect(item.name).to.be.a('string').and.not.empty;",
+                  "    pm.expect(item.price).to.be.a('number').and.above(0);",
+                  "    pm.expect(item).to.have.property('imageUrl');",
+                  "  }",
+                  "  const withCat = products.find(p => typeof p.category === 'string' && p.category.trim().length > 0);",
+                  "  pm.collectionVariables.set('sampleCategory', withCat ? withCat.category : 'COFFEE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-02.1 - Kiểm tra tồn kho khả dụng theo từng size S/M/L (FR-02)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Mỗi món đều có tồn kho nguyên không âm cho cả 3 size S, M, L', () => {",
+                  "  const products = pm.response.json();",
+                  "  for (const item of products) {",
+                  "    pm.expect(item.availableQuantityBySize).to.be.an('object');",
+                  "    for (const size of ['S', 'M', 'L']) {",
+                  "      pm.expect(Number.isInteger(item.availableQuantityBySize[size])).to.eql(true);",
+                  "      pm.expect(item.availableQuantityBySize[size]).to.be.at.least(0);",
+                  "    }",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-03.1 - Lọc thực đơn theo danh mục hợp lệ (FR-03)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Danh sách trả về hợp lệ và không trống', () => {",
+                  "  const products = pm.response.json();",
+                  "  pm.expect(products).to.be.an('array').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?category={{sampleCategory}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "{{sampleCategory}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-04.1 - Tìm kiếm từ khóa không khớp món nào (FR-04)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK (không sập server)', () => pm.response.to.have.status(200));",
+                  "pm.test('Trả về mảng JSON hợp lệ', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?search=mon_khong_ton_tai_xyz_999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "mon_khong_ton_tai_xyz_999"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-05.1 - Truyền tham số query rác và ký tự đặc biệt (TC-05)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Server xử lý an toàn (200 hoặc 400, tuyệt đối không 500)', () => {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?page=-1&limit=abc&sort=<script>alert(1)</script>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-1"
+                },
+                {
+                  "key": "limit",
+                  "value": "abc"
+                },
+                {
+                  "key": "sort",
+                  "value": "<script>alert(1)</script>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-06.1 - Gọi sai phương thức HTTP DELETE trên /products (TC-06)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Chặn phương thức không hỗ trợ bằng 404 hoặc 405', () => {",
+                  "  pm.expect([404, 405]).to.include(pm.response.code);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": ""
+      "value": "https://47.129.180.144.sslip.io/api"
+    },
+    {
+      "key": "webUrl",
+      "value": "https://47.129.180.144.sslip.io"
+    },
+    {
+      "key": "sampleCategory",
+      "value": "COFFEE"
     }
   ]
 }
