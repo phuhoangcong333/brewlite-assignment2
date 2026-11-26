@@ -7,8 +7,23 @@ on:
     branches: [ dev, main ]
 
 jobs:
-  lint-and-build:
+  ci-quality-gate:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: brewlite
+          POSTGRES_PASSWORD: brewlite_test_password
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U brewlite -d brewlite_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout repository code
@@ -19,19 +34,28 @@ jobs:
         with:
           node-version: 20
 
-      - name: Check Backend Build (apps/api)
+      - name: 1. Install Dependencies (API & Web)
         run: |
-          if [ -d "apps/api" ]; then
-            cd apps/api
-            npm install --legacy-peer-deps
-            npx prisma generate
-            npm run build --if-present
-          fi
+          cd apps/api && npm install --legacy-peer-deps && npx prisma generate
+          cd ../web && npm install --legacy-peer-deps
 
-      - name: Check Frontend Build (apps/web)
+      - name: 2. Lint (API & Web)
         run: |
-          if [ -d "apps/web" ]; then
-            cd apps/web
-            npm install --legacy-peer-deps
-            npm run build --if-present
-          fi
+          cd apps/api && npm run lint --if-present
+          cd ../web && npm run lint --if-present
+
+      - name: 3. Unit & Integration Test (API & Web)
+        env:
+          DATABASE_URL: postgresql://brewlite:brewlite_test_password@localhost:5432/brewlite_test?schema=public
+          JWT_SECRET: ci-test-jwt-secret-key-123456
+        run: |
+          cd apps/api
+          npx prisma migrate deploy
+          npm test
+          cd ../web
+          npm test
+
+      - name: 4. Build (API & Web)
+        run: |
+          cd apps/api && npm run build --if-present
+          cd ../web && npm run build --if-present
