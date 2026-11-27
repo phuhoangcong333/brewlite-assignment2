@@ -177,7 +177,9 @@ export default function OrderConfirmationPage() {
   const canRetryPayment =
     order.status === "PENDING" || order.status === "PAYMENT_FAILED";
   const canCancel =
-    order.status === "PENDING" || order.status === "PAYMENT_FAILED";
+    order.status === "PENDING" ||
+    order.status === "PAID" ||
+    order.status === "PAYMENT_FAILED";
   const currentStepIndex = PROGRESS_STEPS.indexOf(order.status);
 
   const handleCancel = async () => {

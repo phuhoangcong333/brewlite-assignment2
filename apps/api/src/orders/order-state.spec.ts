@@ -24,6 +24,7 @@ const validTransitions: ReadonlyArray<readonly [OrderStatus, OrderStatus]> = [
   ['PAYMENT_FAILED', 'PENDING'],
   ['PAYMENT_FAILED', 'CANCELLED'],
   ['PAID', 'PREPARING'],
+  ['PAID', 'CANCELLED'],
   ['PREPARING', 'READY'],
   ['READY', 'COMPLETED'],
 ];
@@ -61,8 +62,8 @@ describe('cancellation by actor', () => {
   )('%s cancellation by %s', (status, actor) => {
     const allowed = (
       actor === 'STAFF'
-        ? ['PENDING', 'PREPARING']
-        : ['PENDING', 'PAYMENT_FAILED']
+        ? ['PENDING', 'PAID', 'PREPARING']
+        : ['PENDING', 'PAYMENT_FAILED', 'PAID']
     ).includes(status);
     expect(canCancelOrder(status, actor)).toBe(allowed);
     if (allowed)

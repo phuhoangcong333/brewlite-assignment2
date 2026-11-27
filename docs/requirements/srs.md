@@ -370,7 +370,7 @@ Là một thành viên nhóm vận hành (DevOps), tôi muốn có endpoint ki�
 - **FR-35:** `GET /orders` yêu cầu JWT. Backend lấy `userId` từ claim `sub` của JWT, chỉ trả các đơn thuộc người dùng hiện tại và sắp xếp `createdAt` giảm dần. Không nhận `userId` tùy ý từ query/body để tra cứu lịch sử cá nhân. Mỗi phần tử có tối thiểu mã đơn, trạng thái, tổng tiền và ngày đặt. Thiếu/sai/hết hạn JWT trả HTTP 401.
 - **FR-36:** `GET /orders/:id` yêu cầu JWT và trả mã đơn, trạng thái, tổng tiền, ngày tạo cùng danh sách `OrderItem`. Khách hàng chỉ được xem đơn của chính mình; nếu đơn không tồn tại hoặc không thuộc người dùng hiện tại, API trả HTTP 404 để không tiết lộ sự tồn tại của đơn người khác.
 - **FR-37:** Giao diện hỗ trợ các trạng thái: `PENDING` (Chờ thanh toán), `PAYMENT_FAILED` (Thanh toán thất bại), `PAID` (Đã thanh toán), `PREPARING` (Đang pha chế), `READY` (Sẵn sàng), `COMPLETED` (Hoàn thành), `CANCELLED` (Đã hủy). Trang theo dõi tự gọi lại API chi tiết đơn theo chu kỳ 5–10 giây.
-- **FR-38:** `PATCH /orders/:id/status` yêu cầu JWT và role `STAFF`; chỉ nhân viên được cập nhật trạng thái vận hành. Nhân viên chỉ thực hiện các bước `PAID → PREPARING`, `PREPARING → READY`, `READY → COMPLETED`; không được tự đặt trạng thái thanh toán `PAID`/`PAYMENT_FAILED` vì các trạng thái này do TV5 cập nhật theo kết quả thanh toán. Luồng hủy đơn chỉ được chuyển từ `PENDING` hoặc `PAYMENT_FAILED` sang `CANCELLED` theo state machine của TV4; `PAID → CANCELLED` bị từ chối. Chuyển trạng thái không hợp lệ trả HTTP 409, dữ liệu không đổi. `COMPLETED` và `CANCELLED` là trạng thái cuối.
+- **FR-38:** `PATCH /orders/:id/status` yêu cầu JWT và role `STAFF`; nhân viên được chuyển `PAID → PREPARING`, `PREPARING → READY`, `READY → COMPLETED`, hoặc hủy từ `PENDING`, `PAID`, `PREPARING` sang `CANCELLED`. Chủ đơn có thể hủy từ `PENDING`, `PAYMENT_FAILED`, `PAID`. Hủy đơn hoàn kho trong transaction; hủy đơn `PAID` không tự hoàn tiền hoặc sửa Payment. Chuyển trạng thái không hợp lệ trả HTTP 409, dữ liệu không đổi. `COMPLETED` và `CANCELLED` là trạng thái cuối.
 - **FR-39:** Khi đơn chuyển từ `READY` sang `COMPLETED`, hệ thống tạo `LoyaltyTransaction` gồm `id`, `userId`, `orderId`, `points`, `createdAt`. Số điểm = phần nguyên của `totalPaid / 10.000` (1 điểm cho mỗi 10.000 VNĐ đã thanh toán); không cộng điểm cho đơn bị hủy hoặc chưa hoàn thành. Mỗi `orderId` chỉ được ghi nhận điểm một lần; việc cập nhật trạng thái và ghi nhận điểm phải bảo đảm không cộng trùng khi request được gửi lại.
 
 > **NFR TV6:** Assignment 2 không giao TV6 một nhóm NFR riêng. Các API lịch sử/chi tiết/cập nhật trạng thái kế thừa xác thực JWT, phân quyền và kiểm tra dữ liệu theo yêu cầu NFR của TV7. Test chuyển trạng thái và test tính điểm là tiêu chí nghiệm thu chức năng của TV6.
@@ -518,7 +518,7 @@ Là một thành viên nhóm vận hành (DevOps), tôi muốn có endpoint ki�
 |---|---|---|
 | BR-6.1 | Khách hàng phải đăng nhập và chỉ được xem lịch sử/chi tiết các đơn thuộc tài khoản hiện tại; `userId` được lấy từ JWT, không lấy từ dữ liệu client tự khai báo. | `GET /orders`, `GET /orders/:id` |
 | BR-6.2 | Lịch sử đơn được sắp xếp theo `createdAt` giảm dần, đơn mới nhất hiển thị trước. | `GET /orders` |
-| BR-6.3 | Chỉ cho phép các chuyển trạng thái: `PENDING → PAID`; `PENDING → PAYMENT_FAILED`; `PAYMENT_FAILED → PENDING` (thử thanh toán lại); `PAID → PREPARING → READY → COMPLETED`; và hủy từ `PENDING` hoặc `PAYMENT_FAILED` sang `CANCELLED`. `PAID → CANCELLED` bị cấm. | State machine đơn hàng |
+| BR-6.3 | Chỉ cho phép các chuyển trạng thái: `PENDING → PAID`; `PENDING → PAYMENT_FAILED`; `PAYMENT_FAILED → PENDING` (thử thanh toán lại); `PAID → PREPARING → READY → COMPLETED`; và hủy từ `PENDING`, `PAYMENT_FAILED`, `PAID` hoặc `PREPARING` sang `CANCELLED` theo quyền của khách hàng/nhân viên. Hủy hoàn kho trong transaction; không tự hoàn tiền. | State machine đơn hàng |
 | BR-6.4 | `PENDING → PAID` và `PENDING → PAYMENT_FAILED` do luồng thanh toán TV5 cập nhật; `PAYMENT_FAILED → PENDING` được thực hiện khi bắt đầu thử thanh toán lại. | Tích hợp TV5 |
 | BR-6.5 | Chỉ tài khoản role `STAFF` được gọi `PATCH /orders/:id/status` để cập nhật các trạng thái xử lý của cửa hàng. Chuyển sai trạng thái trả HTTP 409 và không làm thay đổi dữ liệu. | `PATCH /orders/:id/status` |
 | BR-6.6 | `COMPLETED` và `CANCELLED` là trạng thái cuối, không được chuyển sang trạng thái khác. | State machine đơn hàng |
@@ -671,7 +671,7 @@ Không gửi giá client như giá có thẩm quyền. Nếu cần gửi `client
 - **Xác thực/phân quyền:** JWT bắt buộc; chỉ role `STAFF` được gọi API này. Khách hàng gọi API sẽ nhận `403 Forbidden`.
 - **Request body:** `{ "status": "PREPARING" }` với giá trị thuộc enum `OrderStatus`.
 - **Các chuyển trạng thái xử lý bởi nhân viên:** `PAID → PREPARING`, `PREPARING → READY`, `READY → COMPLETED`. Trạng thái thanh toán `PAID`/`PAYMENT_FAILED` do TV5 cập nhật, không cho nhân viên ghi đè qua endpoint này.
-- **Hủy đơn:** Chuyển sang `CANCELLED` chỉ từ `PENDING` hoặc `PAYMENT_FAILED`, thông qua nghiệp vụ hủy của TV4 và kiểm tra state machine chung. Không cho phép hủy từ `PAID`, `PREPARING`, `READY` hoặc trạng thái cuối. Refund không thuộc phạm vi MVP.
+- **Hủy đơn:** Chủ đơn được hủy từ `PENDING`, `PAYMENT_FAILED`, `PAID`; nhân viên được hủy từ `PENDING`, `PAID`, `PREPARING`. Nghiệp vụ hủy hoàn kho một lần trong transaction. Không tự hoàn tiền hoặc thay đổi Payment.
 - **Kết quả:** Trả về đơn sau khi cập nhật thành công.
 - **Lỗi:** `401 Unauthorized` nếu chưa xác thực; `403 Forbidden` nếu không có role `STAFF`; `404 Not Found` nếu không có đơn; `409 Conflict` nếu chuyển trạng thái không hợp lệ.
 
@@ -681,8 +681,8 @@ Không gửi giá client như giá có thẩm quyền. Nếu cần gửi `client
 |---|---|---|
 | `PENDING` | `PAID`, `PAYMENT_FAILED`, `CANCELLED` | TV5 (kết quả thanh toán); luồng hủy TV4 |
 | `PAYMENT_FAILED` | `PENDING`, `CANCELLED` | TV5 (thử thanh toán lại); luồng hủy TV4 |
-| `PAID` | `PREPARING` | Nhân viên qua TV6 |
-| `PREPARING` | `READY` | Nhân viên qua TV6 |
+| `PAID` | `PREPARING`, `CANCELLED` | Nhân viên qua TV6; hủy bởi chủ đơn hoặc nhân viên |
+| `PREPARING` | `READY`, `CANCELLED` | Nhân viên qua TV6 |
 | `READY` | `COMPLETED` | Nhân viên qua TV6 |
 | `COMPLETED` | Không có | Trạng thái cuối |
 | `CANCELLED` | Không có | Trạng thái cuối |
@@ -794,7 +794,7 @@ Quan hệ: một `User` có nhiều `LoyaltyTransaction`; một `Order` có tố
 8. **Độ dài ghi chú và số lượng ở trang chi tiết:** Cần đồng bộ giới hạn `note` và số lượng tối đa với TV3. Giới hạn 10 ly/dòng của TV3 được chốt trong phần giỏ hàng; TV2 cần áp dụng cùng mức khi validate số lượng ở trang chi tiết hoặc bàn giao validation cho TV3.
 9. **Topping hết hàng:** Thống nhất field khả dụng của topping trong API/schema, ưu tiên dùng một quy ước duy nhất (ví dụ `available` boolean hoặc `stock` số lượng) giữa TV2, TV3 và TV7.
 10. **Trạng thái thanh toán và tên enum:** SRS chốt enum dùng `PENDING` (không dùng `PENDING_PAYMENT`) và `PAYMENT_FAILED`; TV4/TV5 cần đồng bộ schema, API contract và test theo enum này.
-11. **Hủy đơn đã thanh toán:** State machine không cho phép `PAID → CANCELLED`. Nếu nghiệp vụ hoàn tiền/hủy đơn đã thanh toán được bổ sung, cần một quyết định kiến trúc và luồng refund riêng.
+11. **Hủy đơn đã thanh toán:** Có thể hủy `PAID → CANCELLED` và hoàn kho trong transaction. Hủy không tự hoàn tiền hoặc sửa Payment; hoàn tiền nằm ngoài phạm vi hiện tại.
 
 ### 11.3. Các quyết định TV2 chốt cho luồng TV6
 
@@ -802,7 +802,7 @@ Các điểm sau được chốt để thống nhất SRS, API contract, Use Cas
 
 1. **API lịch sử:** Dùng `GET /orders`; JWT bắt buộc, backend lấy `userId` từ claim `sub` và chỉ trả đơn của người dùng hiện tại. Không sử dụng `GET /orders/me` trong MVP. `GET /orders/:id` chỉ cho chủ sở hữu đơn xem chi tiết; đơn không tồn tại hoặc không thuộc quyền xem trả `404`.
 2. **API cập nhật trạng thái:** Dùng `PATCH /orders/:id/status`, bắt buộc JWT và role `STAFF`. Khách hàng nhận `403`. Nhân viên chỉ cập nhật tiến trình cửa hàng: `PAID → PREPARING → READY → COMPLETED`. Trạng thái thanh toán do TV5 quản lý; luồng hủy do TV4 xử lý và phải tuân thủ state machine chung.
-3. **State machine:** `PENDING → PAID`; `PENDING → PAYMENT_FAILED`; `PAYMENT_FAILED → PENDING` khi thử thanh toán lại; `PAID → PREPARING → READY → COMPLETED`; cho phép hủy từ `PENDING` hoặc `PAYMENT_FAILED` sang `CANCELLED`. `PAID → CANCELLED` bị cấm. `COMPLETED` và `CANCELLED` là trạng thái cuối. Mọi chuyển trạng thái khác danh sách được phép trả `409 Conflict` và không đổi dữ liệu.
+3. **State machine:** `PENDING → PAID`; `PENDING → PAYMENT_FAILED`; `PAYMENT_FAILED → PENDING` khi thử thanh toán lại; `PAID → PREPARING → READY → COMPLETED`; chủ đơn có thể hủy `PENDING`, `PAYMENT_FAILED`, `PAID`; nhân viên có thể hủy `PENDING`, `PAID`, `PREPARING` sang `CANCELLED`. Hủy hoàn kho trong transaction. `COMPLETED` và `CANCELLED` là trạng thái cuối. Mọi chuyển trạng thái khác danh sách được phép trả `409 Conflict` và không đổi dữ liệu.
 4. **Thời điểm tích điểm:** Chỉ cộng khi đơn chuyển sang `COMPLETED`, không cộng ngay tại `PAID`. Quy tắc này ưu tiên mô tả nhiệm vụ TV6 trong Assignment 2; Product Backlog Task 10(d) phải sửa theo quyết định này.
 5. **Công thức điểm:** `points = floor(totalPaid / 10000)`, trong đó `totalPaid` là số tiền cuối cùng khách thực tế phải thanh toán sau khuyến mãi (đơn vị VNĐ). Phần lẻ dưới 10.000 VNĐ không tạo điểm; nếu kết quả bằng 0 thì không ghi giao dịch.
 6. **Chống cộng trùng:** Mỗi đơn có tối đa một `LoyaltyTransaction` cộng điểm; dùng unique constraint theo `orderId` hoặc cơ chế idempotent tương đương. Việc chuyển `READY → COMPLETED` và tạo giao dịch điểm phải được xử lý nguyên tử hoặc có cơ chế bảo đảm không cộng trùng.

@@ -598,7 +598,7 @@ export class OrderService {
           }
         } else if (
           order.usesIngredientInventory === null &&
-          ['PENDING', 'PAYMENT_FAILED'].includes(from) &&
+          ['PENDING', 'PAYMENT_FAILED', 'PAID'].includes(from) &&
           (hasRecipeItems || order.items.some((item) => item.toppingIds.length > 0))
         ) {
           const recipesByProduct = new Map(

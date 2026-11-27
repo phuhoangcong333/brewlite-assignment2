@@ -431,6 +431,7 @@ export default function OrderHistoryPage() {
                       Xem tiến trình
                     </Link>
                     {(order.status === "PENDING" ||
+                      order.status === "PAID" ||
                       order.status === "PAYMENT_FAILED") && (
                       <button
                         type="button"

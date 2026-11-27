@@ -6,9 +6,9 @@ import { planCancel } from './order-cancel.plan';
 const allowedStatuses: OrderStatus[] = [
   'PENDING',
   'PAYMENT_FAILED',
+  'PAID',
 ];
 const blockedStatuses: OrderStatus[] = [
-  'PAID',
   'PREPARING',
   'READY',
   'COMPLETED',

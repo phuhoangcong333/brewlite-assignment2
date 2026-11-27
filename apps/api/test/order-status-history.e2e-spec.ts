@@ -362,7 +362,7 @@ describeDb(
       },
     );
 
-    it.each(['PENDING', 'PAYMENT_FAILED'] as const)(
+    it.each(['PENDING', 'PAYMENT_FAILED', 'PAID'] as const)(
       'cancels %s and restores TV4 ingredient inventory exactly once',
       async (status) => {
         const ingredient = await prisma.ingredient.create({
@@ -393,12 +393,16 @@ describeDb(
           .send({ items: [{ productId: product.id, qty: 2, size: 'S' }] })
           .expect(201);
         const id: number = response.body.id;
-        if (status === 'PAYMENT_FAILED') {
+        if (status === 'PAYMENT_FAILED' || status === 'PAID') {
           await request(app.getHttpServer())
             .post('/payments')
             .set(auth())
             .set('Idempotency-Key', `cancel-${id}-${suffix}`)
-            .send({ orderId: id, method: 'WALLET', walletId: 'demo-0000' })
+            .send({
+              orderId: id,
+              method: 'WALLET',
+              walletId: status === 'PAID' ? 'demo-1234' : 'demo-0000',
+            })
             .expect(201);
         }
         expect(
@@ -437,7 +441,7 @@ describeDb(
       },
     );
 
-    it.each(['PAID', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const)(
+    it.each(['PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const)(
       'forbids cancellation of %s without changing status or stock',
       async (status) => {
         const order = await create(status);

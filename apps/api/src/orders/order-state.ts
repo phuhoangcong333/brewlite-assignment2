@@ -14,7 +14,7 @@ export const validTransitions: Readonly<
 > = {
   PENDING: ['PAID', 'PAYMENT_FAILED', 'CANCELLED'],
   PAYMENT_FAILED: ['PENDING', 'CANCELLED'],
-  PAID: ['PREPARING'],
+  PAID: ['PREPARING', 'CANCELLED'],
   PREPARING: ['READY'],
   READY: ['COMPLETED'],
   COMPLETED: [],
@@ -39,8 +39,8 @@ export function canCancelOrder(
   actor: CancellationActor,
 ): boolean {
   return actor === 'STAFF'
-    ? status === 'PENDING' || status === 'PREPARING'
-    : status === 'PENDING' || status === 'PAYMENT_FAILED';
+    ? status === 'PENDING' || status === 'PAID' || status === 'PREPARING'
+    : status === 'PENDING' || status === 'PAYMENT_FAILED' || status === 'PAID';
 }
 
 export function assertCanCancelOrder(

@@ -447,6 +447,7 @@ export default function StaffOrdersPage() {
                         </button>
                       )}
                       {(order.status === "PENDING" ||
+                        order.status === "PAID" ||
                         order.status === "PREPARING") && (
                         <button
                           type="button"

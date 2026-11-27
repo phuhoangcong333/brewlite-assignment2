@@ -213,7 +213,6 @@ describeDb(
     });
 
     it.each([
-      'PAID',
       'READY',
       'COMPLETED',
       'CANCELLED',

@@ -114,9 +114,9 @@ Luồng ở backend:
 
 > Nguyên văn theo đoạn TV6 gửi, rút gọn.
 
-Luồng theo dõi đơn dùng **State Machine** ở tầng nghiệp vụ NestJS để kiểm soát vòng đời đơn: `PENDING`, `PAYMENT_FAILED`, `PAID`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`. Luồng chính là `PENDING → PAID → PREPARING → READY → COMPLETED`. Thanh toán lỗi chuyển đơn sang `PAYMENT_FAILED`; khi khách thử lại, đơn về `PENDING` trước khi xử lý kết quả mới. Việc hủy do TV4 thực hiện từ `PENDING` hoặc `PAYMENT_FAILED`; **không cho `PAID → CANCELLED`**. Nhân viên chỉ thao tác `PAID → PREPARING → READY → COMPLETED`. Chuyển trạng thái sai trả `409 Conflict`.
+Luồng theo dõi đơn dùng **State Machine** ở tầng nghiệp vụ NestJS để kiểm soát vòng đời `Order`. Luồng chính là `PENDING → PAID → PREPARING → READY → COMPLETED`. Chủ đơn được hủy từ `PENDING`, `PAYMENT_FAILED` hoặc `PAID`; nhân viên được hủy từ `PENDING`, `PAID` hoặc `PREPARING`. Hủy hoàn kho trong transaction; không tự hoàn tiền hoặc sửa Payment. Chuyển trạng thái sai trả `409 Conflict`.
 
-Việc đổi trạng thái kiểm tra chuyển hợp lệ rồi cập nhật có điều kiện trong **Prisma transaction** (chỉ đổi nếu trạng thái hiện tại vẫn khớp). Code hiện đã có state machine, transaction và polling; bảng chuyển đổi không cho `PAID → CANCELLED`. Khi `READY → COMPLETED`, transaction tạo một `LoyaltyTransaction` duy nhất theo `orderId` và tăng `User.loyaltyPoints`; thanh toán chỉ cập nhật trạng thái, không cộng điểm. Giao diện theo dõi gọi lại `GET /orders/:id` mỗi **5 đến 10 giây** (polling, không dùng WebSocket).
+Việc đổi trạng thái kiểm tra chuyển hợp lệ rồi cập nhật có điều kiện trong **Prisma transaction** (chỉ đổi nếu trạng thái hiện tại vẫn khớp). Code hiện đã có state machine, transaction và polling; bảng chuyển đổi cho phép `PAID → CANCELLED`. Khi `READY → COMPLETED`, transaction tạo một `LoyaltyTransaction` duy nhất theo `orderId` và tăng `User.loyaltyPoints`; thanh toán chỉ cập nhật trạng thái, không cộng điểm. Giao diện theo dõi gọi lại `GET /orders/:id` mỗi **5 đến 10 giây** (polling, không dùng WebSocket).
 
 ### 3.7. Xác thực và nền tảng chung (TV7)
 
@@ -179,7 +179,7 @@ Các file ADR được giữ nguyên tên hiện có để không làm hỏng li
 2. **TV1:** Đã hoàn tất triển khai HTTPS (`https://47.129.180.144.sslip.io`), RDS private SG và CD pipeline có smoke test `/health` + auto-rollback (`.github/workflows/cd.yml`).
 3. **TV4:** Đã xác nhận optimistic locking bằng `Product.version`, điều kiện stock và retry; cần giữ thuật ngữ này nhất quán trong ADR/sơ đồ.
 4. **TV2:** Manifest và Service Worker đã được bổ sung; cần kiểm thử offline trên các trình duyệt mục tiêu nếu mở rộng phạm vi PWA.
-5. **TV2, TV4:** SRS phải bỏ `PAID → CANCELLED`; state machine code và class diagram đã cấm chuyển đổi này.
+5. **TV2, TV4:** SRS được cập nhật để cho phép `PAID → CANCELLED`; hủy hoàn kho trong transaction, không tự hoàn tiền.
 6. **TV6:** `LoyaltyTransaction` và migration đã có; điểm được cộng trong transaction `READY → COMPLETED`, không còn cộng trong payment service.
 7. **TV7:** API contract cần ghi 422 và đánh dấu mismatch hiện tại; class diagram đang là mô hình đích, chưa khớp schema Prisma hiện tại.
 
